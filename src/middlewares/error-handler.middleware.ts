@@ -1,6 +1,6 @@
 import { baseConfig } from "@/config";
 import { SystemCustomErrorCode, SystemCustomErrorMsgByCode } from "@/events";
-import { ApiError } from "@/libs/ApiError";
+import { ApiError } from "@/libs";
 import type { ApiErrorType } from "@/types";
 
 import type { NextFunction, Request, Response } from "express";

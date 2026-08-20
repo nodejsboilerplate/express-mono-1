@@ -13,7 +13,7 @@ import { ApiResponse, redisClient, connectRedis } from "./libs";
 import { baseConfig } from "./config";
 import { errorHandlerMiddleware, requestLogger } from "./middlewares";
 
-const app: Express = express();
+const app: Express = express();   
 
 /* -------------------------------------------------------------------------- */
 /*                                Base Setup                                  */
@@ -59,7 +59,7 @@ app.use(limiter);
 app.use("/api", routers);
 
 app.get("/health", async (req, res) => {
-  console.log(await redisClient.ping());
+ 
   res.status(200).json(new ApiResponse(200, "OK"));
 });
 
@@ -67,7 +67,8 @@ app.get("/health", async (req, res) => {
 /*                          Error Handler Middleware                          */
 /* -------------------------------------------------------------------------- */
 app.use(errorHandlerMiddleware);
-
-app.listen(baseConfig.PORT, () => {
+  
+app.listen(baseConfig.PORT, async () => {
+  console.log(await redisClient.ping());
   console.log(`Server is listening on port: ${baseConfig.PORT}`);
 });

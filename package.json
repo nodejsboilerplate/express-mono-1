@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "dev": "tsx --tsconfig ./tsconfig.json ./src/server.ts --watch",
+    "dev": "tsx --watch ./src/server.ts",
     "build": "tsdown",
     "test": "echo \"Error: no test specified\" && exit 1",
     "format": "prettier --write \"**/*.{ts,md,json,js}\"",
@@ -12,7 +12,7 @@
     "check:lint": "eslint . --cache --cache-location node_modules/.cache/eslint/ --max-warnings 1000",
     "fix:lint": "eslint . --cache --cache-location node_modules/.cache/eslint/ --fix --max-warnings=1000",
     "check:types": "tsc --noEmit --listFiles"
-  },
+  }, 
   "keywords": [],
   "author": "",
   "license": "ISC",

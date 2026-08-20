@@ -1,0 +1,48 @@
+name: My App
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: myapp-postgres
+    ports:
+      - 5432:5432
+    networks:
+      - myapp
+    volumes:
+      - myapp_pgData:/var/lib/postgresql/MAJOR/docker
+    environment:
+      - POSTGRES_PASSWORD=postgres
+  redis:
+    image: redis:latest
+    container_name: myapp-redis-server
+    ports:
+      - 6379:6379
+    networks:
+      - myapp
+    volumes:
+      - myapp_redis:/data
+  redis_insight:
+    depends_on:
+      - "redis"
+    image: redis/redisinsight:latest
+    container_name: myapp-redisinsight
+    volumes:
+      - myapp_redisinsight:/data
+    ports:
+      - 5540:5540
+    networks:
+      - myapp
+    environment:
+      - RI_REDIS_HOST_0=myapp-redis-server
+      - RI_REDIS_PORT_0=6379
+      - RI_REDIS_USERNAME_0=default
+      - RI_REDIS_PASSWORD_0=default
+
+networks:
+  myapp:
+    driver: bridge
+
+volumes:
+  myapp_pgData:
+  myapp_redis:
+  myapp_redisinsight:
