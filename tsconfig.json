@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": true,
+    "declaration": true,
+    "emitDeclarationOnly": false,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "composite": true,
+    "incremental": true,
+    "isolatedModules": true,
+    "declarationMap": true,
+    "lib": ["ES2024"],
+    "module": "preserve",
+    "exactOptionalPropertyTypes": false,
+    "moduleDetection": "force",
+    "noUnusedParameters": true,
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "target": "esnext",
+    "types": ["node"],
+    "verbatimModuleSyntax": true,
+    "rootDir": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+       "outDir": "dist"
+  },
+  "include": ["src"],
+  "exclude": ["dist", "build", "node_modules"]
+}

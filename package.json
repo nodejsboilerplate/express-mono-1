@@ -1,0 +1,50 @@
+{
+  "name": "express-mono-1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "dev": "tsx --tsconfig ./tsconfig.json ./src/server.ts --watch",
+    "build": "tsdown",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format": "prettier --write \"**/*.{ts,md,json,js}\"",
+    "gen:docs": "typedoc",
+    "check:lint": "eslint . --cache --cache-location node_modules/.cache/eslint/ --max-warnings 1000",
+    "fix:lint": "eslint . --cache --cache-location node_modules/.cache/eslint/ --fix --max-warnings=1000",
+    "check:types": "tsc --noEmit --listFiles"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.23.1",
+    "@types/request-ip": "^0.0.41",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "1.0.0-rc.4",
+    "eslint": "^10.8.1",
+    "express": "^5.2.1",
+    "install": "^0.13.0",
+    "prettier": "^3.9.6",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "drizzle-orm": "1.0.0-rc.4",
+    "express-rate-limit": "^8.6.2",
+    "pg": "^8.23.0",
+    "pino": "^10.3.1",
+    "pino-http": "^11.0.0",
+    "rate-limit-redis": "^6.0.1",
+    "redis": "^6.2.1",
+    "request-ip": "^3.3.0",
+    "tsdown": "^0.22.14"
+  }
+}
