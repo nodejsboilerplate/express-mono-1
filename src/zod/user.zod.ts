@@ -6,7 +6,7 @@ export class UserZValidation {
     // Users
     // ---------------------------------------------------------
     static user = z4.object({
-        email: z4.email({ error: "Invalid email" }).max(255, { error: "Email must be at most 255 characters" }),
+        email: z4.email({ error: "Invalid email" }).min(1, { error: "Email is required" }).max(255, { error: "Email must be at most 255 characters" }),
         username: z4
             .string({ error: "Username is required" })
             .trim()
@@ -48,7 +48,7 @@ export class UserZValidation {
     });
 
     // ---------------------------------------------------------
-    // User Phones
+    // User Phone
     // ---------------------------------------------------------
     static phone = z4.object({
         is_verified: z4.boolean({ error: "is_verified must be a boolean" }).optional(),
@@ -65,12 +65,8 @@ export class UserZValidation {
             .max(20, { error: "Phone number must be at most 20 characters" }),
     });
 
-    static phones = z4
-        .array(this.phone, { error: "Phones must be an array" })
-        .min(1, { error: "At least one phone number is required" });
-
     // ---------------------------------------------------------
-    // User Emails
+    // User Email
     // ---------------------------------------------------------
     static email = z4.object({
         is_verified: z4.boolean({ error: "is_verified must be a boolean" }).optional(),
@@ -78,9 +74,6 @@ export class UserZValidation {
         email: z4.email({ error: "Invalid email" }).max(255, { error: "Email must be at most 255 characters" }),
     });
 
-    static emails = z4
-        .array(this.email, { error: "Emails must be an array" })
-        .min(1, { error: "At least one email is required" });
 
     // ---------------------------------------------------------
     // User Address
@@ -112,18 +105,12 @@ export class UserZValidation {
             .toUpperCase(),
         is_default: z4.boolean({ error: "is_default must be a boolean" }).optional(),
     });
-
-    // ---------------------------------------------------------
-    // CreateUser
-    // ---------------------------------------------------------
-    static createUser = z4.object({
-        user: this.user,
-        profile: this.profile.nullable(),
-        contact: this.contact.nullable(),
-        phones: this.phones.nullable(),
-        emails: this.emails.nullable(),
-        address: this.address.nullable(),
-    });
 }
 
-export type CreateUserInput = z4.infer<typeof UserZValidation.createUser>;
+
+export type CreateUserCoreInput = z4.infer<typeof UserZValidation.user>
+export type CreateUserProfileInput = z4.infer<typeof UserZValidation.profile>
+export type CreateUserContactInput = z4.infer<typeof UserZValidation.contact>
+export type CreateUserPhoneInput = z4.infer<typeof UserZValidation.phone>
+export type CreateUserEmailInput = z4.infer<typeof UserZValidation.email>
+export type CreateUserAddressInput = z4.infer<typeof UserZValidation.address>

@@ -2,15 +2,53 @@ import { userAddresses, userContacts, userEmails, userPhones, userProfiles, user
 import type { UserAddressInsertType, UserAddressSelectType, UserContactInsertType, UserEmailsInsertType, UserEmailsSelectType, UserInsertType, UserPhonesInsertType, UserPhonesSelectType, UserProfileInsertType, UserSelectType } from "@/database/type"
 import { pgDb } from "@/libs/db.connect"
 import { validateWithZod } from "@/utils"
-import { UserZValidation, type CreateUserInput } from "@/zod"
+import { UserZValidation, type CreateUserAddressInput, type CreateUserContactInput, type CreateUserCoreInput, type CreateUserEmailInput, type CreateUserInput, type CreateUserPhoneInput, type CreateUserProfileInput } from "@/zod"
 import type z from "zod"
 
 interface UserServiceType {
-    createUser(user: UserInsertType, profile?: UserProfileInsertType, contact?: UserContactInsertType, phones?: UserPhonesInsertType[], emails?: UserEmailsInsertType[], address?: UserAddressInsertType): Promise<string | z.ZodError>
+    createUserCore(user: CreateUserCoreInput, db: typeof pgDb): Promise<string | z.ZodError>
+   Following the same pattern as createUserCore, here are the rest — each needs the parent FK (userId/contactId) plus the input and db:
+
+typescript
+interface UserRepository {
+    createUserCore(user: CreateUserCoreInput, db: typeof pgDb): Promise<string | z.ZodError>;
+
+    createUserProfile(
+        userId: string,
+        profile: CreateUserProfileInput,
+        db: typeof pgDb
+    ): Promise<string | z.ZodError>;
+
+    createUserContact(
+        userId: string,
+        contact: CreateUserContactInput,
+        db: typeof pgDb
+    ): Promise<string | z.ZodError>;
+
+    createUserPhone(
+        contactId: string,
+        phone: CreateUserPhoneInput,
+        db: typeof pgDb
+    ): Promise<string[] | z.ZodError>;
+
+    createUserEmail(
+        contactId: string,
+        email: CreateUserEmailInput,
+        db: typeof pgDb
+    ): Promise<string[] | z.ZodError>;
+
+    createUserAddress(
+        userId: string,
+        address: CreateUserAddressInput,
+        db: typeof pgDb
+    ): Promise<string | z.ZodError>;
+
+
     updateUserProfile(data: UserProfileInsertType): Promise<string>
     updateUserPhone(data: UserPhonesInsertType): Promise<string>
     updateUserEmail(data: UserEmailsInsertType): Promise<string>
     updateUserAddress(data: UserAddressInsertType): Promise<string>
+
     deleteUserPhone(id: Pick<UserPhonesSelectType, "id">): Promise<string>
     deleteUserEmail(id: Pick<UserEmailsSelectType, "id">): Promise<string>
     deleteUserAddress(id: Pick<UserAddressSelectType, "id">): Promise<string>
@@ -18,63 +56,77 @@ interface UserServiceType {
 }
 
 export class UserService implements UserServiceType {
-    async createUser(user: UserInsertType, profile: UserProfileInsertType, contact: UserContactInsertType, phones: UserPhonesInsertType[], emails: UserEmailsInsertType[], address: UserAddressInsertType): Promise<string | z.ZodError> {
+    // async createUser(user: UserInsertType, profile: UserProfileInsertType, contact: UserContactInsertType, phones: UserPhonesInsertType[], emails: UserEmailsInsertType[], address: UserAddressInsertType): Promise<string | z.ZodError> {
 
-        const playload: CreateUserInput = {
-            user,
-            profile: {
-                ...profile, date_of_birth: profile.date_of_birth ? new Date(profile.date_of_birth) : undefined
-            },
-            address: {
-                addr_line_1: address.addr_line_1,
-                addr_line_2: address.addr_line_2 ?? "",
-                city: address.city,
-                country: address.country,
-                country_iso: address.country_iso,
-                addr_name: address.addr_name ?? "",
-                is_default: address.is_default,
-                post_code: address.post_code ?? "",
-                state: address.state ?? ""
-            },
-            contact: {
-                socials: contact.socials ?? [],
-            },
-            emails,
-            phones
-        }
-        const { data, error } = validateWithZod(playload, UserZValidation.createUser)
+    //     const playload: CreateUserInput = {
+    //         user,
+    //         profile: {
+    //             ...profile, date_of_birth: profile.date_of_birth ? new Date(profile.date_of_birth) : undefined
+    //         },
+    //         address: {
+    //             addr_line_1: address.addr_line_1,
+    //             addr_line_2: address.addr_line_2 ?? "",
+    //             city: address.city,
+    //             country: address.country,
+    //             country_iso: address.country_iso,
+    //             addr_name: address.addr_name ?? "",
+    //             is_default: address.is_default,
+    //             post_code: address.post_code ?? "",
+    //             state: address.state ?? ""
+    //         },
+    //         contact: {
+    //             socials: contact.socials ?? [],
+    //         },
+    //         emails,
+    //         phones
+    //     }
+    //     const { data, error } = validateWithZod(playload, UserZValidation.createUser)
 
-        if (error) {
+    //     if (error) {
+    //         return error
+    //     }
+
+    //     const user_id: string = await pgDb.transaction(async (tx) => {
+    //         const [createdUser] = await tx.insert(users).values(data.user).returning({ id: users.id })
+
+    //         const userId = createdUser?.id!
+
+    //         await tx.insert(userProfiles).values({ ...data.profile, user_id: userId, date_of_birth: data.profile?.date_of_birth ? data.profile?.date_of_birth.toISOString().split("T")[0] : undefined, })
+
+    //         const [createdContact] = await tx.insert(userContacts).values({ ...data.contact, user_id: userId }).returning({ id: userContacts.id })
+
+    //         const contactId = createdContact?.id!
+
+    //         const modifiedPhones = data.phones?.map((p) => ({ ...p, contact_id: contactId }))
+    //         await tx.insert(userPhones).values(modifiedPhones ?? [])
+
+    //         const modifiedEmails = data.emails?.map((e) => ({ ...e, contact_id: contactId }))
+    //         await tx.insert(userEmails).values(modifiedEmails ?? [])
+
+    //         await tx.insert(userAddresses).values({ ...data.address!, user_id: userId })
+
+    //         return userId
+    //     })
+
+    //     if (!user_id) {
+    //         return ""
+    //     }
+
+    //     return user_id
+    // }
+
+    async createUserCore(payload: CreateUserCoreInput, db: typeof pgDb): Promise<string | z.ZodError> {
+        const { data, success, error } = validateWithZod(payload, UserZValidation.user)
+
+        if (!success)
             return error
-        }
 
-        const user_id: string = await pgDb.transaction(async (tx) => {
-            const [createdUser] = await tx.insert(users).values(data.user).returning({ id: users.id })
-            
-            const userId = createdUser?.id!
+        const [user] = await db.insert(users).values(data).returning({ id: users.id })
 
-            await tx.insert(userProfiles).values({ ...data.profile, user_id: userId, date_of_birth: data.profile?.date_of_birth ? data.profile?.date_of_birth.toISOString().split("T")[0] : undefined, })
-
-            const [createdContact] = await tx.insert(userContacts).values({ ...data.contact, user_id: userId }).returning({ id: userContacts.id })
-
-            const contactId = createdContact?.id!
-
-            const modifiedPhones = data.phones?.map((p) => ({ ...p, contact_id: contactId }))
-            await tx.insert(userPhones).values(modifiedPhones ?? [])
-
-            const modifiedEmails = data.emails?.map((e) => ({ ...e, contact_id: contactId }))
-            await tx.insert(userEmails).values(modifiedEmails ?? [])
-
-            await tx.insert(userAddresses).values({ ...data.address!, user_id: userId })
-
-            return userId
-        })
-
-        if (!user_id) {
+        if (!user?.id)
             return ""
-        }
 
-        return user_id
+        return user?.id
     }
 
     async updateUserAddress(data: UserAddressInsertType): Promise<string> {
