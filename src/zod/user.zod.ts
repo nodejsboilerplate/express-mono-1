@@ -2,6 +2,10 @@ import z4 from "zod";
 import { Socials, USER_GENDERS, USER_ROLES } from "@/constants";
 
 export class UserZValidation {
+    // ---------------------------------------------------------
+  // Shared: id validator
+  // ---------------------------------------------------------
+  static id = z4.uuid({ error: "Invalid id" });
   // ---------------------------------------------------------
   // Users
   // ---------------------------------------------------------
@@ -109,8 +113,7 @@ export class UserZValidation {
     addr_name: z4
       .string({ error: "Address name must be a string" })
       .trim()
-      .max(100, { error: "Address name must be at most 100 characters" })
-      .optional(),
+      .max(100, { error: "Address name must be at most 100 characters" }),
     addr_line_1: z4
       .string({ error: "Address line 1 is required" })
       .trim()
@@ -150,11 +153,90 @@ export class UserZValidation {
       .boolean({ error: "is_default must be a boolean" })
       .optional(),
   });
+
+  // ===========================================================
+  // UPDATE SCHEMAS
+  // All fields optional (partial update) + id required
+  // ===========================================================
+
+  static updateUser = this.user.partial().extend({
+    id: this.id,
+  });
+
+  static updateProfile = this.profile.partial().extend({
+    id: this.id,
+  });
+
+  static updateContact = this.contact.partial().extend({
+    id: this.id,
+  });
+
+  static updatePhone = this.phone.partial().extend({
+    id: this.id,
+  });
+
+  static updateEmail = this.email.partial().extend({
+    id: this.id,
+  });
+
+  static updateAddress = this.address.partial().extend({
+    id: this.id,
+  });
+
+
+
+  // ===========================================================
+  // DELETE SCHEMAS
+  // Only id required
+  // ===========================================================
+
+  static deleteUser = z4.object({
+    id: this.id,
+  });
+
+  static deleteUserAddress = z4.object({
+    id: this.id,
+  });
+
+  static deleteUserEmail = z4.object({
+    id: this.id,
+  });
+
+  static deleteUserPhone = z4.object({
+    id: this.id,
+  });
+
+    static deleteUserContact = z4.object({
+    id: this.id,
+});
 }
 
+// ---------------------------------------------------------
+// Create types
+// ---------------------------------------------------------
 export type CreateUserCoreInput = z4.infer<typeof UserZValidation.user>;
 export type CreateUserProfileInput = z4.infer<typeof UserZValidation.profile>;
 export type CreateUserContactInput = z4.infer<typeof UserZValidation.contact>;
 export type CreateUserPhoneInput = z4.infer<typeof UserZValidation.phone>;
 export type CreateUserEmailInput = z4.infer<typeof UserZValidation.email>;
 export type CreateUserAddressInput = z4.infer<typeof UserZValidation.address>;
+
+
+// ---------------------------------------------------------
+// Update types
+// ---------------------------------------------------------
+export type UpdateUserInput = z4.infer<typeof UserZValidation.updateUser>;
+export type UpdateProfileInput = z4.infer<typeof UserZValidation.updateProfile>;
+export type UpdateContactInput = z4.infer<typeof UserZValidation.updateContact>;
+export type UpdatePhoneInput = z4.infer<typeof UserZValidation.updatePhone>;
+export type UpdateEmailInput = z4.infer<typeof UserZValidation.updateEmail>;
+export type UpdateAddressInput = z4.infer<typeof UserZValidation.updateAddress>;
+
+// ---------------------------------------------------------
+// Delete types
+// ---------------------------------------------------------
+export type DeleteUserInput = z4.infer<typeof UserZValidation.deleteUser>;
+export type DeleteUserAddressInput = z4.infer<typeof UserZValidation.deleteUserAddress>;
+export type DeleteUserEmailInput = z4.infer<typeof UserZValidation.deleteUserEmail>;
+export type DeleteUserPhoneInput = z4.infer<typeof UserZValidation.deleteUserPhone>;
+export type DeleteUserContactInput = z4.infer<typeof UserZValidation.deleteUserContact>;
