@@ -69,6 +69,10 @@ interface UserServiceType {
   // =========================================================
   // Update
   // =========================================================
+  updateUserCore(
+    data: UserInsertType,
+    db: typeof pgDb
+  ): Promise<string | z.ZodError>;
   updateUserProfile(
     data: UserProfileInsertType,
     db: typeof pgDb
@@ -261,6 +265,31 @@ export class UserService implements UserServiceType {
   // ---------------------------------------------------------
   // Update
   // ---------------------------------------------------------
+  async updateUserCore(
+    data: UserInsertType,
+    db: typeof pgDb
+  ): Promise<string | z.ZodError> {
+    const {
+      data: parsed,
+      success,
+      error,
+    } = validateWithZod(data, UserZValidation.updateUser);
+
+    if (!success) {
+      return error;
+    }
+
+    const { id, ...updateData } = parsed;
+
+    const [updatedUser] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, id))
+      .returning({ id: users.id });
+
+    if (!updatedUser?.id) return "";
+    return updatedUser.id;
+  }
   async updateUserProfile(
     data: UserProfileInsertType,
     db: typeof pgDb
