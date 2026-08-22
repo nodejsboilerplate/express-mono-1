@@ -33,6 +33,6 @@
     },
        "outDir": "dist"
   },
-  "include": ["src"],
+  "include": ["."],
   "exclude": ["dist", "build", "node_modules"]
 }

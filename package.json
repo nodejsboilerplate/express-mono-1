@@ -11,6 +11,11 @@
     "gen:docs": "typedoc",
     "check:lint": "eslint . --cache --cache-location node_modules/.cache/eslint/ --max-warnings 1000",
     "fix:lint": "eslint . --cache --cache-location node_modules/.cache/eslint/ --fix --max-warnings=1000",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio --verbose",
+    "db:push": "drizzle-kit push",
+    "db:reset": "tsx ./src/libs/reset.db.ts",
     "check:types": "tsc --noEmit --listFiles"
   },
   "keywords": [],
@@ -55,6 +60,8 @@
     "rate-limit-redis": "^6.0.1",
     "redis": "^6.2.1",
     "request-ip": "^3.3.0",
-    "tsdown": "^0.22.14"
+    "tsdown": "^0.22.14",
+    "uuid": "^14.0.2",
+    "zod": "^4.4.3"
   }
 }
