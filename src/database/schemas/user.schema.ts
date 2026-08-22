@@ -21,7 +21,7 @@ export const users = pgTable("users", {
     .$defaultFn(() => uuidv4()),
   email: t.varchar({ length: 255 }).notNull().unique(),
   username: t.varchar({ length: 100 }).notNull().unique(),
-  password: t.varchar({ length: 30 }).notNull(),
+  password: t.varchar({ length: 255 }).notNull(),
   is_verified: t.boolean().notNull().default(false),
   verify_code: t.varchar({ length: 10 }),
   verify_expiry: t.timestamp({ withTimezone: true }),
