@@ -121,7 +121,6 @@ export class UserZValidation {
     addr_line_1: z4
       .string({ error: "Address line 1 is required" })
       .trim()
-      .min(1, { error: "Address line 1 is required" })
       .max(255, { error: "Address line 1 must be at most 255 characters" }),
     addr_line_2: z4
       .string({ error: "Address line 2 must be a string" })
