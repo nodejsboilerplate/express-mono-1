@@ -1,11 +1,10 @@
 {
- 
-    "$schema": "https://typedoc.org/schema.json",
-    "includeVersion": true,
-    "out": "typedoc",
-     "name": "My App - Technical Reference",
-       "externalPattern": ["**/node_modules/**"],
-        
+  "$schema": "https://typedoc.org/schema.json",
+  "includeVersion": true,
+  "out": "typedoc",
+  "name": "My App - Technical Reference",
+  "externalPattern": ["**/node_modules/**"],
+
   "exclude": [
     "**/node_modules/**",
     "**/typedoc/**",
@@ -15,7 +14,7 @@
     "**/temp/**"
   ],
   "excludeExternals": true,
-   "entryPoints": ["src"],
+  "entryPoints": ["src"],
   "entryPointStrategy": "expand",
   "skipErrorChecking": true
 }

@@ -13,10 +13,8 @@ export const config = [
   eslintConfigPrettier,
   ...tseslint.configs.recommended,
   {
-
     rules: {
-  
-      "@typescript-eslint/consistent-type-imports": "error"
+      "@typescript-eslint/consistent-type-imports": "error",
     },
   },
   {

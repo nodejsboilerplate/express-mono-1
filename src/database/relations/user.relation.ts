@@ -1,5 +1,12 @@
 import { defineRelations } from "drizzle-orm";
-import { userAddresses, userContacts, userEmails, userPhones, userProfiles, users } from "../schemas";
+import {
+  userAddresses,
+  userContacts,
+  userEmails,
+  userPhones,
+  userProfiles,
+  users,
+} from "../schemas";
 
 export const userRelations = defineRelations(
   { users, userProfiles, userContacts, userPhones, userEmails, userAddresses },

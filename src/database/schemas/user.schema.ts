@@ -1,6 +1,6 @@
-import { pgTable, pgEnum } from "drizzle-orm/pg-core"
-import * as t from "drizzle-orm/pg-core"
-import { table_timestamps } from "./helper"
+import { pgTable, pgEnum } from "drizzle-orm/pg-core";
+import * as t from "drizzle-orm/pg-core";
+import { table_timestamps } from "./helper";
 import { v4 as uuidv4 } from "uuid";
 import { USER_GENDERS, USER_ROLES } from "@/constants";
 import type { SocialLink } from "@/types";
@@ -9,13 +9,16 @@ import type { SocialLink } from "@/types";
 // Enums
 // ---------------------------------------------------------
 export const userRoleEnum = pgEnum("user_role", USER_ROLES);
-export const userGenderRoleEnum = pgEnum("user_gender_role", USER_GENDERS)
+export const userGenderRoleEnum = pgEnum("user_gender_role", USER_GENDERS);
 
 // ---------------------------------------------------------
 // Users
 // ---------------------------------------------------------
 export const users = pgTable("users", {
-  id: t.uuid().primaryKey().$defaultFn(() => uuidv4()),
+  id: t
+    .uuid()
+    .primaryKey()
+    .$defaultFn(() => uuidv4()),
   email: t.varchar({ length: 255 }).notNull().unique(),
   username: t.varchar({ length: 100 }).notNull().unique(),
   password: t.varchar({ length: 30 }).notNull(),
@@ -23,14 +26,17 @@ export const users = pgTable("users", {
   verify_code: t.varchar({ length: 10 }),
   verify_expiry: t.timestamp({ withTimezone: true }),
   role: userRoleEnum().notNull().default("USER"),
-  ...table_timestamps
+  ...table_timestamps,
 });
 
 // ---------------------------------------------------------
 // User Profiles
 // ---------------------------------------------------------
 export const userProfiles = pgTable("user_profiles", {
-  id: t.uuid().primaryKey().$defaultFn(() => uuidv4()),
+  id: t
+    .uuid()
+    .primaryKey()
+    .$defaultFn(() => uuidv4()),
   user_id: t
     .uuid()
     .notNull()
@@ -43,28 +49,34 @@ export const userProfiles = pgTable("user_profiles", {
   nickname: t.varchar({ length: 100 }),
   date_of_birth: t.date(),
   gender: userGenderRoleEnum(),
-  ...table_timestamps
+  ...table_timestamps,
 });
 
 // ---------------------------------------------------------
 // User contacts
 // ---------------------------------------------------------
 export const userContacts = pgTable("user_contacts", {
-  id: t.uuid().primaryKey().$defaultFn(() => uuidv4()),
+  id: t
+    .uuid()
+    .primaryKey()
+    .$defaultFn(() => uuidv4()),
   user_id: t
     .uuid()
     .notNull()
     .unique()
     .references(() => users.id, { onDelete: "cascade" }),
   socials: t.jsonb().$type<SocialLink[]>().notNull().default([]),
-  ...table_timestamps
+  ...table_timestamps,
 });
 
 // ---------------------------------------------------------
 // User Phones
 // ---------------------------------------------------------
 export const userPhones = pgTable("user_phones", {
-  id: t.uuid().primaryKey().$defaultFn(() => uuidv4()),
+  id: t
+    .uuid()
+    .primaryKey()
+    .$defaultFn(() => uuidv4()),
   contact_id: t
     .uuid()
     .notNull()
@@ -73,14 +85,17 @@ export const userPhones = pgTable("user_phones", {
   is_primary: t.boolean().notNull().default(false),
   phone_code: t.varchar({ length: 5 }).notNull(),
   phone: t.varchar({ length: 20 }).notNull(),
-  ...table_timestamps
+  ...table_timestamps,
 });
 
 // ---------------------------------------------------------
 // User emails
 // ---------------------------------------------------------
 export const userEmails = pgTable("user_emails", {
-  id: t.uuid().primaryKey().$defaultFn(() => uuidv4()),
+  id: t
+    .uuid()
+    .primaryKey()
+    .$defaultFn(() => uuidv4()),
   contact_id: t
     .uuid()
     .notNull()
@@ -88,14 +103,17 @@ export const userEmails = pgTable("user_emails", {
   is_verified: t.boolean().notNull().default(false),
   is_primary: t.boolean().notNull().default(false),
   email: t.varchar({ length: 255 }).notNull(),
-  ...table_timestamps
+  ...table_timestamps,
 });
 
 // ---------------------------------------------------------
 // User Address
 // ---------------------------------------------------------
 export const userAddresses = pgTable("user_addresses", {
-  id: t.uuid().primaryKey().$defaultFn(() => uuidv4()),
+  id: t
+    .uuid()
+    .primaryKey()
+    .$defaultFn(() => uuidv4()),
   user_id: t
     .uuid()
     .notNull()
@@ -109,5 +127,5 @@ export const userAddresses = pgTable("user_addresses", {
   country: t.varchar({ length: 100 }).notNull(),
   country_iso: t.varchar({ length: 2 }).notNull(),
   is_default: t.boolean().notNull().default(false),
-  ...table_timestamps
+  ...table_timestamps,
 });

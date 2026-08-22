@@ -16,10 +16,7 @@ process.argv.forEach((val) => {
   }
 });
 
-if (!admin)
-  throw new Error(
-    "Dangerous action: use --override to continue."
-  );
+if (!admin) throw new Error("Dangerous action: use --override to continue.");
 
 if (process.env.NODE_ENV === "production") {
   console.error("❌ Database reset is disabled in production.");

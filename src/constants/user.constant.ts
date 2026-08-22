@@ -1,11 +1,16 @@
-export const USER_ROLES = ["ADMIN", "USER"] as const
+export const USER_ROLES = ["ADMIN", "USER"] as const;
 
-export const USER_GENDERS = ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"] as const
+export const USER_GENDERS = [
+  "MALE",
+  "FEMALE",
+  "OTHER",
+  "PREFER_NOT_TO_SAY",
+] as const;
 
 export enum Socials {
   FACEBOOK = "facebook",
   INSTAGRAM = "instagram",
-  TWITTER = "twitter", 
+  TWITTER = "twitter",
   LINKEDIN = "linkedin",
   YOUTUBE = "youtube",
   TIKTOK = "tiktok",
