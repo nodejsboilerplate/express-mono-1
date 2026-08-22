@@ -185,30 +185,6 @@ export class UserZValidation {
   static updateAddress = this.address.partial().extend({
     id: this.id,
   });
-
-  // ┌─────────────────────────────────────────────────────┐
-  // │ Delete Validations                                  │
-  // │ Only id required                                    │
-  // └─────────────────────────────────────────────────────┘
-  static deleteUser = z4.object({
-    id: this.id,
-  });
-
-  static deleteUserAddress = z4.object({
-    id: this.id,
-  });
-
-  static deleteUserEmail = z4.object({
-    id: this.id,
-  });
-
-  static deleteUserPhone = z4.object({
-    id: this.id,
-  });
-
-  static deleteUserContact = z4.object({
-    id: this.id,
-  });
 }
 
 // ---------------------------------------------------------
@@ -230,20 +206,3 @@ export type UpdateContactInput = z4.infer<typeof UserZValidation.updateContact>;
 export type UpdatePhoneInput = z4.infer<typeof UserZValidation.updatePhone>;
 export type UpdateEmailInput = z4.infer<typeof UserZValidation.updateEmail>;
 export type UpdateAddressInput = z4.infer<typeof UserZValidation.updateAddress>;
-
-// ---------------------------------------------------------
-// Delete types
-// ---------------------------------------------------------
-export type DeleteUserInput = z4.infer<typeof UserZValidation.deleteUser>;
-export type DeleteUserAddressInput = z4.infer<
-  typeof UserZValidation.deleteUserAddress
->;
-export type DeleteUserEmailInput = z4.infer<
-  typeof UserZValidation.deleteUserEmail
->;
-export type DeleteUserPhoneInput = z4.infer<
-  typeof UserZValidation.deleteUserPhone
->;
-export type DeleteUserContactInput = z4.infer<
-  typeof UserZValidation.deleteUserContact
->;

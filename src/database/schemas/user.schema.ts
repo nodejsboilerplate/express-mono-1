@@ -81,6 +81,11 @@ export const userPhones = pgTable("user_phones", {
     .uuid()
     .notNull()
     .references(() => userContacts.id, { onDelete: "cascade" }),
+      user_id: t
+    .uuid()
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
   is_verified: t.boolean().notNull().default(false),
   is_primary: t.boolean().notNull().default(false),
   phone_code: t.varchar({ length: 5 }).notNull(),
@@ -100,6 +105,11 @@ export const userEmails = pgTable("user_emails", {
     .uuid()
     .notNull()
     .references(() => userContacts.id, { onDelete: "cascade" }),
+      user_id: t
+    .uuid()
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
   is_verified: t.boolean().notNull().default(false),
   is_primary: t.boolean().notNull().default(false),
   email: t.varchar({ length: 255 }).notNull(),

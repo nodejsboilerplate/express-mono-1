@@ -2,6 +2,46 @@ enum SYSTEM_CUSTOM_ERROR_EVENTS {
   INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR",
   UNAUTHORIZED = "UNAUTHORIZED",
   UNKNOWN_ERROR = "UNKNOWN_ERROR",
+
+  // -- 400: bad request / validation --
+  VALIDATION_ERROR = "VALIDATION_ERROR",
+  INVALID_VERIFICATION_CODE = "INVALID_VERIFICATION_CODE",
+  VERIFICATION_CODE_EXPIRED = "VERIFICATION_CODE_EXPIRED",
+
+  // -- 404: not found, one per resource --
+  USER_NOT_FOUND = "USER_NOT_FOUND",
+  PROFILE_NOT_FOUND = "PROFILE_NOT_FOUND",
+  CONTACT_NOT_FOUND = "CONTACT_NOT_FOUND",
+  PHONE_NOT_FOUND = "PHONE_NOT_FOUND",
+  EMAIL_NOT_FOUND = "EMAIL_NOT_FOUND",
+  ADDRESS_NOT_FOUND = "ADDRESS_NOT_FOUND",
+
+  // -- 409: conflict --
+  USER_ALREADY_VERIFIED = "USER_ALREADY_VERIFIED",
+
+  // -- 500: operation failed, one per resource per action --
+  USER_CREATION_FAILED = "USER_CREATION_FAILED",
+  USER_UPDATE_FAILED = "USER_UPDATE_FAILED",
+  USER_DELETE_FAILED = "USER_DELETE_FAILED",
+
+  PROFILE_CREATION_FAILED = "PROFILE_CREATION_FAILED",
+  PROFILE_UPDATE_FAILED = "PROFILE_UPDATE_FAILED",
+
+  CONTACT_CREATION_FAILED = "CONTACT_CREATION_FAILED",
+  CONTACT_UPDATE_FAILED = "CONTACT_UPDATE_FAILED",
+  CONTACT_DELETE_FAILED = "CONTACT_DELETE_FAILED",
+
+  PHONE_CREATION_FAILED = "PHONE_CREATION_FAILED",
+  PHONE_UPDATE_FAILED = "PHONE_UPDATE_FAILED",
+  PHONE_DELETE_FAILED = "PHONE_DELETE_FAILED",
+
+  EMAIL_CREATION_FAILED = "EMAIL_CREATION_FAILED",
+  EMAIL_UPDATE_FAILED = "EMAIL_UPDATE_FAILED",
+  EMAIL_DELETE_FAILED = "EMAIL_DELETE_FAILED",
+
+  ADDRESS_CREATION_FAILED = "ADDRESS_CREATION_FAILED",
+  ADDRESS_UPDATE_FAILED = "ADDRESS_UPDATE_FAILED",
+  ADDRESS_DELETE_FAILED = "ADDRESS_DELETE_FAILED",
 }
 
 export const SystemCustomErrorCode: Record<SYSTEM_CUSTOM_ERROR_EVENTS, string> =
@@ -9,6 +49,42 @@ export const SystemCustomErrorCode: Record<SYSTEM_CUSTOM_ERROR_EVENTS, string> =
     INTERNAL_SERVER_ERROR: "50000",
     UNAUTHORIZED: "40100",
     UNKNOWN_ERROR: "50001",
+
+    VALIDATION_ERROR: "40001",
+    INVALID_VERIFICATION_CODE: "40002",
+    VERIFICATION_CODE_EXPIRED: "40003",
+
+    USER_NOT_FOUND: "40401",
+    PROFILE_NOT_FOUND: "40402",
+    CONTACT_NOT_FOUND: "40403",
+    PHONE_NOT_FOUND: "40404",
+    EMAIL_NOT_FOUND: "40405",
+    ADDRESS_NOT_FOUND: "40406",
+
+    USER_ALREADY_VERIFIED: "40901",
+
+    USER_CREATION_FAILED: "50010",
+    USER_UPDATE_FAILED: "50011",
+    USER_DELETE_FAILED: "50012",
+
+    PROFILE_CREATION_FAILED: "50020",
+    PROFILE_UPDATE_FAILED: "50021",
+
+    CONTACT_CREATION_FAILED: "50030",
+    CONTACT_UPDATE_FAILED: "50031",
+    CONTACT_DELETE_FAILED: "50032",
+
+    PHONE_CREATION_FAILED: "50040",
+    PHONE_UPDATE_FAILED: "50041",
+    PHONE_DELETE_FAILED: "50042",
+
+    EMAIL_CREATION_FAILED: "50050",
+    EMAIL_UPDATE_FAILED: "50051",
+    EMAIL_DELETE_FAILED: "50052",
+
+    ADDRESS_CREATION_FAILED: "50060",
+    ADDRESS_UPDATE_FAILED: "50061",
+    ADDRESS_DELETE_FAILED: "50062",
   };
 
 export type SystemCustomErrorMessageDataType = {
@@ -38,7 +114,6 @@ export const SystemCustomErrorMsgByCode: SystemCustomErrorMessageType = {
       "Something went wrong on our end. Please try again later or contact support if the issue persists.",
     code: SystemCustomErrorCode.INTERNAL_SERVER_ERROR,
   },
-
   [SystemCustomErrorCode.UNAUTHORIZED]: {
     title: "Unauthorized",
     message: "Your session has expired or is invalid. Please log in again.",
@@ -49,6 +124,159 @@ export const SystemCustomErrorMsgByCode: SystemCustomErrorMessageType = {
     message:
       "An unexpected error occurred. Please try again later or contact support if the issue persists.",
     code: SystemCustomErrorCode.UNKNOWN_ERROR,
+  },
+
+  // -- 400 --
+  [SystemCustomErrorCode.VALIDATION_ERROR]: {
+    title: "Invalid Input",
+    message: "One or more fields failed validation.",
+    code: SystemCustomErrorCode.VALIDATION_ERROR,
+  },
+  [SystemCustomErrorCode.INVALID_VERIFICATION_CODE]: {
+    title: "Invalid Code",
+    message: "The verification code is incorrect.",
+    code: SystemCustomErrorCode.INVALID_VERIFICATION_CODE,
+  },
+  [SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED]: {
+    title: "Code Expired",
+    message: "The verification code has expired. Please request a new one.",
+    code: SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED,
+  },
+
+  // -- 404 --
+  [SystemCustomErrorCode.USER_NOT_FOUND]: {
+    title: "User Not Found",
+    message: "No user exists with the given id.",
+    code: SystemCustomErrorCode.USER_NOT_FOUND,
+  },
+  [SystemCustomErrorCode.PROFILE_NOT_FOUND]: {
+    title: "Profile Not Found",
+    message: "No profile exists with the given id.",
+    code: SystemCustomErrorCode.PROFILE_NOT_FOUND,
+  },
+  [SystemCustomErrorCode.CONTACT_NOT_FOUND]: {
+    title: "Contact Not Found",
+    message: "No contact exists with the given id.",
+    code: SystemCustomErrorCode.CONTACT_NOT_FOUND,
+  },
+  [SystemCustomErrorCode.PHONE_NOT_FOUND]: {
+    title: "Phone Not Found",
+    message: "No phone number exists with the given id.",
+    code: SystemCustomErrorCode.PHONE_NOT_FOUND,
+  },
+  [SystemCustomErrorCode.EMAIL_NOT_FOUND]: {
+    title: "Email Not Found",
+    message: "No email exists with the given id.",
+    code: SystemCustomErrorCode.EMAIL_NOT_FOUND,
+  },
+  [SystemCustomErrorCode.ADDRESS_NOT_FOUND]: {
+    title: "Address Not Found",
+    message: "No address exists with the given id.",
+    code: SystemCustomErrorCode.ADDRESS_NOT_FOUND,
+  },
+
+  // -- 409 --
+  [SystemCustomErrorCode.USER_ALREADY_VERIFIED]: {
+    title: "Already Verified",
+    message: "This account has already been verified.",
+    code: SystemCustomErrorCode.USER_ALREADY_VERIFIED,
+  },
+
+  // -- 500: user --
+  [SystemCustomErrorCode.USER_CREATION_FAILED]: {
+    title: "Signup Failed",
+    message: "Your account could not be created. Please try again.",
+    code: SystemCustomErrorCode.USER_CREATION_FAILED,
+  },
+  [SystemCustomErrorCode.USER_UPDATE_FAILED]: {
+    title: "Update Failed",
+    message: "Your account could not be updated. Please try again.",
+    code: SystemCustomErrorCode.USER_UPDATE_FAILED,
+  },
+  [SystemCustomErrorCode.USER_DELETE_FAILED]: {
+    title: "Deletion Failed",
+    message: "Your account could not be deleted. Please try again.",
+    code: SystemCustomErrorCode.USER_DELETE_FAILED,
+  },
+
+  // -- 500: profile --
+  [SystemCustomErrorCode.PROFILE_CREATION_FAILED]: {
+    title: "Profile Setup Failed",
+    message: "Your profile could not be created. Please try again.",
+    code: SystemCustomErrorCode.PROFILE_CREATION_FAILED,
+  },
+  [SystemCustomErrorCode.PROFILE_UPDATE_FAILED]: {
+    title: "Profile Update Failed",
+    message: "Your profile could not be updated. Please try again.",
+    code: SystemCustomErrorCode.PROFILE_UPDATE_FAILED,
+  },
+
+  // -- 500: contact --
+  [SystemCustomErrorCode.CONTACT_CREATION_FAILED]: {
+    title: "Contact Creation Failed",
+    message: "The contact could not be created. Please try again.",
+    code: SystemCustomErrorCode.CONTACT_CREATION_FAILED,
+  },
+  [SystemCustomErrorCode.CONTACT_UPDATE_FAILED]: {
+    title: "Contact Update Failed",
+    message: "The contact could not be updated. Please try again.",
+    code: SystemCustomErrorCode.CONTACT_UPDATE_FAILED,
+  },
+  [SystemCustomErrorCode.CONTACT_DELETE_FAILED]: {
+    title: "Contact Deletion Failed",
+    message: "The contact could not be deleted. Please try again.",
+    code: SystemCustomErrorCode.CONTACT_DELETE_FAILED,
+  },
+
+  // -- 500: phone --
+  [SystemCustomErrorCode.PHONE_CREATION_FAILED]: {
+    title: "Phone Creation Failed",
+    message: "The phone number could not be added. Please try again.",
+    code: SystemCustomErrorCode.PHONE_CREATION_FAILED,
+  },
+  [SystemCustomErrorCode.PHONE_UPDATE_FAILED]: {
+    title: "Phone Update Failed",
+    message: "The phone number could not be updated. Please try again.",
+    code: SystemCustomErrorCode.PHONE_UPDATE_FAILED,
+  },
+  [SystemCustomErrorCode.PHONE_DELETE_FAILED]: {
+    title: "Phone Deletion Failed",
+    message: "The phone number could not be deleted. Please try again.",
+    code: SystemCustomErrorCode.PHONE_DELETE_FAILED,
+  },
+
+  // -- 500: email --
+  [SystemCustomErrorCode.EMAIL_CREATION_FAILED]: {
+    title: "Email Creation Failed",
+    message: "The email could not be added. Please try again.",
+    code: SystemCustomErrorCode.EMAIL_CREATION_FAILED,
+  },
+  [SystemCustomErrorCode.EMAIL_UPDATE_FAILED]: {
+    title: "Email Update Failed",
+    message: "The email could not be updated. Please try again.",
+    code: SystemCustomErrorCode.EMAIL_UPDATE_FAILED,
+  },
+  [SystemCustomErrorCode.EMAIL_DELETE_FAILED]: {
+    title: "Email Deletion Failed",
+    message: "The email could not be deleted. Please try again.",
+    code: SystemCustomErrorCode.EMAIL_DELETE_FAILED,
+  },
+
+  // -- 500: address --
+  [SystemCustomErrorCode.ADDRESS_CREATION_FAILED]: {
+    title: "Address Creation Failed",
+    message: "The address could not be added. Please try again.",
+    code: SystemCustomErrorCode.ADDRESS_CREATION_FAILED,
+  },
+  [SystemCustomErrorCode.ADDRESS_UPDATE_FAILED]: {
+    title: "Address Update Failed",
+    message: "The address could not be updated. Please try again.",
+    code: SystemCustomErrorCode.ADDRESS_UPDATE_FAILED,
+  },
+  [SystemCustomErrorCode.ADDRESS_DELETE_FAILED]: {
+    title: "Address Deletion Failed",
+    message: "The address could not be deleted. Please try again.",
+    code: SystemCustomErrorCode.ADDRESS_DELETE_FAILED,
   },
 };
 
