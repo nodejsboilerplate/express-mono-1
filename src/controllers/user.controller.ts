@@ -28,10 +28,14 @@ interface UserControllerType {
   updateProfile(req: Request, res: Response): Promise<Response>;
   updateAddress(req: Request, res: Response): Promise<Response>;
   updateContact(req: Request, res: Response): Promise<Response>;
+  updatePhone(req: Request, res: Response): Promise<Response>;
+  updateEmail(req: Request, res: Response): Promise<Response>;
 
   deleteProfile(req: Request, res: Response): Promise<Response>;
   deleteAddress(req: Request, res: Response): Promise<Response>;
   deleteContact(req: Request, res: Response): Promise<Response>;
+    deletePhone(req: Request, res: Response): Promise<Response>;
+  deleteEmail(req: Request, res: Response): Promise<Response>;
 }
 
 export class UserController implements UserControllerType {
@@ -420,6 +424,58 @@ export class UserController implements UserControllerType {
       );
   }
 
+  async updatePhone(req: Request, res: Response): Promise<Response> {
+    const { id, userId } = req.params as { id: string; userId: string };
+
+    const result = await this.userService.updateUserPhone(
+      userId,
+      id,
+      req.body as Partial<UserPhonesInsertType>,
+      pgDb
+    );
+
+    if (isZodError(result)) throw validationError(result);
+    if (!result) {
+      throw new ApiError(
+        404,
+        SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_NOT_FOUND]!
+      );
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, "Phone number updated successfully.", {
+          id: result,
+        })
+      );
+  }
+
+  async updateEmail(req: Request, res: Response): Promise<Response> {
+    const { id, userId } = req.params as { id: string; userId: string };
+
+    const result = await this.userService.updateUserEmail(
+      userId,
+      id,
+      req.body as Partial<UserEmailsInsertType>,
+      pgDb
+    );
+
+    if (isZodError(result)) throw validationError(result);
+    if (!result) {
+      throw new ApiError(
+        404,
+        SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_NOT_FOUND]!
+      );
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, "Email updated successfully.", { id: result })
+      );
+  }
+
   // ---------------------------------------------------------
   // Delete
   // ---------------------------------------------------------
@@ -486,6 +542,48 @@ export class UserController implements UserControllerType {
       .status(200)
       .json(
         new ApiResponse(200, "Contact deleted successfully.", { id: result })
+      );
+  }
+
+  async deletePhone(req: Request, res: Response): Promise<Response> {
+    const { id, userId } = req.params as { id: string; userId: string };
+
+    const result = await this.userService.deleteUserPhone(userId, id, pgDb);
+
+    if (isZodError(result)) throw validationError(result);
+    if (!result) {
+      throw new ApiError(
+        404,
+        SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_NOT_FOUND]!
+      );
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, "Phone number deleted successfully.", {
+          id: result,
+        })
+      );
+  }
+
+  async deleteEmail(req: Request, res: Response): Promise<Response> {
+    const { id, userId } = req.params as { id: string; userId: string };
+
+    const result = await this.userService.deleteUserEmail(userId, id, pgDb);
+
+    if (isZodError(result)) throw validationError(result);
+    if (!result) {
+      throw new ApiError(
+        404,
+        SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_NOT_FOUND]!
+      );
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, "Email deleted successfully.", { id: result })
       );
   }
 }

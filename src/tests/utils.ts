@@ -2,8 +2,9 @@ import { afterAll, beforeAll } from 'vitest'
 import { exec } from "child_process"
 
 export function setupDatabase() {
-    process.env.NODE_ENV = "test"
+
     beforeAll(async () => {
+       
         exec("pnpm db:generate && pnpm db:migrate", (error, stdout, stderr) => {
             if (error) {
                 console.error("Error: ", error)
@@ -19,8 +20,8 @@ export function setupDatabase() {
         })
     })
 
-    afterAll(async () => {
-        process.env.NODE_ENV = "development"
+    afterAll( () => {
+        
         exec("pnpm db:reset --override", (error, stdout, stderr) => {
             if (error) {
                 console.error("Error: ", error)
@@ -34,6 +35,7 @@ export function setupDatabase() {
                 console.log("Std out: ", stdout)
             }
         })
+        
     })
 
 }
