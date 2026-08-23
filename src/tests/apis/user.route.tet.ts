@@ -7,7 +7,13 @@ import { eq } from "drizzle-orm";
 import userRouter from "@/routes/user.route";
 import { errorHandlerMiddleware } from "@/middlewares/error-handler.middleware";
 import { pgDb } from "@/libs/db.connect";
-import { users, userContacts, userPhones, userEmails, userAddresses } from "@/database";
+import {
+  users,
+  userContacts,
+  userPhones,
+  userEmails,
+  userAddresses,
+} from "@/database";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { setupDatabase } from "../utils";
 
@@ -16,7 +22,7 @@ import { setupDatabase } from "../utils";
 // No mocks. This hits an actual Postgres test database.
 // ---------------------------------------------------------------
 
-setupDatabase()
+setupDatabase();
 
 function buildApp(): Express {
   const app = express();
@@ -56,21 +62,22 @@ afterAll(async () => {
 // Helper to create a real user via the API itself, so tests exercise
 // the full create path and give us a valid userId for nested resources.
 
-
 async function createTestUser(overrides: Record<string, unknown> = {}) {
-
-    const res = await request(app).post("/users/create").send({ email: `test-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`,
+  const res = await request(app)
+    .post("/users/create")
+    .send({
+      email: `test-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`,
       username: `testuser-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       password: "Password123!",
       role: "user",
       first_name: "Test",
       last_name: "User",
-      ...overrides, });
+      ...overrides,
+    });
 
   if (res.status !== 201) {
     console.log("createTestUser failed:", JSON.stringify(res.body, null, 2));
   }
-
 
   expect(res.status).toBe(201);
   const userId = res.body.data.id as string;
@@ -86,14 +93,16 @@ describe("POST /users/create", () => {
   it("creates a user and profile, returns 201", async () => {
     const email = `create-${Date.now()}@example.com`;
 
-    const res = await request(app).post("/users/create").send({
-      email,
-      username: `user-${Date.now()}`,
-      password: "Password123!",
-      role: "user",
-      first_name: "Mahin",
-      last_name: "N",
-    });
+    const res = await request(app)
+      .post("/users/create")
+      .send({
+        email,
+        username: `user-${Date.now()}`,
+        password: "Password123!",
+        role: "user",
+        first_name: "Mahin",
+        last_name: "N",
+      });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
@@ -102,7 +111,10 @@ describe("POST /users/create", () => {
     createdUserIds.push(res.body.data.id);
 
     // Verify it actually landed in the DB
-    const [row] = await pgDb.select().from(users).where(eq(users.id, res.body.data.id));
+    const [row] = await pgDb
+      .select()
+      .from(users)
+      .where(eq(users.id, res.body.data.id));
     expect(row?.email).toBe(email);
     expect(row?.verify_code).toBeTruthy();
   });
@@ -122,14 +134,16 @@ describe("POST /users/create", () => {
     const email = `dup-${Date.now()}@example.com`;
     await createTestUser({ email, username: `dupuser-${Date.now()}` });
 
-    const res = await request(app).post("/users/create").send({
-      email,
-      username: `dupuser2-${Date.now()}`,
-      password: "Password123!",
-      role: "user",
-      first_name: "Test",
-      last_name: "User",
-    });
+    const res = await request(app)
+      .post("/users/create")
+      .send({
+        email,
+        username: `dupuser2-${Date.now()}`,
+        password: "Password123!",
+        role: "user",
+        first_name: "Test",
+        last_name: "User",
+      });
 
     // Adjust expected status/code to whatever your unique-constraint
     // handling actually returns (likely surfaces as a 500 unless you
@@ -187,7 +201,10 @@ describe("POST /users/:userId/contacts/:contactId/phones and /emails", () => {
 
     expect(res.status).toBe(201);
 
-    const [row] = await pgDb.select().from(userPhones).where(eq(userPhones.id, res.body.data.id));
+    const [row] = await pgDb
+      .select()
+      .from(userPhones)
+      .where(eq(userPhones.id, res.body.data.id));
     expect(row?.user_id).toBe(userId);
     expect(row?.contact_id).toBe(contactId);
   });
@@ -202,7 +219,10 @@ describe("POST /users/:userId/contacts/:contactId/phones and /emails", () => {
 
     expect(res.status).toBe(201);
 
-    const [row] = await pgDb.select().from(userEmails).where(eq(userEmails.id, res.body.data.id));
+    const [row] = await pgDb
+      .select()
+      .from(userEmails)
+      .where(eq(userEmails.id, res.body.data.id));
     expect(row?.email).toBe("contact@example.com");
   });
 });
@@ -225,7 +245,10 @@ describe("POST /users/verify", () => {
 
     expect(res.status).toBe(200);
 
-    const [updated] = await pgDb.select().from(users).where(eq(users.id, userId));
+    const [updated] = await pgDb
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
     expect(updated?.is_verified).toBe(true);
     expect(updated?.verify_code).toBeNull();
   });
@@ -255,7 +278,9 @@ describe("POST /users/verify", () => {
       .from(users)
       .where(eq(users.id, userId));
 
-    await request(app).post("/users/verify").send({ id: userId, code: row!.verify_code });
+    await request(app)
+      .post("/users/verify")
+      .send({ id: userId, code: row!.verify_code });
 
     const res = await request(app)
       .post("/users/verify")
@@ -304,7 +329,9 @@ describe("DELETE /users/:userId", () => {
   });
 
   it("returns 404 for a nonexistent user", async () => {
-    const res = await request(app).delete("/users/00000000-0000-0000-0000-000000000000");
+    const res = await request(app).delete(
+      "/users/00000000-0000-0000-0000-000000000000"
+    );
     expect(res.status).toBe(404);
   });
 });

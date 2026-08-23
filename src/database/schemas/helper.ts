@@ -1,4 +1,4 @@
-import "dotenv/config"
+import "dotenv/config";
 import * as t from "drizzle-orm/pg-core";
 
 // Table Timestamps

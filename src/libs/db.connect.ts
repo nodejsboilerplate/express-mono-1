@@ -1,11 +1,11 @@
 import { baseConfig } from "@/config";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { userRelations } from "@/database/relations";
-import {  NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 const relations = {
-  ...userRelations
-}
+  ...userRelations,
+};
 
 export const pgDb = drizzle(baseConfig.DATABASE_URL, {
   relations,
@@ -14,8 +14,6 @@ export const pgDb = drizzle(baseConfig.DATABASE_URL, {
 });
 
 type RelationsType = typeof relations;
-type Transaction = Parameters<
-  Parameters<typeof pgDb.transaction>[0]
->[0];
+type Transaction = Parameters<Parameters<typeof pgDb.transaction>[0]>[0];
 
 export type PgDbClientType = NodePgDatabase<RelationsType> | Transaction;

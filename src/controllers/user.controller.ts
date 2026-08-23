@@ -13,7 +13,12 @@ import type {
   UserPhonesInsertType,
   UserProfileInsertType,
 } from "@/database/type";
-import { generateVerificationCode, getVerifyExpiry, isZodError, validationError } from "@/utils";
+import {
+  generateVerificationCode,
+  getVerifyExpiry,
+  isZodError,
+  validationError,
+} from "@/utils";
 
 interface UserControllerType {
   createUser(req: Request, res: Response): Promise<Response>;
@@ -34,7 +39,7 @@ interface UserControllerType {
   deleteProfile(req: Request, res: Response): Promise<Response>;
   deleteAddress(req: Request, res: Response): Promise<Response>;
   deleteContact(req: Request, res: Response): Promise<Response>;
-    deletePhone(req: Request, res: Response): Promise<Response>;
+  deletePhone(req: Request, res: Response): Promise<Response>;
   deleteEmail(req: Request, res: Response): Promise<Response>;
 }
 
@@ -73,15 +78,18 @@ export class UserController implements UserControllerType {
         throw new ApiError(
           500,
           SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.USER_CREATION_FAILED
+            SystemCustomErrorCode.USER_CREATION_FAILED
           ]!
         );
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
-
-      await this.userService.updateUserCore(userId, { password: hashedPassword, verify_code, verify_expiry }, tx)
+      await this.userService.updateUserCore(
+        userId,
+        { password: hashedPassword, verify_code, verify_expiry },
+        tx
+      );
 
       const profileId = await this.userService.createUserProfile(
         userId,
@@ -102,7 +110,7 @@ export class UserController implements UserControllerType {
         throw new ApiError(
           500,
           SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.PROFILE_CREATION_FAILED
+            SystemCustomErrorCode.PROFILE_CREATION_FAILED
           ]!
         );
       }
@@ -110,13 +118,15 @@ export class UserController implements UserControllerType {
       return { userId, profileId };
     });
 
-    return res.status(201).json(
-      new ApiResponse(
-        201,
-        "Account created successfully. Please verify your account using the code sent to you.",
-        { id: result.userId, profile_id: result.profileId }
-      )
-    );
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
+          "Account created successfully. Please verify your account using the code sent to you.",
+          { id: result.userId, profile_id: result.profileId }
+        )
+      );
   }
 
   async createAddress(req: Request, res: Response): Promise<Response> {
@@ -133,18 +143,23 @@ export class UserController implements UserControllerType {
       throw new ApiError(
         500,
         SystemCustomErrorMsgByCode[
-        SystemCustomErrorCode.ADDRESS_CREATION_FAILED
+          SystemCustomErrorCode.ADDRESS_CREATION_FAILED
         ]!
       );
     }
 
     return res
       .status(201)
-      .json(new ApiResponse(201, "Address added successfully.", { id: result }));
+      .json(
+        new ApiResponse(201, "Address added successfully.", { id: result })
+      );
   }
 
   async createPhone(req: Request, res: Response): Promise<Response> {
-    const { contactId, userId } = req.params as { contactId: string, userId: string };
+    const { contactId, userId } = req.params as {
+      contactId: string;
+      userId: string;
+    };
 
     const result = await this.userService.createUserPhone(
       userId,
@@ -157,19 +172,22 @@ export class UserController implements UserControllerType {
     if (!result) {
       throw new ApiError(
         500,
-        SystemCustomErrorMsgByCode[
-        SystemCustomErrorCode.PHONE_CREATION_FAILED
-        ]!
+        SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_CREATION_FAILED]!
       );
     }
 
     return res
       .status(201)
-      .json(new ApiResponse(201, "Phone number added successfully.", { id: result }));
+      .json(
+        new ApiResponse(201, "Phone number added successfully.", { id: result })
+      );
   }
 
   async createEmail(req: Request, res: Response): Promise<Response> {
-    const { contactId, userId } = req.params as { contactId: string, userId: string };
+    const { contactId, userId } = req.params as {
+      contactId: string;
+      userId: string;
+    };
 
     const result = await this.userService.createUserEmail(
       userId,
@@ -182,9 +200,7 @@ export class UserController implements UserControllerType {
     if (!result) {
       throw new ApiError(
         500,
-        SystemCustomErrorMsgByCode[
-        SystemCustomErrorCode.EMAIL_CREATION_FAILED
-        ]!
+        SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_CREATION_FAILED]!
       );
     }
 
@@ -229,9 +245,7 @@ export class UserController implements UserControllerType {
     if (user.is_verified) {
       throw new ApiError(
         400,
-        SystemCustomErrorMsgByCode[
-        SystemCustomErrorCode.USER_ALREADY_VERIFIED
-        ]!
+        SystemCustomErrorMsgByCode[SystemCustomErrorCode.USER_ALREADY_VERIFIED]!
       );
     }
 
@@ -239,7 +253,7 @@ export class UserController implements UserControllerType {
       throw new ApiError(
         400,
         SystemCustomErrorMsgByCode[
-        SystemCustomErrorCode.INVALID_VERIFICATION_CODE
+          SystemCustomErrorCode.INVALID_VERIFICATION_CODE
         ]!
       );
     }
@@ -248,7 +262,7 @@ export class UserController implements UserControllerType {
       throw new ApiError(
         400,
         SystemCustomErrorMsgByCode[
-        SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED
+          SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED
         ]!
       );
     }
@@ -262,23 +276,19 @@ export class UserController implements UserControllerType {
     if (!verifiedUser?.id) {
       throw new ApiError(
         500,
-        SystemCustomErrorMsgByCode[
-        SystemCustomErrorCode.USER_UPDATE_FAILED
-        ]!
+        SystemCustomErrorMsgByCode[SystemCustomErrorCode.USER_UPDATE_FAILED]!
       );
     }
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, "Account verified successfully.", {
-          id: verifiedUser.id,
-        })
-      );
+    return res.status(200).json(
+      new ApiResponse(200, "Account verified successfully.", {
+        id: verifiedUser.id,
+      })
+    );
   }
 
   async verifyContactPhone(req: Request, res: Response): Promise<Response> {
-    const { id, userId } = req.params as { id: string, userId: string };
+    const { id, userId } = req.params as { id: string; userId: string };
     const { code } = req.body ?? {};
 
     if (!code) {
@@ -305,17 +315,15 @@ export class UserController implements UserControllerType {
       );
     }
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, "Phone number verified successfully.", {
-          id: result,
-        })
-      );
+    return res.status(200).json(
+      new ApiResponse(200, "Phone number verified successfully.", {
+        id: result,
+      })
+    );
   }
 
   async verifyContactEmail(req: Request, res: Response): Promise<Response> {
-    const { id, userId } = req.params as { id: string, userId: string };
+    const { id, userId } = req.params as { id: string; userId: string };
     const { code } = req.body ?? {};
 
     if (!code) {
@@ -377,7 +385,7 @@ export class UserController implements UserControllerType {
   }
 
   async updateAddress(req: Request, res: Response): Promise<Response> {
-    const { id, userId } = req.params as { id: string, userId: string };
+    const { id, userId } = req.params as { id: string; userId: string };
     const result = await this.userService.updateUserAddress(
       userId,
       id,
@@ -442,13 +450,11 @@ export class UserController implements UserControllerType {
       );
     }
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, "Phone number updated successfully.", {
-          id: result,
-        })
-      );
+    return res.status(200).json(
+      new ApiResponse(200, "Phone number updated successfully.", {
+        id: result,
+      })
+    );
   }
 
   async updateEmail(req: Request, res: Response): Promise<Response> {
@@ -505,7 +511,7 @@ export class UserController implements UserControllerType {
   }
 
   async deleteAddress(req: Request, res: Response): Promise<Response> {
-    const { id, userId } = req.params as { id: string, userId: string };
+    const { id, userId } = req.params as { id: string; userId: string };
 
     const result = await this.userService.deleteUserAddress(userId, id, pgDb);
 
@@ -525,8 +531,7 @@ export class UserController implements UserControllerType {
   }
 
   async deleteContact(req: Request, res: Response): Promise<Response> {
-    const { id, userId } = req.params as { id: string, userId: string };
-
+    const { id, userId } = req.params as { id: string; userId: string };
 
     const result = await this.userService.deleteUserContact(userId, id, pgDb);
 
@@ -558,13 +563,11 @@ export class UserController implements UserControllerType {
       );
     }
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, "Phone number deleted successfully.", {
-          id: result,
-        })
-      );
+    return res.status(200).json(
+      new ApiResponse(200, "Phone number deleted successfully.", {
+        id: result,
+      })
+    );
   }
 
   async deleteEmail(req: Request, res: Response): Promise<Response> {

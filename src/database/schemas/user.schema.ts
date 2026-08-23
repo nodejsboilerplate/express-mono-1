@@ -1,6 +1,6 @@
 import { pgTable, pgEnum } from "drizzle-orm/pg-core";
 import * as t from "drizzle-orm/pg-core";
-import {  table_timestamps } from "./helper";
+import { table_timestamps } from "./helper";
 import { v4 as uuidv4 } from "uuid";
 import { USER_GENDERS, USER_ROLES } from "@/constants";
 import type { SocialLink } from "@/types";
@@ -32,7 +32,7 @@ export const users = pgTable("users", {
 // ---------------------------------------------------------
 // User Profiles
 // ---------------------------------------------------------
-export const userProfiles =  pgTable("user_profiles", {
+export const userProfiles = pgTable("user_profiles", {
   id: t
     .uuid()
     .primaryKey()
@@ -55,7 +55,7 @@ export const userProfiles =  pgTable("user_profiles", {
 // ---------------------------------------------------------
 // User contacts
 // ---------------------------------------------------------
-export const userContacts =  pgTable("user_contacts", {
+export const userContacts = pgTable("user_contacts", {
   id: t
     .uuid()
     .primaryKey()
@@ -72,7 +72,7 @@ export const userContacts =  pgTable("user_contacts", {
 // ---------------------------------------------------------
 // User Phones
 // ---------------------------------------------------------
-export const userPhones =  pgTable("user_phones", {
+export const userPhones = pgTable("user_phones", {
   id: t
     .uuid()
     .primaryKey()
@@ -81,7 +81,7 @@ export const userPhones =  pgTable("user_phones", {
     .uuid()
     .notNull()
     .references(() => userContacts.id, { onDelete: "cascade" }),
-      user_id: t
+  user_id: t
     .uuid()
     .notNull()
     .unique()
@@ -96,7 +96,7 @@ export const userPhones =  pgTable("user_phones", {
 // ---------------------------------------------------------
 // User emails
 // ---------------------------------------------------------
-export const userEmails =  pgTable("user_emails", {
+export const userEmails = pgTable("user_emails", {
   id: t
     .uuid()
     .primaryKey()
@@ -105,7 +105,7 @@ export const userEmails =  pgTable("user_emails", {
     .uuid()
     .notNull()
     .references(() => userContacts.id, { onDelete: "cascade" }),
-      user_id: t
+  user_id: t
     .uuid()
     .notNull()
     .unique()
@@ -119,7 +119,7 @@ export const userEmails =  pgTable("user_emails", {
 // ---------------------------------------------------------
 // User Address
 // ---------------------------------------------------------
-export const userAddresses =  pgTable("user_addresses", {
+export const userAddresses = pgTable("user_addresses", {
   id: t
     .uuid()
     .primaryKey()
