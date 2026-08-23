@@ -19,10 +19,12 @@ import {
   isZodError,
   validationError,
 } from "@/utils";
+import type { CreateUserContactInput } from "@/zod";
 
 interface UserControllerType {
   createUser(req: Request, res: Response): Promise<Response>;
   createAddress(req: Request, res: Response): Promise<Response>;
+  createContact(req: Request, res: Response): Promise<Response>;
   createPhone(req: Request, res: Response): Promise<Response>;
   createEmail(req: Request, res: Response): Promise<Response>;
 
@@ -155,6 +157,30 @@ export class UserController implements UserControllerType {
       );
   }
 
+    async createContact(req: Request, res: Response): Promise<Response> {
+    const { userId } = req.params as { userId: string };
+
+    const result = await this.userService.createUserContact(
+      userId,
+      req.body,
+      pgDb
+    );
+
+    if (isZodError(result)) throw validationError(result);
+    if (!result) {
+      throw new ApiError(
+        500,
+        SystemCustomErrorMsgByCode[
+          SystemCustomErrorCode.CONTACT_CREATION_FAILED
+        ]!
+      );
+    }
+
+    return res
+      .status(201)
+      .json(new ApiResponse(201, "Contact added successfully.", { id: result }));
+  }
+
   async createPhone(req: Request, res: Response): Promise<Response> {
     const { contactId, userId } = req.params as {
       contactId: string;
@@ -214,7 +240,7 @@ export class UserController implements UserControllerType {
   // ---------------------------------------------------------
 
   async verifyUser(req: Request, res: Response): Promise<Response> {
-    const { id, code } = req.body ?? {};
+    const { id, code } = req.body ;
 
     if (!id || !code) {
       throw new ApiError(

@@ -1,7 +1,7 @@
 import z4 from "zod";
 import { Socials, USER_GENDERS, USER_ROLES } from "@/constants";
 
-export class UserZValidation {
+export class UserZSchema {
   // ===========================================================
   // Shared: id validator
   // ===========================================================
@@ -13,10 +13,10 @@ export class UserZValidation {
   // ===========================================================
   // Users
   // ===========================================================
-  static user = z4.object({
+  static createUser = z4.object({
     email: z4
       .email({ error: "Invalid email" })
-      .min(1, { error: "Email is required" })
+     
       .max(255, { error: "Email must be at most 255 characters" }),
     username: z4
       .string({ error: "Username is required" })
@@ -37,12 +37,12 @@ export class UserZValidation {
   // ===========================================================
   // User Profiles
   // ===========================================================
-  static profile = z4.object({
+  static createProfile = z4.object({
+    user_id: this.id,
     first_name: z4
       .string({ error: "First name must be a string" })
       .trim()
-      .max(100, { error: "First name must be at most 100 characters" })
-      .nullish(),
+      .max(100, { error: "First name must be at most 100 characters" }),
     last_name: z4
       .string({ error: "Last name must be a string" })
       .trim()
@@ -67,16 +67,20 @@ export class UserZValidation {
     url: z4.url({ error: "Invalid social link URL" }),
   });
 
-  static contact = z4.object({
+  static createContact = z4.object({
+    id: this.id,
+        user_id: this.id,
     socials: z4
       .array(this.socialLink, { error: "Socials must be an array" })
-      .default([]),
+      .default([]).optional(),
   });
 
   // ===========================================================
   // User Phone
   // ===========================================================
-  static phone = z4.object({
+  static createPhone = z4.object({
+    contact_id: this.id,
+    user_id: this.id,
     is_verified: z4
       .boolean({ error: "is_verified must be a boolean" })
       .optional(),
@@ -98,7 +102,9 @@ export class UserZValidation {
   // ===========================================================
   // User Email
   // ===========================================================
-  static email = z4.object({
+  static createEmail = z4.object({
+    contact_id: this.id,
+    user_id: this.id,
     is_verified: z4
       .boolean({ error: "is_verified must be a boolean" })
       .optional(),
@@ -113,42 +119,46 @@ export class UserZValidation {
   // ===========================================================
   // User Address
   // ===========================================================
-  static address = z4.object({
+  static createAddress = z4.object({
+    user_id: this.id,
     addr_name: z4
-      .string({ error: "Address name must be a string" })
+      .string({ error: "Address name must be a text" })
+  
       .trim()
       .max(100, { error: "Address name must be at most 100 characters" }),
     addr_line_1: z4
-      .string({ error: "Address line 1 is required" })
+      .string({ error: "Address line 1 details must be a text" })
+  
       .trim()
       .max(255, { error: "Address line 1 must be at most 255 characters" }),
     addr_line_2: z4
-      .string({ error: "Address line 2 must be a string" })
+      .string({ error: "Address line 2 must be a text" })
       .trim()
       .max(255, { error: "Address line 2 must be at most 255 characters" })
       .optional(),
     city: z4
-      .string({ error: "City is required" })
+      .string({ error: "City must be a text" })
       .trim()
-      .min(1, { error: "City is required" })
+
       .max(100, { error: "City must be at most 100 characters" }),
     state: z4
-      .string({ error: "State must be a string" })
+      .string({ error: "State must be a text" })
       .trim()
       .max(100, { error: "State must be at most 100 characters" })
       .optional(),
     post_code: z4
-      .string({ error: "Post code must be a string" })
+      .string({ error: "Post code must be a text" })
       .trim()
       .max(20, { error: "Post code must be at most 20 characters" })
       .optional(),
     country: z4
-      .string({ error: "Country is required" })
+      .string({ error: "Country must be a text" })
       .trim()
-      .min(1, { error: "Country is required" })
+
       .max(100, { error: "Country must be at most 100 characters" }),
     country_iso: z4
-      .string({ error: "Country ISO code is required" })
+      .string({ error: "Country ISO code must be a text" })
+    
       .trim()
       .length(2, { error: "country_iso must be a 2-letter ISO code" })
       .toUpperCase(),
@@ -157,52 +167,90 @@ export class UserZValidation {
       .optional(),
   });
 
+  static verifyUserByCodeInput = z4.object({
+    id: this.id,
+    code: z4
+      .string({ error: "Code is required" })
+      .trim()
+      .regex(/^\d{6}$/, { error: "Code must be a 6-digit number" }),
+  });
+
   // ┌─────────────────────────────────────────────────────┐
   // │ Update Validations                                  │
   // │ All fields optional (partial update) + id required  │
   // └─────────────────────────────────────────────────────┘
 
-  static updateUser = this.user.partial().extend({
+  static updateUser = this.createUser.partial().extend({
     id: this.id,
+    is_verified: z4
+      .boolean({ error: "is_verified must be a boolean" })
+      .optional(),
+    verify_code: z4
+      .string({ error: "verify_code must be a string" })
+      .max(10, { error: "verify_code must be at most 10 characters" })
+      .nullish(),
+    verify_expiry: z4.coerce
+      .date({ error: "Invalid verify_expiry" })
+      .nullish(),
   });
 
-  static updateProfile = this.profile.partial().extend({
+  static updateProfile = this.createProfile.partial().extend({
     id: this.id,
+    user_id: this.createProfile.shape.user_id
   });
 
-  static updateContact = this.contact.partial().extend({
-    id: this.id,
+  static updateContact = this.createContact.partial().extend({
+    user_id: this.createContact.shape.user_id,
   });
 
-  static updatePhone = this.phone.partial().extend({
+  static updatePhone = this.createPhone.partial().extend({
     id: this.id,
+    user_id: this.createPhone.shape.user_id
   });
 
-  static updateEmail = this.email.partial().extend({
+  static updateEmail = this.createEmail.partial().extend({
     id: this.id,
+        user_id: this.createEmail.shape.user_id
   });
 
-  static updateAddress = this.address.partial().extend({
+  static updateAddress = this.createAddress.partial().extend({
     id: this.id,
+     user_id: this.createAddress.shape.user_id
   });
+
+  static deleteByUserWithContextId = z4.object({
+    id: this.id,
+    user_id: this.id
+  })
 }
 
+export type IdInputType = z4.infer<typeof UserZSchema.id>
 // ---------------------------------------------------------
 // Create types
 // ---------------------------------------------------------
-export type CreateUserCoreInput = z4.infer<typeof UserZValidation.user>;
-export type CreateUserProfileInput = z4.infer<typeof UserZValidation.profile>;
-export type CreateUserContactInput = z4.infer<typeof UserZValidation.contact>;
-export type CreateUserPhoneInput = z4.infer<typeof UserZValidation.phone>;
-export type CreateUserEmailInput = z4.infer<typeof UserZValidation.email>;
-export type CreateUserAddressInput = z4.infer<typeof UserZValidation.address>;
+export type CreateUserCoreInputType = z4.infer<typeof UserZSchema.createUser>;
+export type CreateUserProfileInputType = z4.infer<typeof UserZSchema.createProfile>;
+export type CreateUserContactInputType = z4.infer<typeof UserZSchema.createContact>;
+export type CreateUserPhoneInputType = z4.infer<typeof UserZSchema.createPhone>;
+export type CreateUserEmailInputType = z4.infer<typeof UserZSchema.createEmail>;
+export type CreateUserAddressInputType = z4.infer<typeof UserZSchema.createAddress>;
+
+// ---------------------------------------------------------
+// Verification types
+// ---------------------------------------------------------
+export type VerifyUserByCodeInputType = z4.infer<typeof UserZSchema.verifyUserByCodeInput>
 
 // ---------------------------------------------------------
 // Update types
 // ---------------------------------------------------------
-export type UpdateUserInput = z4.infer<typeof UserZValidation.updateUser>;
-export type UpdateProfileInput = z4.infer<typeof UserZValidation.updateProfile>;
-export type UpdateContactInput = z4.infer<typeof UserZValidation.updateContact>;
-export type UpdatePhoneInput = z4.infer<typeof UserZValidation.updatePhone>;
-export type UpdateEmailInput = z4.infer<typeof UserZValidation.updateEmail>;
-export type UpdateAddressInput = z4.infer<typeof UserZValidation.updateAddress>;
+export type UpdateUserInputType = z4.infer<typeof UserZSchema.updateUser>;
+export type UpdateProfileInputType = z4.infer<typeof UserZSchema.updateProfile>;
+export type UpdateContactInputType = z4.infer<typeof UserZSchema.updateContact>;
+export type UpdatePhoneInputType = z4.infer<typeof UserZSchema.updatePhone>;
+export type UpdateEmailInputType = z4.infer<typeof UserZSchema.updateEmail>;
+export type UpdateAddressInputType = z4.infer<typeof UserZSchema.updateAddress>;
+
+// ---------------------------------------------------------
+// Delete types
+// ---------------------------------------------------------
+export type DeleteByUserWithContextIdInputType = z4.infer<typeof UserZSchema.deleteByUserWithContextId>

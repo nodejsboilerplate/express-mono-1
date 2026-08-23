@@ -6,25 +6,9 @@ import {
   userProfiles,
   users,
 } from "@/database";
-import type {
-  UserAddressInsertType,
-  UserContactInsertType,
-  UserEmailsInsertType,
-  UserInsertType,
-  UserPhonesInsertType,
-  UserProfileInsertType,
-} from "@/database/type";
 import type { PgDbClientType } from "@/libs/db.connect";
-import { validateWithZod } from "@/utils";
-import {
-  UserZValidation,
-  type CreateUserAddressInput,
-  type CreateUserContactInput,
-  type CreateUserCoreInput,
-  type CreateUserEmailInput,
-  type CreateUserPhoneInput,
-  type CreateUserProfileInput,
-} from "@/zod";
+import type { CreateUserAddressInputType, CreateUserContactInputType, CreateUserCoreInputType, CreateUserEmailInputType, CreateUserPhoneInputType, CreateUserProfileInputType, DeleteByUserWithContextIdInputType, IdInputType, UpdateAddressInputType, UpdateContactInputType, UpdateEmailInputType, UpdatePhoneInputType, UpdateProfileInputType, UpdateUserInputType } from "@/zod";
+
 import { and, eq } from "drizzle-orm";
 import type z from "zod";
 
@@ -33,98 +17,90 @@ interface UserServiceType {
   // Create
   // =========================================================
   createUserCore(
-    payload: CreateUserCoreInput,
+    payload: CreateUserCoreInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
   createUserProfile(
-    userId: string,
-    payload: CreateUserProfileInput,
+
+    payload: CreateUserProfileInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
   createUserContact(
-    userId: string,
-    payload: CreateUserContactInput,
+
+    payload: CreateUserContactInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
   createUserPhone(
-    userId: string,
-    contactId: string,
-    payload: CreateUserPhoneInput,
+
+
+    payload: CreateUserPhoneInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
   createUserEmail(
-    userId: string,
-    contactId: string,
-    payload: CreateUserEmailInput,
+
+    payload: CreateUserEmailInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
   createUserAddress(
-    userId: string,
-    payload: CreateUserAddressInput,
+
+    payload: CreateUserAddressInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
+
+  // TODO: add these methods also
+  // updateUserVerifyStatus(userId: string, code: string): Promise<string >;
+  // updateContactPhoneVerifyStatus(): Promise<string >;
+  // updateContactEmailVerifyStatus(): Promise<string >;
 
   // =========================================================
   // Update
   // =========================================================
   updateUserCore(
-    userId: string,
-    data: Partial<UserInsertType>,
+
+    payload: UpdateUserInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
   updateUserProfile(
-    userId: string,
-    data: Partial<Omit<UserProfileInsertType, "id">>,
+    payload: UpdateProfileInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
   updateUserPhone(
-    userId: string,
-    id: string,
-    data: Partial<Omit<UserPhonesInsertType, "id">>,
+    payload: UpdatePhoneInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
   updateUserEmail(
-    userId: string,
-    id: string,
-    data: Partial<Omit<UserEmailsInsertType, "id">>,
+    payload: UpdateEmailInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
   updateUserAddress(
-    userId: string,
-    id: string,
-    data: Partial<Omit<UserAddressInsertType, "id">>,
+    payload: UpdateAddressInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
   updateUserContact(
-    userId: string,
-    data: Partial<Omit<UserContactInsertType, "id">>,
+    payload: UpdateContactInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
 
   // =========================================================
   // Delete
   // =========================================================
   deleteUserContact(
-    userId: string,
-    id: string,
+    payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
   deleteUserPhone(
-    userId: string,
-    id: string,
+    payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
   deleteUserEmail(
-    userId: string,
-    id: string,
+    payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
+  ): Promise<string >;
   deleteUserAddress(
-    userId: string,
-    id: string,
+    payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError>;
-  deleteUser(id: string, db: PgDbClientType): Promise<string | z.ZodError>;
+  ): Promise<string >;
+  deleteUser(id: string, db: PgDbClientType): Promise<string >;
 }
 
 export class UserService implements UserServiceType {
@@ -132,19 +108,13 @@ export class UserService implements UserServiceType {
   // Create
   // ---------------------------------------------------------
   async createUserCore(
-    payload: CreateUserCoreInput,
+    payload: CreateUserCoreInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const { data, success, error } = validateWithZod(
-      payload,
-      UserZValidation.user
-    );
-
-    if (!success) return error;
+  ): Promise<string > {
 
     const [user] = await db
       .insert(users)
-      .values(data)
+      .values(payload)
       .returning({ id: users.id });
 
     if (!user?.id) return "";
@@ -153,22 +123,15 @@ export class UserService implements UserServiceType {
   }
 
   async createUserAddress(
-    userId: string,
-    payload: CreateUserAddressInput,
-    db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const { data, success, error } = validateWithZod(
-      payload,
-      UserZValidation.address
-    );
 
-    if (!success) {
-      return error;
-    }
+    payload: CreateUserAddressInputType,
+    db: PgDbClientType
+  ): Promise<string > {
+
 
     const [createdUserAddress] = await db
       .insert(userAddresses)
-      .values({ ...data, user_id: userId })
+      .values(payload)
       .returning({ id: userAddresses.id });
 
     if (!createdUserAddress?.id) return "";
@@ -176,21 +139,15 @@ export class UserService implements UserServiceType {
   }
 
   async createUserContact(
-    userId: string,
-    payload: CreateUserContactInput,
+
+    payload: CreateUserContactInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const { data, success, error } = validateWithZod(
-      payload,
-      UserZValidation.contact
-    );
-    if (!success) {
-      return error;
-    }
+  ): Promise<string > {
+    
 
     const [createdUserContact] = await db
       .insert(userContacts)
-      .values({ ...data, user_id: userId })
+      .values(payload)
       .returning({ id: userContacts.id });
 
     if (!createdUserContact?.id) return "";
@@ -198,22 +155,15 @@ export class UserService implements UserServiceType {
   }
 
   async createUserEmail(
-    userId: string,
-    contactId: string,
-    payload: CreateUserEmailInput,
+
+    payload: CreateUserEmailInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const { data, success, error } = validateWithZod(
-      payload,
-      UserZValidation.email
-    );
-    if (!success) {
-      return error;
-    }
+  ): Promise<string > {
+   
 
     const [createdUserEmail] = await db
       .insert(userEmails)
-      .values({ ...data, contact_id: contactId, user_id: userId })
+      .values(payload)
       .returning({ id: userEmails.id });
 
     if (!createdUserEmail?.id) return "";
@@ -222,22 +172,14 @@ export class UserService implements UserServiceType {
   }
 
   async createUserPhone(
-    userId: string,
-    contactId: string,
-    payload: CreateUserPhoneInput,
+
+    payload: CreateUserPhoneInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const { data, success, error } = validateWithZod(
-      payload,
-      UserZValidation.phone
-    );
-    if (!success) {
-      return error;
-    }
+  ): Promise<string > {
 
     const [createdUserPhone] = await db
       .insert(userPhones)
-      .values({ ...data, contact_id: contactId, user_id: userId })
+      .values(payload)
       .returning({ id: userPhones.id });
     if (!createdUserPhone?.id) return "";
 
@@ -245,25 +187,17 @@ export class UserService implements UserServiceType {
   }
 
   async createUserProfile(
-    userId: string,
-    payload: CreateUserProfileInput,
+    
+    payload: CreateUserProfileInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const { data, success, error } = validateWithZod(
-      payload,
-      UserZValidation.profile
-    );
-    if (!success) {
-      return error;
-    }
+  ): Promise<string > {
 
     const [createdUserProfie] = await db
       .insert(userProfiles)
       .values({
-        ...data,
-        user_id: userId,
-        date_of_birth: data.date_of_birth
-          ? data.date_of_birth.toISOString().split("T")[0]
+        ...payload,
+        date_of_birth: payload.date_of_birth
+          ? payload.date_of_birth.toISOString().split("T")[0]
           : undefined,
       })
       .returning({ id: userProfiles.id });
@@ -276,45 +210,29 @@ export class UserService implements UserServiceType {
   // Update
   // ---------------------------------------------------------
   async updateUserCore(
-    userId: string,
-    data: Partial<UserInsertType>,
+   
+    payload: UpdateUserInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const {
-      data: parsed,
-      success,
-      error,
-    } = validateWithZod({ ...data, id: userId }, UserZValidation.updateUser);
+  ): Promise<string > {
 
-    if (!success) {
-      return error;
-    }
 
     const [updatedUser] = await db
       .update(users)
-      .set(parsed)
-      .where(eq(users.id, userId))
+      .set(payload)
+      .where(eq(users.id, payload.id))
       .returning({ id: users.id });
 
     if (!updatedUser?.id) return "";
     return updatedUser.id;
   }
+
   async updateUserProfile(
-    userId: string,
-    data: Partial<UserProfileInsertType>,
+    
+    payload: UpdateProfileInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const {
-      data: parsed,
-      success,
-      error,
-    } = validateWithZod(data, UserZValidation.updateProfile);
-
-    if (!success) {
-      return error;
-    }
-
-    const { date_of_birth, ...updateData } = parsed;
+  ): Promise<string > {
+   
+    const { date_of_birth, ...updateData } = payload;
 
     const [updatedProfile] = await db
       .update(userProfiles)
@@ -324,7 +242,7 @@ export class UserService implements UserServiceType {
           ? date_of_birth.toISOString().split("T")[0]
           : undefined,
       })
-      .where(eq(userProfiles.user_id, userId))
+      .where(eq(userProfiles.user_id, payload.user_id))
       .returning({ id: userProfiles.id });
 
     if (!updatedProfile?.id) return "";
@@ -332,25 +250,15 @@ export class UserService implements UserServiceType {
   }
 
   async updateUserPhone(
-    userId: string,
-    id: string,
-    data: Partial<Omit<UserPhonesInsertType, "id">>,
+   
+    payload: UpdatePhoneInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const {
-      data: parsed,
-      success,
-      error,
-    } = validateWithZod({ ...data, id }, UserZValidation.updatePhone);
-
-    if (!success) {
-      return error;
-    }
+  ): Promise<string > {
 
     const [updatedPhone] = await db
       .update(userPhones)
-      .set(parsed)
-      .where(and(eq(userPhones.user_id, userId), eq(userPhones.id, parsed.id)))
+      .set(payload)
+      .where(and(eq(userPhones.user_id, payload.user_id), eq(userPhones.id, payload.id)))
       .returning({ id: userPhones.id });
 
     if (!updatedPhone?.id) return "";
@@ -358,25 +266,16 @@ export class UserService implements UserServiceType {
   }
 
   async updateUserEmail(
-    userId: string,
-    id: string,
-    data: Partial<Omit<UserEmailsInsertType, "id">>,
+  
+    payload: UpdateEmailInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const {
-      data: parsed,
-      success,
-      error,
-    } = validateWithZod({ ...data, id }, UserZValidation.updateEmail);
+  ): Promise<string > {
 
-    if (!success) {
-      return error;
-    }
 
     const [updatedEmail] = await db
       .update(userEmails)
-      .set(parsed)
-      .where(and(eq(userEmails.user_id, userId), eq(userEmails.id, parsed.id)))
+      .set(payload)
+      .where(and(eq(userEmails.user_id, payload.user_id), eq(userEmails.id, payload.id)))
       .returning({ id: userEmails.id });
 
     if (!updatedEmail?.id) return "";
@@ -384,26 +283,17 @@ export class UserService implements UserServiceType {
   }
 
   async updateUserAddress(
-    userId: string,
-    id: string,
-    data: Partial<Omit<UserAddressInsertType, "id">>,
-    db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const {
-      data: parsed,
-      success,
-      error,
-    } = validateWithZod({ ...data, id }, UserZValidation.updateAddress);
 
-    if (!success) {
-      return error;
-    }
+    payload: UpdateAddressInputType,
+    db: PgDbClientType
+  ): Promise<string > {
+
 
     const [updatedAddress] = await db
       .update(userAddresses)
-      .set(parsed)
+      .set(payload)
       .where(
-        and(eq(userAddresses.user_id, userId), eq(userAddresses.id, parsed.id))
+        and(eq(userAddresses.user_id, payload.user_id), eq(userAddresses.id, payload.id))
       )
       .returning({ id: userAddresses.id });
 
@@ -412,24 +302,15 @@ export class UserService implements UserServiceType {
   }
 
   async updateUserContact(
-    userId: string,
-    data: Partial<Omit<UserContactInsertType, "id">>,
+    payload: UpdateContactInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const {
-      data: parsed,
-      success,
-      error,
-    } = validateWithZod(data, UserZValidation.updateContact);
+  ): Promise<string> {
 
-    if (!success) {
-      return error;
-    }
 
     const [updatedContact] = await db
       .update(userContacts)
-      .set(parsed)
-      .where(eq(userContacts.user_id, userId))
+      .set(payload)
+      .where(eq(userContacts.user_id, payload.user_id))
       .returning({ id: userContacts.id });
 
     if (!updatedContact?.id) return "";
@@ -441,24 +322,15 @@ export class UserService implements UserServiceType {
   // ---------------------------------------------------------
 
   async deleteUserContact(
-    userId: string,
-    id: string,
+    payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const {
-      data: parsedId,
-      success,
-      error,
-    } = validateWithZod(id, UserZValidation.id);
+  ): Promise<string> {
 
-    if (!success) {
-      return error;
-    }
 
     const [deletedContact] = await db
       .delete(userContacts)
       .where(
-        and(eq(userContacts.id, parsedId), eq(userContacts.user_id, userId))
+        and(eq(userContacts.id, payload.id), eq(userContacts.user_id, payload.user_id))
       )
       .returning({ id: userContacts.id });
 
@@ -467,23 +339,14 @@ export class UserService implements UserServiceType {
   }
 
   async deleteUserPhone(
-    userId: string,
-    id: string,
+     payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const {
-      data: parsedId,
-      success,
-      error,
-    } = validateWithZod(id, UserZValidation.id);
+  ): Promise<string> {
 
-    if (!success) {
-      return error;
-    }
 
     const [deletedPhone] = await db
       .delete(userPhones)
-      .where(and(eq(userPhones.id, parsedId), eq(userPhones.user_id, userId)))
+      .where(and(eq(userPhones.id, payload.id), eq(userPhones.user_id, payload.user_id)))
       .returning({ id: userPhones.id });
 
     if (!deletedPhone?.id) return "";
@@ -491,23 +354,13 @@ export class UserService implements UserServiceType {
   }
 
   async deleteUserEmail(
-    userId: string,
-    id: string,
+        payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const {
-      data: parsedId,
-      success,
-      error,
-    } = validateWithZod(id, UserZValidation.id);
-
-    if (!success) {
-      return error;
-    }
+  ): Promise<string> {
 
     const [deletedEmail] = await db
       .delete(userEmails)
-      .where(and(eq(userEmails.id, parsedId), eq(userEmails.user_id, userId)))
+      .where(and(eq(userEmails.id, payload.id), eq(userEmails.user_id, payload.user_id)))
       .returning({ id: userEmails.id });
 
     if (!deletedEmail?.id) return "";
@@ -515,24 +368,15 @@ export class UserService implements UserServiceType {
   }
 
   async deleteUserAddress(
-    userId: string,
-    id: string,
+        payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const {
-      data: parsedId,
-      success,
-      error,
-    } = validateWithZod(id, UserZValidation.id);
+  ): Promise<string> {
 
-    if (!success) {
-      return error;
-    }
 
     const [deletedAddress] = await db
       .delete(userAddresses)
       .where(
-        and(eq(userAddresses.id, parsedId), eq(userAddresses.user_id, userId))
+        and(eq(userAddresses.id, payload.id), eq(userAddresses.user_id, payload.user_id))
       )
       .returning({ id: userAddresses.id });
 
@@ -541,22 +385,13 @@ export class UserService implements UserServiceType {
   }
 
   async deleteUser(
-    id: string,
+    payload: IdInputType,
     db: PgDbClientType
-  ): Promise<string | z.ZodError> {
-    const {
-      data: parsedId,
-      success,
-      error,
-    } = validateWithZod(id, UserZValidation.id);
-
-    if (!success) {
-      return error;
-    }
+  ): Promise<string> {
 
     const [deletedUser] = await db
       .delete(users)
-      .where(eq(users.id, parsedId))
+      .where(eq(users.id, payload))
       .returning({ id: users.id });
 
     if (!deletedUser?.id) return "";

@@ -42,7 +42,7 @@ export const userProfiles = pgTable("user_profiles", {
     .notNull()
     .unique()
     .references(() => users.id, { onDelete: "cascade" }),
-  first_name: t.varchar({ length: 100 }),
+  first_name: t.varchar({ length: 100 }).notNull(),
   last_name: t.varchar({ length: 100 }),
   avatar: t.text(),
   cover_img: t.text(),

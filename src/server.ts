@@ -10,7 +10,6 @@ import { rateLimit } from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis";
 import requestIp from "request-ip";
 import { ApiResponse, redisClient, connectRedis } from "./libs";
-import { baseConfig } from "./config";
 import { errorHandlerMiddleware, requestLogger } from "./middlewares";
 
 const app: Express = express();
@@ -67,7 +66,4 @@ app.get("/health", async (req, res) => {
 /* -------------------------------------------------------------------------- */
 app.use(errorHandlerMiddleware);
 
-app.listen(baseConfig.PORT, async () => {
-  console.log(await redisClient.ping());
-  console.log(`Server is listening on port: ${baseConfig.PORT}`);
-});
+export {app}
