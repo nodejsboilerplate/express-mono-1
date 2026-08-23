@@ -8,18 +8,13 @@ import {
 } from "@/database";
 import type {
     UserAddressInsertType,
-    UserAddressSelectType,
     UserContactInsertType,
     UserEmailsInsertType,
-    UserEmailsSelectType,
     UserInsertType,
     UserPhonesInsertType,
-    UserPhonesSelectType,
     UserProfileInsertType,
-    UserSelectType,
 } from "@/database/type";
-import { pgDb } from "@/libs/db.connect";
-import type { PgDbClient } from "@/types";
+import type { PgDbClientType } from "@/libs/db.connect";
 import { validateWithZod } from "@/utils";
 import {
     UserZValidation,
@@ -39,34 +34,34 @@ interface UserServiceType {
     // =========================================================
     createUserCore(
         payload: CreateUserCoreInput,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     createUserProfile(
         userId: string,
         payload: CreateUserProfileInput,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     createUserContact(
         userId: string,
         payload: CreateUserContactInput,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     createUserPhone(
         userId: string,
         contactId: string,
         payload: CreateUserPhoneInput,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     createUserEmail(
         userId: string,
         contactId: string,
         payload: CreateUserEmailInput,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     createUserAddress(
         userId: string,
         payload: CreateUserAddressInput,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
 
     // =========================================================
@@ -75,35 +70,35 @@ interface UserServiceType {
     updateUserCore(
         userId: string,
         data: Partial<UserInsertType>,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     updateUserProfile(
         userId: string,
-        data: Partial<Omit<UserProfileInsertType, "id" >>,
-        db: PgDbClient
+        data: Partial<Omit<UserProfileInsertType, "id">>,
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     updateUserPhone(
         userId: string,
-           id: string,
+        id: string,
         data: Partial<Omit<UserPhonesInsertType, "id">>,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     updateUserEmail(
         userId: string,
-           id: string,
-        data:  Partial<Omit<UserEmailsInsertType, "id">>,
-        db: PgDbClient
+        id: string,
+        data: Partial<Omit<UserEmailsInsertType, "id">>,
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     updateUserAddress(
         userId: string,
-           id: string,
-        data:  Partial<Omit<UserAddressInsertType, "id">>,
-        db: PgDbClient
+        id: string,
+        data: Partial<Omit<UserAddressInsertType, "id">>,
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     updateUserContact(
         userId: string,
         data: Partial<Omit<UserContactInsertType, "id">>,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
 
     // =========================================================
@@ -112,26 +107,26 @@ interface UserServiceType {
     deleteUserContact(
         userId: string,
         id: string,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     deleteUserPhone(
         userId: string,
         id: string,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     deleteUserEmail(
         userId: string,
         id: string,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     deleteUserAddress(
         userId: string,
         id: string,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
     deleteUser(
         id: string,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError>;
 }
 
@@ -141,7 +136,7 @@ export class UserService implements UserServiceType {
     // ---------------------------------------------------------
     async createUserCore(
         payload: CreateUserCoreInput,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const { data, success, error } = validateWithZod(
             payload,
@@ -163,7 +158,7 @@ export class UserService implements UserServiceType {
     async createUserAddress(
         userId: string,
         payload: CreateUserAddressInput,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const { data, success, error } = validateWithZod(
             payload,
@@ -186,7 +181,7 @@ export class UserService implements UserServiceType {
     async createUserContact(
         userId: string,
         payload: CreateUserContactInput,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const { data, success, error } = validateWithZod(
             payload,
@@ -209,7 +204,7 @@ export class UserService implements UserServiceType {
         userId: string,
         contactId: string,
         payload: CreateUserEmailInput,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const { data, success, error } = validateWithZod(
             payload,
@@ -233,7 +228,7 @@ export class UserService implements UserServiceType {
         userId: string,
         contactId: string,
         payload: CreateUserPhoneInput,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const { data, success, error } = validateWithZod(
             payload,
@@ -255,7 +250,7 @@ export class UserService implements UserServiceType {
     async createUserProfile(
         userId: string,
         payload: CreateUserProfileInput,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const { data, success, error } = validateWithZod(
             payload,
@@ -286,7 +281,7 @@ export class UserService implements UserServiceType {
     async updateUserCore(
         userId: string,
         data: Partial<UserInsertType>,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const {
             data: parsed,
@@ -298,7 +293,7 @@ export class UserService implements UserServiceType {
             return error;
         }
 
-       
+
 
         const [updatedUser] = await db
             .update(users)
@@ -312,7 +307,7 @@ export class UserService implements UserServiceType {
     async updateUserProfile(
         userId: string,
         data: Partial<UserProfileInsertType>,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const {
             data: parsed,
@@ -345,13 +340,13 @@ export class UserService implements UserServiceType {
         userId: string,
         id: string,
         data: Partial<Omit<UserPhonesInsertType, "id">>,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const {
             data: parsed,
             success,
             error,
-        } = validateWithZod({...data, id}, UserZValidation.updatePhone);
+        } = validateWithZod({ ...data, id }, UserZValidation.updatePhone);
 
         if (!success) {
             return error;
@@ -370,15 +365,15 @@ export class UserService implements UserServiceType {
 
     async updateUserEmail(
         userId: string,
-           id: string,
-        data:  Partial<Omit<UserEmailsInsertType, "id">>,
-        db: PgDbClient
+        id: string,
+        data: Partial<Omit<UserEmailsInsertType, "id">>,
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const {
             data: parsed,
             success,
             error,
-        } = validateWithZod({...data, id}, UserZValidation.updateEmail);
+        } = validateWithZod({ ...data, id }, UserZValidation.updateEmail);
 
         if (!success) {
             return error;
@@ -389,7 +384,7 @@ export class UserService implements UserServiceType {
         const [updatedEmail] = await db
             .update(userEmails)
             .set(parsed)
-            .where(and( eq(userEmails.user_id, userId), eq(userEmails.id, parsed.id)))
+            .where(and(eq(userEmails.user_id, userId), eq(userEmails.id, parsed.id)))
             .returning({ id: userEmails.id });
 
         if (!updatedEmail?.id) return "";
@@ -398,15 +393,15 @@ export class UserService implements UserServiceType {
 
     async updateUserAddress(
         userId: string,
-      id: string,
-        data:  Partial<Omit<UserAddressInsertType, "id">>,
-        db: PgDbClient
+        id: string,
+        data: Partial<Omit<UserAddressInsertType, "id">>,
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const {
             data: parsed,
             success,
             error,
-        } = validateWithZod({...data, id}, UserZValidation.updateAddress);
+        } = validateWithZod({ ...data, id }, UserZValidation.updateAddress);
 
         if (!success) {
             return error;
@@ -425,9 +420,9 @@ export class UserService implements UserServiceType {
     }
 
     async updateUserContact(
-           userId: string,
-        data: Partial<Omit<UserContactInsertType, "id" >>,
-        db: PgDbClient
+        userId: string,
+        data: Partial<Omit<UserContactInsertType, "id">>,
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const {
             data: parsed,
@@ -439,7 +434,7 @@ export class UserService implements UserServiceType {
             return error;
         }
 
-      
+
 
         const [updatedContact] = await db
             .update(userContacts)
@@ -458,7 +453,7 @@ export class UserService implements UserServiceType {
     async deleteUserContact(
         userId: string,
         id: string,
-        db: PgDbClient
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const { data: parsedId, success, error } = validateWithZod(
             id,
@@ -480,8 +475,8 @@ export class UserService implements UserServiceType {
 
     async deleteUserPhone(
         userId: string,
-          id: string,
-        db: PgDbClient
+        id: string,
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const { data: parsedId, success, error } = validateWithZod(
             id,
@@ -503,8 +498,8 @@ export class UserService implements UserServiceType {
 
     async deleteUserEmail(
         userId: string,
-           id: string,
-        db: PgDbClient
+        id: string,
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const { data: parsedId, success, error } = validateWithZod(
             id,
@@ -526,8 +521,8 @@ export class UserService implements UserServiceType {
 
     async deleteUserAddress(
         userId: string,
-    id: string,
-        db: PgDbClient
+        id: string,
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const { data: parsedId, success, error } = validateWithZod(
             id,
@@ -548,8 +543,8 @@ export class UserService implements UserServiceType {
     }
 
     async deleteUser(
-         id: string,
-        db: PgDbClient
+        id: string,
+        db: PgDbClientType
     ): Promise<string | z.ZodError> {
         const { data: parsedId, success, error } = validateWithZod(
             id,

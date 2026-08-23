@@ -1,12 +1,10 @@
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import type { Request, Response } from "express";
-import z4 from "zod";
-
 import { users } from "@/database";
-import { getSystemCustomErrorMsgByKey, SystemCustomErrorCode, SystemCustomErrorMsgByCode } from "@/events";
+import { SystemCustomErrorCode, SystemCustomErrorMsgByCode } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
-import { pgDb } from "@/libs/db.connect";
+import { pgDb, type PgDbClientType } from "@/libs/db.connect";
 import { UserService } from "@/services/user.service";
 import type {
   UserAddressInsertType,
@@ -16,7 +14,6 @@ import type {
   UserProfileInsertType,
 } from "@/database/type";
 import { generateVerificationCode, getVerifyExpiry, isZodError, validationError } from "@/utils";
-import type { PgDbClient } from "@/types";
 
 interface UserControllerType {
   createUser(req: Request, res: Response): Promise<Response>;
@@ -39,11 +36,10 @@ interface UserControllerType {
 
 export class UserController implements UserControllerType {
   private userService = new UserService();
- 
+
   // ---------------------------------------------------------
   // Create
   // ---------------------------------------------------------
- 
   async createUser(req: Request, res: Response): Promise<Response> {
     const {
       email,
@@ -58,10 +54,10 @@ export class UserController implements UserControllerType {
       date_of_birth,
       gender,
     } = req.body ?? {};
- 
+
     const verify_code = generateVerificationCode();
     const verify_expiry = getVerifyExpiry();
- 
+
     const result = await pgDb.transaction(async (tx) => {
       // Inserted with the raw (Zod-validated) password first, since the
       // service's `user` schema validates the plaintext password shape
@@ -71,22 +67,22 @@ export class UserController implements UserControllerType {
         { email, username, password, role },
         tx
       );
- 
+
       if (isZodError(userId)) throw validationError(userId);
       if (!userId) {
         throw new ApiError(
           500,
           SystemCustomErrorMsgByCode[
-            SystemCustomErrorCode.USER_CREATION_FAILED
+          SystemCustomErrorCode.USER_CREATION_FAILED
           ]!
         );
       }
- 
-      const hashedPassword = await bcrypt.hash(password, 10);
- 
 
-        await this.userService.updateUserCore(userId, { password: hashedPassword, verify_code, verify_expiry }, tx)
- 
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+
+      await this.userService.updateUserCore(userId, { password: hashedPassword, verify_code, verify_expiry }, tx)
+
       const profileId = await this.userService.createUserProfile(
         userId,
         {
@@ -100,20 +96,20 @@ export class UserController implements UserControllerType {
         },
         tx
       );
- 
+
       if (isZodError(profileId)) throw validationError(profileId);
       if (!profileId) {
         throw new ApiError(
           500,
           SystemCustomErrorMsgByCode[
-            SystemCustomErrorCode.PROFILE_CREATION_FAILED
+          SystemCustomErrorCode.PROFILE_CREATION_FAILED
           ]!
         );
       }
- 
+
       return { userId, profileId };
     });
- 
+
     return res.status(201).json(
       new ApiResponse(
         201,
@@ -122,88 +118,88 @@ export class UserController implements UserControllerType {
       )
     );
   }
- 
+
   async createAddress(req: Request, res: Response): Promise<Response> {
     const { userId } = req.params as { userId: string };
- 
+
     const result = await this.userService.createUserAddress(
       userId,
       req.body,
       pgDb
     );
- 
+
     if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
         500,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.ADDRESS_CREATION_FAILED
+        SystemCustomErrorCode.ADDRESS_CREATION_FAILED
         ]!
       );
     }
- 
+
     return res
       .status(201)
       .json(new ApiResponse(201, "Address added successfully.", { id: result }));
   }
- 
+
   async createPhone(req: Request, res: Response): Promise<Response> {
     const { contactId, userId } = req.params as { contactId: string, userId: string };
- 
+
     const result = await this.userService.createUserPhone(
-        userId,
+      userId,
       contactId,
       req.body,
       pgDb
     );
- 
+
     if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
         500,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.PHONE_CREATION_FAILED
+        SystemCustomErrorCode.PHONE_CREATION_FAILED
         ]!
       );
     }
- 
+
     return res
       .status(201)
       .json(new ApiResponse(201, "Phone number added successfully.", { id: result }));
   }
- 
+
   async createEmail(req: Request, res: Response): Promise<Response> {
-       const { contactId, userId } = req.params as { contactId: string, userId: string };
- 
+    const { contactId, userId } = req.params as { contactId: string, userId: string };
+
     const result = await this.userService.createUserEmail(
-        userId,
+      userId,
       contactId,
       req.body,
       pgDb
     );
- 
+
     if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
         500,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.EMAIL_CREATION_FAILED
+        SystemCustomErrorCode.EMAIL_CREATION_FAILED
         ]!
       );
     }
- 
+
     return res
       .status(201)
       .json(new ApiResponse(201, "Email added successfully.", { id: result }));
   }
- 
+
   // ---------------------------------------------------------
   // Verify
   // ---------------------------------------------------------
- 
+
   async verifyUser(req: Request, res: Response): Promise<Response> {
     const { id, code } = req.body ?? {};
- 
+
     if (!id || !code) {
       throw new ApiError(
         400,
@@ -212,7 +208,7 @@ export class UserController implements UserControllerType {
         ["id and code are required"]
       );
     }
- 
+
     const [user] = await pgDb
       .select({
         id: users.id,
@@ -222,56 +218,56 @@ export class UserController implements UserControllerType {
       })
       .from(users)
       .where(eq(users.id, id));
- 
+
     if (!user) {
       throw new ApiError(
         404,
         SystemCustomErrorMsgByCode[SystemCustomErrorCode.USER_NOT_FOUND]!
       );
     }
- 
+
     if (user.is_verified) {
       throw new ApiError(
         400,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.USER_ALREADY_VERIFIED
+        SystemCustomErrorCode.USER_ALREADY_VERIFIED
         ]!
       );
     }
- 
+
     if (!user.verify_code || user.verify_code !== code) {
       throw new ApiError(
         400,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.INVALID_VERIFICATION_CODE
+        SystemCustomErrorCode.INVALID_VERIFICATION_CODE
         ]!
       );
     }
- 
+
     if (!user.verify_expiry || user.verify_expiry.getTime() < Date.now()) {
       throw new ApiError(
         400,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED
+        SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED
         ]!
       );
     }
- 
+
     const [verifiedUser] = await pgDb
       .update(users)
       .set({ is_verified: true, verify_code: null, verify_expiry: null })
       .where(eq(users.id, id))
       .returning({ id: users.id });
- 
+
     if (!verifiedUser?.id) {
       throw new ApiError(
         500,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.USER_UPDATE_FAILED
+        SystemCustomErrorCode.USER_UPDATE_FAILED
         ]!
       );
     }
- 
+
     return res
       .status(200)
       .json(
@@ -280,11 +276,11 @@ export class UserController implements UserControllerType {
         })
       );
   }
- 
+
   async verifyContactPhone(req: Request, res: Response): Promise<Response> {
     const { id, userId } = req.params as { id: string, userId: string };
     const { code } = req.body ?? {};
- 
+
     if (!code) {
       throw new ApiError(
         400,
@@ -293,14 +289,14 @@ export class UserController implements UserControllerType {
         ["code is required"]
       );
     }
- 
+
     const result = await this.userService.updateUserPhone(
-        id,
-        userId,
+      id,
+      userId,
       { id, is_verified: true } as UserPhonesInsertType,
       pgDb
     );
- 
+
     if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
@@ -308,7 +304,7 @@ export class UserController implements UserControllerType {
         SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_NOT_FOUND]!
       );
     }
- 
+
     return res
       .status(200)
       .json(
@@ -317,11 +313,11 @@ export class UserController implements UserControllerType {
         })
       );
   }
- 
+
   async verifyContactEmail(req: Request, res: Response): Promise<Response> {
-    const { id , userId} = req.params as { id: string,userId: string };
+    const { id, userId } = req.params as { id: string, userId: string };
     const { code } = req.body ?? {};
- 
+
     if (!code) {
       throw new ApiError(
         400,
@@ -330,14 +326,14 @@ export class UserController implements UserControllerType {
         ["code is required"]
       );
     }
- 
+
     const result = await this.userService.updateUserEmail(
-        id,
-        userId,
+      id,
+      userId,
       { id, is_verified: true } as UserEmailsInsertType,
       pgDb
     );
- 
+
     if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
@@ -345,26 +341,26 @@ export class UserController implements UserControllerType {
         SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_NOT_FOUND]!
       );
     }
- 
+
     return res
       .status(200)
       .json(
         new ApiResponse(200, "Email verified successfully.", { id: result })
       );
   }
- 
+
   // ---------------------------------------------------------
   // Update
   // ---------------------------------------------------------
- 
+
   async updateProfile(req: Request, res: Response): Promise<Response> {
-        const {   userId} = req.params as { userId: string };
+    const { userId } = req.params as { userId: string };
     const result = await this.userService.updateUserProfile(
-        userId,
+      userId,
       req.body as UserProfileInsertType,
       pgDb
     );
- 
+
     if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
@@ -372,23 +368,23 @@ export class UserController implements UserControllerType {
         SystemCustomErrorMsgByCode[SystemCustomErrorCode.PROFILE_NOT_FOUND]!
       );
     }
- 
+
     return res
       .status(200)
       .json(
         new ApiResponse(200, "Profile updated successfully.", { id: result })
       );
   }
- 
+
   async updateAddress(req: Request, res: Response): Promise<Response> {
-        const { id , userId} = req.params as { id: string,userId: string };
+    const { id, userId } = req.params as { id: string, userId: string };
     const result = await this.userService.updateUserAddress(
-        userId,
-        id,
+      userId,
+      id,
       req.body as UserAddressInsertType,
       pgDb
     );
- 
+
     if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
@@ -396,23 +392,23 @@ export class UserController implements UserControllerType {
         SystemCustomErrorMsgByCode[SystemCustomErrorCode.ADDRESS_NOT_FOUND]!
       );
     }
- 
+
     return res
       .status(200)
       .json(
         new ApiResponse(200, "Address updated successfully.", { id: result })
       );
   }
- 
+
   async updateContact(req: Request, res: Response): Promise<Response> {
-     const { userId} = req.params as { userId: string };
+    const { userId } = req.params as { userId: string };
     const result = await this.userService.updateUserContact(
-            userId,
-  
+      userId,
+
       req.body as UserContactInsertType,
       pgDb
     );
- 
+
     if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
@@ -420,27 +416,27 @@ export class UserController implements UserControllerType {
         SystemCustomErrorMsgByCode[SystemCustomErrorCode.CONTACT_NOT_FOUND]!
       );
     }
- 
+
     return res
       .status(200)
       .json(
         new ApiResponse(200, "Contact updated successfully.", { id: result })
       );
   }
- 
+
   // ---------------------------------------------------------
   // Delete
   // ---------------------------------------------------------
- 
+
   async deleteProfile(req: Request, res: Response): Promise<Response> {
-    const {  userId} = req.params as { userId: string };
- 
+    const { userId } = req.params as { userId: string };
+
     // `user_profiles` is 1:1 with `users` and cascade-deletes via the FK
     // (onDelete: "cascade"), so there's no standalone "delete profile"
     // operation on the service layer — deleting the user is what removes
     // the profile row. `id` here is the user id.
     const result = await this.userService.deleteUser(userId, pgDb);
- 
+
     if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
@@ -448,19 +444,19 @@ export class UserController implements UserControllerType {
         SystemCustomErrorMsgByCode[SystemCustomErrorCode.USER_NOT_FOUND]!
       );
     }
- 
+
     return res
       .status(200)
       .json(
         new ApiResponse(200, "Account deleted successfully.", { id: result })
       );
   }
- 
+
   async deleteAddress(req: Request, res: Response): Promise<Response> {
-     const { id , userId} = req.params as { id: string,userId: string };
- 
+    const { id, userId } = req.params as { id: string, userId: string };
+
     const result = await this.userService.deleteUserAddress(userId, id, pgDb);
- 
+
     if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
@@ -468,20 +464,20 @@ export class UserController implements UserControllerType {
         SystemCustomErrorMsgByCode[SystemCustomErrorCode.ADDRESS_NOT_FOUND]!
       );
     }
- 
+
     return res
       .status(200)
       .json(
         new ApiResponse(200, "Address deleted successfully.", { id: result })
       );
   }
- 
+
   async deleteContact(req: Request, res: Response): Promise<Response> {
- const { id , userId} = req.params as { id: string,userId: string };
-    
- 
+    const { id, userId } = req.params as { id: string, userId: string };
+
+
     const result = await this.userService.deleteUserContact(userId, id, pgDb);
- 
+
     if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
@@ -489,7 +485,7 @@ export class UserController implements UserControllerType {
         SystemCustomErrorMsgByCode[SystemCustomErrorCode.CONTACT_NOT_FOUND]!
       );
     }
- 
+
     return res
       .status(200)
       .json(
