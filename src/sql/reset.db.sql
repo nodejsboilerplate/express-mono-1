@@ -1,5 +1,5 @@
 -- Delete all tables
--- SET search_path TO fluctux, public;
+-- SET search_path TO public;
 DO $$ DECLARE
     r RECORD;
 BEGIN

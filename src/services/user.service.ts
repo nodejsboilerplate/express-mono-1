@@ -287,13 +287,11 @@ export class UserService implements UserServiceType {
             data: parsed,
             success,
             error,
-        } = validateWithZod(data, UserZValidation.updateUser);
+        } = validateWithZod({...data, id: userId}, UserZValidation.updateUser);
 
         if (!success) {
             return error;
         }
-
-
 
         const [updatedUser] = await db
             .update(users)

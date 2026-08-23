@@ -1,1 +1,0 @@
-ALTER TABLE "users" ALTER COLUMN "password" SET DATA TYPE varchar(255) USING "password"::varchar(255);

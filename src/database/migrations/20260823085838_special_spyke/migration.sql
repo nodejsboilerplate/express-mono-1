@@ -3,7 +3,7 @@ CREATE TYPE "user_role" AS ENUM('ADMIN', 'USER');--> statement-breakpoint
 CREATE TABLE "user_addresses" (
 	"id" uuid PRIMARY KEY,
 	"user_id" uuid NOT NULL,
-	"addr_name" varchar(100),
+	"addr_name" varchar(100) NOT NULL,
 	"addr_line_1" varchar(255) NOT NULL,
 	"addr_line_2" varchar(255),
 	"city" varchar(100) NOT NULL,
@@ -27,6 +27,7 @@ CREATE TABLE "user_contacts" (
 CREATE TABLE "user_emails" (
 	"id" uuid PRIMARY KEY,
 	"contact_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL UNIQUE,
 	"is_verified" boolean DEFAULT false NOT NULL,
 	"is_primary" boolean DEFAULT false NOT NULL,
 	"email" varchar(255) NOT NULL,
@@ -37,6 +38,7 @@ CREATE TABLE "user_emails" (
 CREATE TABLE "user_phones" (
 	"id" uuid PRIMARY KEY,
 	"contact_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL UNIQUE,
 	"is_verified" boolean DEFAULT false NOT NULL,
 	"is_primary" boolean DEFAULT false NOT NULL,
 	"phone_code" varchar(5) NOT NULL,
@@ -63,7 +65,7 @@ CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY,
 	"email" varchar(255) NOT NULL UNIQUE,
 	"username" varchar(100) NOT NULL UNIQUE,
-	"password" varchar(30) NOT NULL,
+	"password" varchar(255) NOT NULL,
 	"is_verified" boolean DEFAULT false NOT NULL,
 	"verify_code" varchar(10),
 	"verify_expiry" timestamp with time zone,
@@ -75,5 +77,7 @@ CREATE TABLE "users" (
 ALTER TABLE "user_addresses" ADD CONSTRAINT "user_addresses_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "user_contacts" ADD CONSTRAINT "user_contacts_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "user_emails" ADD CONSTRAINT "user_emails_contact_id_user_contacts_id_fkey" FOREIGN KEY ("contact_id") REFERENCES "user_contacts"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "user_emails" ADD CONSTRAINT "user_emails_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "user_phones" ADD CONSTRAINT "user_phones_contact_id_user_contacts_id_fkey" FOREIGN KEY ("contact_id") REFERENCES "user_contacts"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "user_phones" ADD CONSTRAINT "user_phones_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "user_profiles" ADD CONSTRAINT "user_profiles_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;

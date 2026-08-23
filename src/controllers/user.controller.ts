@@ -59,10 +59,6 @@ export class UserController implements UserControllerType {
     const verify_expiry = getVerifyExpiry();
 
     const result = await pgDb.transaction(async (tx) => {
-      // Inserted with the raw (Zod-validated) password first, since the
-      // service's `user` schema validates the plaintext password shape
-      // (min 8 / max 30). It's overwritten with the bcrypt hash below,
-      // before this transaction ever commits.
       const userId = await this.userService.createUserCore(
         { email, username, password, role },
         tx

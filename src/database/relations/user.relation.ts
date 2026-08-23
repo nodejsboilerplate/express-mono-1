@@ -20,6 +20,14 @@ export const userRelations = defineRelations(
         from: r.users.id,
         to: r.userContacts.user_id,
       }),
+      contact_phones: r.many.userPhones({
+        from: r.users.id,
+        to: r.userPhones.user_id
+      }),
+      contact_emails: r.many.userEmails({
+        from: r.users.id,
+        to: r.userEmails.user_id
+      }),
       addresses: r.many.userAddresses({
         from: r.users.id,
         to: r.userAddresses.user_id,
@@ -50,12 +58,20 @@ export const userRelations = defineRelations(
         from: r.userPhones.contact_id,
         to: r.userContacts.id,
       }),
+      user: r.one.users({
+        from: r.userPhones.user_id,
+        to: r.users.id
+      })
     },
     userEmails: {
       contact: r.one.userContacts({
         from: r.userEmails.contact_id,
         to: r.userContacts.id,
       }),
+      user: r.one.users({
+        from: r.userEmails.user_id,
+        to: r.users.id
+      })
     },
     userAddresses: {
       user: r.one.users({

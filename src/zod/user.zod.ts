@@ -9,7 +9,7 @@ export class UserZValidation {
   // ┌─────────────────────────┐
   // │ Create Validations      │
   // └─────────────────────────┘
-  static id = z4.uuid({ error: "Invalid id" });
+  static id = z4.uuidv4({ error: "Invalid id" });
   // ===========================================================
   // Users
   // ===========================================================

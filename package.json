@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "tsx --watch ./src/server.ts",
     "build": "tsdown",
-    "test": "echo \"Error: no test specified\" && exit 1",
     "format": "prettier --write \"**/*.{ts,md,json,js}\"",
     "gen:docs": "typedoc",
     "check:lint": "eslint . --cache --cache-location node_modules/.cache/eslint/ --max-warnings 1000",
@@ -16,6 +15,7 @@
     "db:studio": "drizzle-kit studio --verbose",
     "db:push": "drizzle-kit push",
     "db:reset": "tsx ./src/libs/reset.db.ts",
+    "test": "vitest",
     "check:types": "tsc --noEmit --listFiles"
   },
   "keywords": [],
@@ -47,7 +47,9 @@
     "prettier": "^3.9.6",
     "ts-node": "^10.9.2",
     "tsx": "^4.23.12",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.11"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
