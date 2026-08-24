@@ -12,12 +12,6 @@ setupDatabase();
 
 const userService = new UserService();
 
-// ---------------------------------------------------------------
-// Payload builders — must match UserZSchema shapes exactly, since
-// the service no longer validates; these are what a controller
-// would pass in after validateWithZod already ran.
-// ---------------------------------------------------------------
-
 function validUserPayload(overrides: Partial<any> = {}) {
   return {
     email: `test-${crypto.randomUUID()}@example.com`,
@@ -94,8 +88,7 @@ describe("UserService.createUserCore", () => {
 describe("UserService.createUserProfile", () => {
   test("creates a profile for a user", async () => {
     const userId = await createUser();
-
-    // first_name is required per createProfile schema
+    
     const profileId = await userService.createUserProfile(
       { user_id: userId, first_name: "Mahin", last_name: "N" },
       pgDb

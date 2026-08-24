@@ -18,6 +18,8 @@ enum SYSTEM_CUSTOM_ERROR_EVENTS {
 
   // -- 409: conflict --
   USER_ALREADY_VERIFIED = "USER_ALREADY_VERIFIED",
+    PHONE_ALREADY_VERIFIED = "PHONE_ALREADY_VERIFIED",
+  EMAIL_ALREADY_VERIFIED = "EMAIL_ALREADY_VERIFIED",
 
   // -- 500: operation failed, one per resource per action --
   USER_CREATION_FAILED = "USER_CREATION_FAILED",
@@ -62,6 +64,8 @@ export const SystemCustomErrorCode: Record<SYSTEM_CUSTOM_ERROR_EVENTS, string> =
     ADDRESS_NOT_FOUND: "40406",
 
     USER_ALREADY_VERIFIED: "40901",
+      PHONE_ALREADY_VERIFIED: "40902",
+  EMAIL_ALREADY_VERIFIED: "40903",
 
     USER_CREATION_FAILED: "50010",
     USER_UPDATE_FAILED: "50011",
@@ -180,6 +184,16 @@ export const SystemCustomErrorMsgByCode: SystemCustomErrorMessageType = {
     title: "Already Verified",
     message: "This account has already been verified.",
     code: SystemCustomErrorCode.USER_ALREADY_VERIFIED,
+  },
+   [SystemCustomErrorCode.PHONE_ALREADY_VERIFIED]: {
+    title: "Already Verified",
+    message: "This phone number has already been verified.",
+    code: SystemCustomErrorCode.PHONE_ALREADY_VERIFIED,
+  },
+  [SystemCustomErrorCode.EMAIL_ALREADY_VERIFIED]: {
+    title: "Already Verified",
+    message: "This email has already been verified.",
+    code: SystemCustomErrorCode.EMAIL_ALREADY_VERIFIED,
   },
 
   // -- 500: user --

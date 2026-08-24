@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Request, Response } from "express";
-import { users } from "@/database";
+import { userEmails, userPhones, users } from "@/database";
 import { SystemCustomErrorCode, SystemCustomErrorMsgByCode } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
 import { pgDb } from "@/libs/db.connect";
@@ -86,7 +86,7 @@ export class UserController extends UserService implements UserControllerType {
         throw new ApiError(
           500,
           SystemCustomErrorMsgByCode[
-            SystemCustomErrorCode.USER_CREATION_FAILED
+          SystemCustomErrorCode.USER_CREATION_FAILED
           ]!
         );
       }
@@ -118,7 +118,7 @@ export class UserController extends UserService implements UserControllerType {
         throw new ApiError(
           500,
           SystemCustomErrorMsgByCode[
-            SystemCustomErrorCode.PROFILE_CREATION_FAILED
+          SystemCustomErrorCode.PROFILE_CREATION_FAILED
           ]!
         );
       }
@@ -154,7 +154,7 @@ export class UserController extends UserService implements UserControllerType {
       throw new ApiError(
         500,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.ADDRESS_CREATION_FAILED
+        SystemCustomErrorCode.ADDRESS_CREATION_FAILED
         ]!
       );
     }
@@ -184,7 +184,7 @@ export class UserController extends UserService implements UserControllerType {
       throw new ApiError(
         500,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.CONTACT_CREATION_FAILED
+        SystemCustomErrorCode.CONTACT_CREATION_FAILED
         ]!
       );
     }
@@ -296,7 +296,7 @@ export class UserController extends UserService implements UserControllerType {
       throw new ApiError(
         400,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.INVALID_VERIFICATION_CODE
+        SystemCustomErrorCode.INVALID_VERIFICATION_CODE
         ]!
       );
     }
@@ -305,7 +305,7 @@ export class UserController extends UserService implements UserControllerType {
       throw new ApiError(
         400,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED
+        SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED
         ]!
       );
     }
@@ -334,66 +334,143 @@ export class UserController extends UserService implements UserControllerType {
     );
   }
 
-  async verifyContactPhoneHandler(
-    req: Request,
-    res: Response
-  ): Promise<Response> {
-    const { id, user_id } = req.params as { id: string; user_id: string };
-    const { code } = req.body;
+async verifyContactPhoneHandler(
+  req: Request,
+  res: Response
+): Promise<Response> {
+  const { id, user_id } = req.params as { id: string; user_id: string };
+  const { code } = req.body;
 
-    const parse_payload = userValidators.verifyCodeWithUserId({
-      code,
-      id,
-      user_id,
-    });
+  const parse_payload = userValidators.verifyCodeWithUserId({
+    code,
+    id,
+    user_id,
+  });
 
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
+  if (isZodError(parse_payload)) throw validationError(parse_payload);
 
-    const result = await this.updateUserPhone(parse_payload, pgDb);
+  const [user_phone] = await pgDb
+    .select({
+      id: userPhones.id,
+      is_verified: userPhones.is_verified,
+      verify_code: userPhones.verify_code,
+      verify_expiry: userPhones.verify_expiry,
+    })
+    .from(userPhones)
+    .where(eq(userPhones.id, parse_payload.id));
 
-    if (!result) {
-      throw new ApiError(
-        404,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_NOT_FOUND]!
-      );
-    }
-
-    return res.status(200).json(
-      new ApiResponse(200, "Phone number verified successfully.", {
-        id: result,
-      })
+  if (!user_phone) {
+    throw new ApiError(
+      404,
+      SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_NOT_FOUND]!
     );
   }
 
-  async verifyContactEmailHandler(
-    req: Request,
-    res: Response
-  ): Promise<Response> {
-    const { id, user_id } = req.params as { id: string; user_id: string };
-    const { code } = req.body ?? {};
-
-    const parse_payload = userValidators.verifyCodeWithUserId({
-      code,
-      id,
-      user_id,
-    });
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.updateUserEmail(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(
-        404,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_NOT_FOUND]!
-      );
-    }
-
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, "Email verified successfully.", { id: result })
-      );
+  if (user_phone.is_verified) {
+    throw new ApiError(
+      409,
+      SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_ALREADY_VERIFIED]!
+    );
   }
+
+  if (!user_phone.verify_code || user_phone.verify_code !== parse_payload.code) {
+    throw new ApiError(
+      400,
+      SystemCustomErrorMsgByCode[SystemCustomErrorCode.INVALID_VERIFICATION_CODE]!
+    );
+  }
+
+  if (!user_phone.verify_expiry || user_phone.verify_expiry.getTime() < Date.now()) {
+    throw new ApiError(
+      400,
+      SystemCustomErrorMsgByCode[SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED]!
+    );
+  }
+
+  const result = await this.updateUserPhone({ ...parse_payload, is_verified: true }, pgDb);
+
+  if (!result) {
+    throw new ApiError(
+      404,
+      SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_NOT_FOUND]!
+    );
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, "Phone number verified successfully.", {
+      id: result,
+    })
+  );
+}
+
+async verifyContactEmailHandler(
+  req: Request,
+  res: Response
+): Promise<Response> {
+  const { id, user_id } = req.params as { id: string; user_id: string };
+  const { code } = req.body ?? {};
+
+  const parse_payload = userValidators.verifyCodeWithUserId({
+    code,
+    id,
+    user_id,
+  });
+
+  if (isZodError(parse_payload)) throw validationError(parse_payload);
+
+  const [user_email] = await pgDb
+    .select({
+      id: userEmails.id,
+      is_verified: userEmails.is_verified,
+      verify_code: userEmails.verify_code,
+      verify_expiry: userEmails.verify_expiry,
+    })
+    .from(userEmails)
+    .where(eq(userEmails.id, parse_payload.id));
+
+  if (!user_email) {
+    throw new ApiError(
+      404,
+      SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_NOT_FOUND]!
+    );
+  }
+
+  if (user_email.is_verified) {
+    throw new ApiError(
+      409,
+      SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_ALREADY_VERIFIED]!
+    );
+  }
+
+  if (!user_email.verify_code || user_email.verify_code !== parse_payload.code) {
+    throw new ApiError(
+      400,
+      SystemCustomErrorMsgByCode[SystemCustomErrorCode.INVALID_VERIFICATION_CODE]!
+    );
+  }
+
+  if (!user_email.verify_expiry || user_email.verify_expiry.getTime() < Date.now()) {
+    throw new ApiError(
+      400,
+      SystemCustomErrorMsgByCode[SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED]!
+    );
+  }
+
+  const result = await this.updateUserEmail({ ...parse_payload, is_verified: true }, pgDb);
+
+  if (!result) {
+    throw new ApiError(
+      404,
+      SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_NOT_FOUND]!
+    );
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, "Email verified successfully.", { id: result })
+    );
+}
 
   // ---------------------------------------------------------
   // Update
@@ -429,7 +506,7 @@ export class UserController extends UserService implements UserControllerType {
   async updateAddressHandler(req: Request, res: Response): Promise<Response> {
     const { id, user_id } = req.params as { id: string; user_id: string };
     const payload = req.body as Omit<UpdateAddressInputType, "user_id" | "id">;
-    const parse_payload = userValidators.updateUserProfileInput({
+    const parse_payload = userValidators.updateUserAddressInput({
       ...payload,
       user_id,
       id,

@@ -87,6 +87,8 @@ export const userPhones = pgTable("user_phones", {
     .unique()
     .references(() => users.id, { onDelete: "cascade" }),
   is_verified: t.boolean().notNull().default(false),
+  verify_code: t.varchar({ length: 10 }),
+  verify_expiry: t.timestamp({ withTimezone: true }),
   is_primary: t.boolean().notNull().default(false),
   phone_code: t.varchar({ length: 5 }).notNull(),
   phone: t.varchar({ length: 20 }).notNull(),
@@ -111,6 +113,8 @@ export const userEmails = pgTable("user_emails", {
     .unique()
     .references(() => users.id, { onDelete: "cascade" }),
   is_verified: t.boolean().notNull().default(false),
+  verify_code: t.varchar({ length: 10 }),
+  verify_expiry: t.timestamp({ withTimezone: true }),
   is_primary: t.boolean().notNull().default(false),
   email: t.varchar({ length: 255 }).notNull(),
   ...table_timestamps,
