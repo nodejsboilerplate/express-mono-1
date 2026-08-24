@@ -207,14 +207,17 @@ export class UserController implements UserControllerType {
       userId: string;
     };
 
+    const payload = req.body
+
+    const parsed_payload = userValidators.createUserPhoneInput({...payload, user_id: userId, contact_id: contactId})
+
+    if(isZodError(parsed_payload)) throw validationError(parsed_payload)
+
     const result = await this.userService.createUserPhone(
-      userId,
-      contactId,
-      req.body,
+      parsed_payload,
       pgDb
     );
 
-    if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
         500,
