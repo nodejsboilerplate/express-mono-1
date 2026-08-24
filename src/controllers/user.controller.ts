@@ -47,8 +47,8 @@ interface UserControllerType {
 }
 
 const userValidators = new UserInputValidators()
-export class UserController extends UserService implements UserControllerType  {
-  
+export class UserController extends UserService implements UserControllerType {
+
 
   // ---------------------------------------------------------
   // Create
@@ -209,9 +209,9 @@ export class UserController extends UserService implements UserControllerType  {
 
     const payload = req.body
 
-    const parsed_payload = userValidators.createUserPhoneInput({...payload, user_id: userId, contact_id: contactId})
+    const parsed_payload = userValidators.createUserPhoneInput({ ...payload, user_id: userId, contact_id: contactId })
 
-    if(isZodError(parsed_payload)) throw validationError(parsed_payload)
+    if (isZodError(parsed_payload)) throw validationError(parsed_payload)
 
     const result = await this.createUserPhone(
       parsed_payload,
@@ -239,9 +239,9 @@ export class UserController extends UserService implements UserControllerType  {
     };
     const payload = req.body
 
-    const parse_payload = userValidators.createUserEmailInput({...payload, user_id: userId, contact_id: contactId})
+    const parse_payload = userValidators.createUserEmailInput({ ...payload, user_id: userId, contact_id: contactId })
 
-    if(isZodError(parse_payload)) throw validationError(parse_payload)
+    if (isZodError(parse_payload)) throw validationError(parse_payload)
 
     const result = await this.createUserEmail(
       parse_payload,
@@ -265,11 +265,11 @@ export class UserController extends UserService implements UserControllerType  {
   // ---------------------------------------------------------
 
   async verifyUserHandler(req: Request, res: Response): Promise<Response> {
-    const { id } = req.params as {id: string};
+    const { id } = req.params as { id: string };
     const { code } = req.body;
 
-    const parsed_payload = userValidators.verifyCodeInput({id, code})
-    if(isZodError(parsed_payload)) throw validationError(parsed_payload)
+    const parsed_payload = userValidators.verifyCodeInput({ id, code })
+    if (isZodError(parsed_payload)) throw validationError(parsed_payload)
 
     const [user] = await pgDb
       .select({
@@ -334,18 +334,18 @@ export class UserController extends UserService implements UserControllerType  {
 
   async verifyContactPhoneHandler(req: Request, res: Response): Promise<Response> {
     const { id, user_id } = req.params as { id: string; user_id: string };
-    const { code } = req.body ;
+    const { code } = req.body;
 
-    const parse_payload = userValidators.verifyCodeWithUserId({code, id, user_id})
+    const parse_payload = userValidators.verifyCodeWithUserId({ code, id, user_id })
 
-    if(isZodError(parse_payload)) throw validationError(parse_payload)
+    if (isZodError(parse_payload)) throw validationError(parse_payload)
 
     const result = await this.updateUserPhone(
-     parse_payload,
+      parse_payload,
       pgDb
     );
 
-  
+
     if (!result) {
       throw new ApiError(
         404,
@@ -361,26 +361,18 @@ export class UserController extends UserService implements UserControllerType  {
   }
 
   async verifyContactEmailHandler(req: Request, res: Response): Promise<Response> {
-    const { id, userId } = req.params as { id: string; userId: string };
+    const { id, user_id } = req.params as { id: string; user_id: string };
     const { code } = req.body ?? {};
 
-    if (!code) {
-      throw new ApiError(
-        400,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.VALIDATION_ERROR]!,
-        undefined,
-        ["code is required"]
-      );
-    }
+    const parse_payload = userValidators.verifyCodeWithUserId({ code, id, user_id })
+    if (isZodError(parse_payload)) throw validationError(parse_payload)
 
     const result = await this.updateUserEmail(
-      id,
-      userId,
-      { id, is_verified: true } as UserEmailsInsertType,
+      parse_payload,
       pgDb
     );
 
-    if (isZodError(result)) throw validationError(result);
+
     if (!result) {
       throw new ApiError(
         404,
