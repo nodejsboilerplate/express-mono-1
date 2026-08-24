@@ -20,7 +20,7 @@ import {
   validationError,
 } from "@/utils";
 import { UserInputValidators } from "@/validators/inputs/user.validator";
-import type { CreateUserAddressInputType } from "@/zod";
+import type { CreateUserAddressInputType, CreateUserContactInputType } from "@/zod";
 
 interface UserControllerType {
   createUser(req: Request, res: Response): Promise<Response>;
@@ -66,7 +66,7 @@ export class UserController implements UserControllerType {
       nickname,
       date_of_birth,
       gender,
-    } = req.body ;
+    } = req.body;
 
     const verify_code = generateVerificationCode();
     const verify_expiry = getVerifyExpiry();
@@ -148,9 +148,9 @@ export class UserController implements UserControllerType {
     const { userId } = req.params as { userId: string };
     const payload = req.body as Omit<CreateUserAddressInputType, "user_id">
 
-    const parse_payload = userValidators.createUserAddressInput({...payload, user_id: userId})
+    const parse_payload = userValidators.createUserAddressInput({ ...payload, user_id: userId })
 
-    if(isZodError(parse_payload)) throw validationError(parse_payload)
+    if (isZodError(parse_payload)) throw validationError(parse_payload)
 
     const result = await this.userService.createUserAddress(
       parse_payload,
@@ -176,13 +176,17 @@ export class UserController implements UserControllerType {
   async createContact(req: Request, res: Response): Promise<Response> {
     const { userId } = req.params as { userId: string };
 
+    const payload = req.body as Omit<CreateUserContactInputType, "user_id">
+
+    const parse_payload = userValidators.createUserContactInput({ ...payload, user_id: userId })
+
+    if (isZodError(parse_payload)) throw validationError(parse_payload)
+
     const result = await this.userService.createUserContact(
-      userId,
-      req.body,
+      parse_payload,
       pgDb
     );
 
-    if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
         500,

@@ -133,7 +133,6 @@ export class UserService implements UserServiceType {
   }
 
   async createUserContact(
-
     payload: CreateUserContactInputType,
     db: PgDbClientType
   ): Promise<string> {
