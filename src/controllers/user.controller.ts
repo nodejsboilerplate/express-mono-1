@@ -20,7 +20,7 @@ import {
   validationError,
 } from "@/utils";
 import { UserInputValidators } from "@/validators/inputs/user.validator";
-import type { CreateUserAddressInputType, CreateUserContactInputType, UpdateAddressInputType, UpdateContactInputType, UpdateProfileInputType } from "@/zod";
+import type { CreateUserAddressInputType, CreateUserContactInputType, UpdateAddressInputType, UpdateContactInputType, UpdatePhoneInputType, UpdateProfileInputType } from "@/zod";
 
 interface UserControllerType {
   createUserHandler(req: Request, res: Response): Promise<Response>;
@@ -397,7 +397,7 @@ export class UserController extends UserService implements UserControllerType {
 
     const parse_payload = userValidators.updateUserProfileInput({ ...payload, user_id })
 
-    if(isZodError(parse_payload)) throw validationError(parse_payload)
+    if (isZodError(parse_payload)) throw validationError(parse_payload)
 
     const result = await this.updateUserProfile(
       parse_payload,
@@ -420,10 +420,10 @@ export class UserController extends UserService implements UserControllerType {
 
   async updateAddressHandler(req: Request, res: Response): Promise<Response> {
     const { id, user_id } = req.params as { id: string; user_id: string };
- const payload = req.body as Omit<UpdateAddressInputType, "user_id" | "id">
- const parse_payload = userValidators.updateUserProfileInput({ ...payload, user_id, id })
+    const payload = req.body as Omit<UpdateAddressInputType, "user_id" | "id">
+    const parse_payload = userValidators.updateUserProfileInput({ ...payload, user_id, id })
 
-    if(isZodError(parse_payload)) throw validationError(parse_payload)
+    if (isZodError(parse_payload)) throw validationError(parse_payload)
 
 
     const result = await this.updateUserAddress(
@@ -431,7 +431,7 @@ export class UserController extends UserService implements UserControllerType {
       pgDb
     );
 
-  
+
     if (!result) {
       throw new ApiError(
         404,
@@ -449,17 +449,17 @@ export class UserController extends UserService implements UserControllerType {
   async updateContactHandler(req: Request, res: Response): Promise<Response> {
     const { user_id } = req.params as { user_id: string };
 
-     const payload = req.body as Omit<UpdateContactInputType, "user_id">
- const parse_payload = userValidators.updateUserContactInput({ ...payload, user_id })
+    const payload = req.body as Omit<UpdateContactInputType, "user_id">
+    const parse_payload = userValidators.updateUserContactInput({ ...payload, user_id })
 
-    if(isZodError(parse_payload)) throw validationError(parse_payload)
+    if (isZodError(parse_payload)) throw validationError(parse_payload)
 
     const result = await this.updateUserContact(
       parse_payload,
       pgDb
     );
 
-   
+
     if (!result) {
       throw new ApiError(
         404,
@@ -475,16 +475,18 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async updatePhoneHandler(req: Request, res: Response): Promise<Response> {
-    const { id, userId } = req.params as { id: string; userId: string };
+    const { id, user_id } = req.params as { id: string; user_id: string };
+
+    const payload = req.body as Omit<UpdatePhoneInputType, "user_id" | "id">
+    const parse_payload = userValidators.updateUserPhoneInput({ ...payload, user_id, id })
+
+    if (isZodError(parse_payload)) throw validationError(parse_payload)
 
     const result = await this.updateUserPhone(
-      userId,
-      id,
-      req.body as Partial<UserPhonesInsertType>,
+      parse_payload,
       pgDb
     );
 
-    if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
         404,
