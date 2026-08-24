@@ -238,14 +238,15 @@ export class UserController implements UserControllerType {
       userId: string;
     };
 
+    const parse_payload = userValidators.createUserEmailInput({...payload, user_id: userId, contact_id: contactId})
+
+    if(isZodError(parse_payload)) throw validationError(parse_payload)
+
     const result = await this.userService.createUserEmail(
-      userId,
-      contactId,
-      req.body,
+      parse_payload,
       pgDb
     );
 
-    if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
         500,
