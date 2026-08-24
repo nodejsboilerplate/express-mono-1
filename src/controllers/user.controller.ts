@@ -535,7 +535,7 @@ export class UserController extends UserService implements UserControllerType {
   async deleteProfileHandler(req: Request, res: Response): Promise<Response> {
     const { userId } = req.params as { userId: string };
 
-  
+
     const parse_id = userValidators.idInput(userId)
 
     if (isZodError(parse_id)) throw validationError(parse_id)
@@ -564,14 +564,14 @@ export class UserController extends UserService implements UserControllerType {
   async deleteAddressHandler(req: Request, res: Response): Promise<Response> {
     const { id, user_id } = req.params as { id: string; user_id: string };
 
-      
-    const parse_payload = userValidators.deleteByUserIdWithContextIdInput({id, user_id})
+
+    const parse_payload = userValidators.deleteByUserIdWithContextIdInput({ id, user_id })
 
     if (isZodError(parse_payload)) throw validationError(parse_payload)
 
     const result = await this.deleteUserAddress(parse_payload, pgDb);
 
- 
+
     if (!result) {
       throw new ApiError(
         404,
@@ -589,13 +589,12 @@ export class UserController extends UserService implements UserControllerType {
   async deleteContactHandler(req: Request, res: Response): Promise<Response> {
     const { id, user_id } = req.params as { id: string; user_id: string };
 
-     const parse_payload = userValidators.deleteByUserIdWithContextIdInput({id, user_id})
+    const parse_payload = userValidators.deleteByUserIdWithContextIdInput({ id, user_id })
 
     if (isZodError(parse_payload)) throw validationError(parse_payload)
 
     const result = await this.deleteUserContact(parse_payload, pgDb);
 
-  
     if (!result) {
       throw new ApiError(
         404,
@@ -611,11 +610,13 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async deletePhoneHandler(req: Request, res: Response): Promise<Response> {
-    const { id, userId } = req.params as { id: string; userId: string };
+    const { id, user_id } = req.params as { id: string; user_id: string };
 
-    const result = await this.deleteUserPhone(userId, id, pgDb);
+    const parse_payload = userValidators.deleteByUserIdWithContextIdInput({ id, user_id })
+    if (isZodError(parse_payload)) throw validationError(parse_payload)
 
-    if (isZodError(result)) throw validationError(result);
+    const result = await this.deleteUserPhone(parse_payload, pgDb);
+
     if (!result) {
       throw new ApiError(
         404,
@@ -631,11 +632,14 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async deleteEmailHandler(req: Request, res: Response): Promise<Response> {
-    const { id, userId } = req.params as { id: string; userId: string };
+    const { id, user_id } = req.params as { id: string; user_id: string };
 
-    const result = await this.deleteUserEmail(userId, id, pgDb);
+      const parse_payload = userValidators.deleteByUserIdWithContextIdInput({ id, user_id })
+    if (isZodError(parse_payload)) throw validationError(parse_payload)
 
-    if (isZodError(result)) throw validationError(result);
+    const result = await this.deleteUserEmail(parse_payload, pgDb);
+
+ 
     if (!result) {
       throw new ApiError(
         404,
