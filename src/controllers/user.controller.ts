@@ -587,11 +587,15 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async deleteContactHandler(req: Request, res: Response): Promise<Response> {
-    const { id, userId } = req.params as { id: string; userId: string };
+    const { id, user_id } = req.params as { id: string; user_id: string };
 
-    const result = await this.deleteUserContact(userId, id, pgDb);
+     const parse_payload = userValidators.deleteByUserIdWithContextIdInput({id, user_id})
 
-    if (isZodError(result)) throw validationError(result);
+    if (isZodError(parse_payload)) throw validationError(parse_payload)
+
+    const result = await this.deleteUserContact(parse_payload, pgDb);
+
+  
     if (!result) {
       throw new ApiError(
         404,
