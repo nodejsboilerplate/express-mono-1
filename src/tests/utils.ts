@@ -3,7 +3,7 @@ import { exec } from "child_process";
 
 export function setupDatabase() {
   beforeAll(async () => {
-    exec("pnpm db:generate && pnpm db:migrate", (error, stdout, stderr) => {
+    exec("pnpm db:reset --override && pnpm db:generate && pnpm db:migrate", (error, stdout, stderr) => {
       if (error) {
         console.error("Error: ", error);
       }

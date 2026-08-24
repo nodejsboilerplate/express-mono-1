@@ -1,17 +1,27 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "6fab9421-0098-49f6-8b31-28505c49ceba",
-  "prevIds": ["040d308a-dd35-461d-9ced-57c362cda3e3"],
+  "id": "4cf7e9a3-831d-4995-9f9c-1ce4a47f93ff",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
   "ddl": [
     {
-      "values": ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"],
+      "values": [
+        "MALE",
+        "FEMALE",
+        "OTHER",
+        "PREFER_NOT_TO_SAY"
+      ],
       "name": "user_gender_role",
       "entityType": "enums",
       "schema": "public"
     },
     {
-      "values": ["ADMIN", "USER"],
+      "values": [
+        "ADMIN",
+        "USER"
+      ],
       "name": "user_role",
       "entityType": "enums",
       "schema": "public"
@@ -339,6 +349,32 @@
       "table": "user_emails"
     },
     {
+      "type": "varchar(10)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "verify_code",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user_emails"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "verify_expiry",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user_emails"
+    },
+    {
       "type": "boolean",
       "typeSchema": null,
       "notNull": true,
@@ -438,6 +474,32 @@
       "generated": null,
       "identity": null,
       "name": "is_verified",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user_phones"
+    },
+    {
+      "type": "varchar(10)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "verify_code",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user_phones"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "verify_expiry",
       "entityType": "columns",
       "schema": "public",
       "table": "user_phones"
@@ -782,10 +844,14 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["user_id"],
+      "columns": [
+        "user_id"
+      ],
       "schemaTo": "public",
       "tableTo": "users",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "user_addresses_user_id_users_id_fkey",
@@ -795,10 +861,14 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["user_id"],
+      "columns": [
+        "user_id"
+      ],
       "schemaTo": "public",
       "tableTo": "users",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "user_contacts_user_id_users_id_fkey",
@@ -808,10 +878,14 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["contact_id"],
+      "columns": [
+        "contact_id"
+      ],
       "schemaTo": "public",
       "tableTo": "user_contacts",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "user_emails_contact_id_user_contacts_id_fkey",
@@ -821,10 +895,14 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["user_id"],
+      "columns": [
+        "user_id"
+      ],
       "schemaTo": "public",
       "tableTo": "users",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "user_emails_user_id_users_id_fkey",
@@ -834,10 +912,14 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["contact_id"],
+      "columns": [
+        "contact_id"
+      ],
       "schemaTo": "public",
       "tableTo": "user_contacts",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "user_phones_contact_id_user_contacts_id_fkey",
@@ -847,10 +929,14 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["user_id"],
+      "columns": [
+        "user_id"
+      ],
       "schemaTo": "public",
       "tableTo": "users",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "user_phones_user_id_users_id_fkey",
@@ -860,10 +946,14 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["user_id"],
+      "columns": [
+        "user_id"
+      ],
       "schemaTo": "public",
       "tableTo": "users",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "user_profiles_user_id_users_id_fkey",
@@ -872,7 +962,9 @@
       "table": "user_profiles"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "user_addresses_pkey",
       "schema": "public",
@@ -880,7 +972,9 @@
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "user_contacts_pkey",
       "schema": "public",
@@ -888,7 +982,9 @@
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "user_emails_pkey",
       "schema": "public",
@@ -896,7 +992,9 @@
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "user_phones_pkey",
       "schema": "public",
@@ -904,7 +1002,9 @@
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "user_profiles_pkey",
       "schema": "public",
@@ -912,7 +1012,9 @@
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "users_pkey",
       "schema": "public",
@@ -921,7 +1023,9 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["user_id"],
+      "columns": [
+        "user_id"
+      ],
       "nullsNotDistinct": false,
       "name": "user_contacts_user_id_key",
       "schema": "public",
@@ -930,7 +1034,9 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["user_id"],
+      "columns": [
+        "user_id"
+      ],
       "nullsNotDistinct": false,
       "name": "user_emails_user_id_key",
       "schema": "public",
@@ -939,7 +1045,9 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["user_id"],
+      "columns": [
+        "user_id"
+      ],
       "nullsNotDistinct": false,
       "name": "user_phones_user_id_key",
       "schema": "public",
@@ -948,7 +1056,9 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["user_id"],
+      "columns": [
+        "user_id"
+      ],
       "nullsNotDistinct": false,
       "name": "user_profiles_user_id_key",
       "schema": "public",
@@ -957,7 +1067,9 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["email"],
+      "columns": [
+        "email"
+      ],
       "nullsNotDistinct": false,
       "name": "users_email_key",
       "schema": "public",
@@ -966,7 +1078,9 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["username"],
+      "columns": [
+        "username"
+      ],
       "nullsNotDistinct": false,
       "name": "users_username_key",
       "schema": "public",
