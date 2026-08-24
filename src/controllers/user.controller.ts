@@ -20,6 +20,7 @@ import {
   validationError,
 } from "@/utils";
 import { UserInputValidators } from "@/validators/inputs/user.validator";
+import type { CreateUserAddressInputType } from "@/zod";
 
 interface UserControllerType {
   createUser(req: Request, res: Response): Promise<Response>;
@@ -65,7 +66,7 @@ export class UserController implements UserControllerType {
       nickname,
       date_of_birth,
       gender,
-    } = req.body ?? {};
+    } = req.body ;
 
     const verify_code = generateVerificationCode();
     const verify_expiry = getVerifyExpiry();
@@ -145,14 +146,17 @@ export class UserController implements UserControllerType {
 
   async createAddress(req: Request, res: Response): Promise<Response> {
     const { userId } = req.params as { userId: string };
+    const payload = req.body as Omit<CreateUserAddressInputType, "user_id">
+
+    const parse_payload = userValidators.createUserAddressInput({...payload, user_id: userId})
+
+    if(isZodError(parse_payload)) throw validationError(parse_payload)
 
     const result = await this.userService.createUserAddress(
-      userId,
-      req.body,
+      parse_payload,
       pgDb
     );
 
-    if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
         500,
