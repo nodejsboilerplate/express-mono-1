@@ -66,4 +66,4 @@ app.get("/health", async (req, res) => {
 /* -------------------------------------------------------------------------- */
 app.use(errorHandlerMiddleware);
 
-export {app}
+export { app };

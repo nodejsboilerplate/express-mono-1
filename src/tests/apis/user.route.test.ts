@@ -90,7 +90,11 @@ async function createTestUser(overrides: Partial<any> = {}) {
   const res = await request(app).post(BASE).send(validUserPayload(overrides));
 
   if (res.status !== 201) {
-    console.log("createTestUser failed:", res.status, JSON.stringify(res.body, null, 2));
+    console.log(
+      "createTestUser failed:",
+      res.status,
+      JSON.stringify(res.body, null, 2)
+    );
   }
 
   expect(res.status).toBe(201);
@@ -103,7 +107,11 @@ async function createTestContact(userId: string) {
     .send({ id: crypto.randomUUID(), socials: [] });
 
   if (res.status !== 201) {
-    console.log("createTestContact failed:", res.status, JSON.stringify(res.body, null, 2));
+    console.log(
+      "createTestContact failed:",
+      res.status,
+      JSON.stringify(res.body, null, 2)
+    );
   }
 
   expect(res.status).toBe(201);
@@ -123,23 +131,32 @@ describe(`POST ${BASE}`, () => {
     expect(res.body.data.id).toBeDefined();
     expect(res.body.data.profile_id).toBeDefined();
 
-    const [row] = await pgDb.select().from(users).where(eq(users.id, res.body.data.id));
+    const [row] = await pgDb
+      .select()
+      .from(users)
+      .where(eq(users.id, res.body.data.id));
     expect(row?.role).toBe("USER");
     expect(row?.is_verified).toBe(false);
   });
 
   test("returns 400 for invalid email", async () => {
-    const res = await request(app).post(BASE).send(validUserPayload({ email: "not-an-email" }));
+    const res = await request(app)
+      .post(BASE)
+      .send(validUserPayload({ email: "not-an-email" }));
     expect(res.status).toBe(400);
   });
 
   test("returns 400 for a username with disallowed characters", async () => {
-    const res = await request(app).post(BASE).send(validUserPayload({ username: "bad-username!" }));
+    const res = await request(app)
+      .post(BASE)
+      .send(validUserPayload({ username: "bad-username!" }));
     expect(res.status).toBe(400);
   });
 
   test("returns 400 for a password under 8 characters", async () => {
-    const res = await request(app).post(BASE).send(validUserPayload({ password: "short" }));
+    const res = await request(app)
+      .post(BASE)
+      .send(validUserPayload({ password: "short" }));
     expect(res.status).toBe(400);
   });
 
@@ -148,7 +165,9 @@ describe(`POST ${BASE}`, () => {
     const first = await request(app).post(BASE).send(payload);
     expect(first.status).toBe(201);
 
-    const second = await request(app).post(BASE).send(validUserPayload({ email: payload.email }));
+    const second = await request(app)
+      .post(BASE)
+      .send(validUserPayload({ email: payload.email }));
     expect([400, 409, 500]).toContain(second.status);
   });
 });
@@ -157,11 +176,16 @@ describe(`POST ${BASE}/:userId/address`, () => {
   test("creates an address and persists it", async () => {
     const userId = await createTestUser();
 
-    const res = await request(app).post(`${BASE}/${userId}/address`).send(validAddressPayload());
+    const res = await request(app)
+      .post(`${BASE}/${userId}/address`)
+      .send(validAddressPayload());
 
     expect(res.status).toBe(201);
 
-    const [row] = await pgDb.select().from(userAddresses).where(eq(userAddresses.id, res.body.data.id));
+    const [row] = await pgDb
+      .select()
+      .from(userAddresses)
+      .where(eq(userAddresses.id, res.body.data.id));
     expect(row?.user_id).toBe(userId);
     expect(row?.city).toBe("Dhaka");
   });
@@ -185,15 +209,19 @@ describe(`POST ${BASE}/:userId/contact`, () => {
   test("creates a contact and persists it", async () => {
     const userId = await createTestUser();
 
-    const res = await request(app).post(`${BASE}/${userId}/contact`).send({ id: userId, socials: [] });
+    const res = await request(app)
+      .post(`${BASE}/${userId}/contact`)
+      .send({ id: userId, socials: [] });
 
     expect(res.status).toBe(201);
     expect(res.body.data.id).toBeTypeOf("string");
   });
 
   test("returns 400 when id is missing", async () => {
-    const userId = " "
-    const res = await request(app).post(`${BASE}/${userId}/contact`).send({ socials: [] });
+    const userId = " ";
+    const res = await request(app)
+      .post(`${BASE}/${userId}/contact`)
+      .send({ socials: [] });
     expect(res.status).toBe(400);
   });
 
@@ -201,7 +229,10 @@ describe(`POST ${BASE}/:userId/contact`, () => {
     const userId = await createTestUser();
     const res = await request(app)
       .post(`${BASE}/${userId}/contact`)
-      .send({ id: crypto.randomUUID(), socials: [{ type: "invalid-platform", url: "not-a-url" }] });
+      .send({
+        id: crypto.randomUUID(),
+        socials: [{ type: "invalid-platform", url: "not-a-url" }],
+      });
     expect(res.status).toBe(400);
   });
 });
@@ -217,7 +248,10 @@ describe(`POST ${BASE}/:userId/contact/:contactId/phone`, () => {
 
     expect(res.status).toBe(201);
 
-    const [row] = await pgDb.select().from(userPhones).where(eq(userPhones.id, res.body.data.id));
+    const [row] = await pgDb
+      .select()
+      .from(userPhones)
+      .where(eq(userPhones.id, res.body.data.id));
     expect(row?.contact_id).toBe(contactId);
   });
 
@@ -260,20 +294,29 @@ describe(`POST ${BASE}/:userId/contact/:contactId/email`, () => {
 describe(`POST ${BASE}/verify`, () => {
   test("verifies a user with the correct code", async () => {
     const userId = await createTestUser();
-    const [row] = await pgDb.select({ verify_code: users.verify_code }).from(users).where(eq(users.id, userId));
+    const [row] = await pgDb
+      .select({ verify_code: users.verify_code })
+      .from(users)
+      .where(eq(users.id, userId));
 
-    const res = await request(app).post(`${BASE}/verify`).send({ id: userId, code: row!.verify_code });
+    const res = await request(app)
+      .post(`${BASE}/verify`)
+      .send({ id: userId, code: row!.verify_code });
     expect(res.status).toBe(200);
   });
 
   test("returns 400 for the wrong code", async () => {
     const userId = await createTestUser();
-    const res = await request(app).post(`${BASE}/verify`).send({ id: userId, code: "000000" });
+    const res = await request(app)
+      .post(`${BASE}/verify`)
+      .send({ id: userId, code: "000000" });
     expect(res.status).toBe(400);
   });
 
   test("returns 404 for a well-formed but nonexistent user id", async () => {
-    const res = await request(app).post(`${BASE}/verify`).send({ id: crypto.randomUUID(), code: "123456" });
+    const res = await request(app)
+      .post(`${BASE}/verify`)
+      .send({ id: crypto.randomUUID(), code: "123456" });
     expect(res.status).toBe(404);
   });
 });
@@ -287,7 +330,9 @@ describe(`POST ${BASE}/:userId/phone/:id/verify`, () => {
       .send(validPhonePayload());
     const phoneId = phoneRes.body.data.id as string;
 
-    const res = await request(app).post(`${BASE}/${userId}/phone/${phoneId}/verify`).send({ code: "123456" });
+    const res = await request(app)
+      .post(`${BASE}/${userId}/phone/${phoneId}/verify`)
+      .send({ code: "123456" });
     expect(res.status).toBe(200);
   });
 });
@@ -301,7 +346,9 @@ describe(`POST ${BASE}/:userId/email/:id/verify`, () => {
       .send(validEmailPayload());
     const emailId = emailRes.body.data.id as string;
 
-    const res = await request(app).post(`${BASE}/${userId}/email/${emailId}/verify`).send({ code: "123456" });
+    const res = await request(app)
+      .post(`${BASE}/${userId}/email/${emailId}/verify`)
+      .send({ code: "123456" });
     expect(res.status).toBe(200);
   });
 });
@@ -330,10 +377,14 @@ describe(`PATCH ${BASE}/:userId/profile`, () => {
 describe(`PATCH ${BASE}/:userId/address/:id`, () => {
   test("updates the address", async () => {
     const userId = await createTestUser();
-    const createRes = await request(app).post(`${BASE}/${userId}/address`).send(validAddressPayload());
+    const createRes = await request(app)
+      .post(`${BASE}/${userId}/address`)
+      .send(validAddressPayload());
     const addressId = createRes.body.data.id as string;
 
-    const res = await request(app).patch(`${BASE}/${userId}/address/${addressId}`).send({ city: "Chattogram" });
+    const res = await request(app)
+      .patch(`${BASE}/${userId}/address/${addressId}`)
+      .send({ city: "Chattogram" });
     expect(res.status).toBe(200);
   });
 
@@ -367,7 +418,9 @@ describe(`PATCH ${BASE}/:userId/phone/:id`, () => {
       .send(validPhonePayload());
     const phoneId = phoneRes.body.data.id as string;
 
-    const res = await request(app).patch(`${BASE}/${userId}/phone/${phoneId}`).send({ phone: "1999999999" });
+    const res = await request(app)
+      .patch(`${BASE}/${userId}/phone/${phoneId}`)
+      .send({ phone: "1999999999" });
     expect(res.status).toBe(200);
   });
 
@@ -416,10 +469,14 @@ describe(`DELETE ${BASE}/:userId`, () => {
 describe(`DELETE ${BASE}/:userId/address/:id`, () => {
   test("deletes the address", async () => {
     const userId = await createTestUser();
-    const createRes = await request(app).post(`${BASE}/${userId}/address`).send(validAddressPayload());
+    const createRes = await request(app)
+      .post(`${BASE}/${userId}/address`)
+      .send(validAddressPayload());
     const addressId = createRes.body.data.id as string;
 
-    const res = await request(app).delete(`${BASE}/${userId}/address/${addressId}`);
+    const res = await request(app).delete(
+      `${BASE}/${userId}/address/${addressId}`
+    );
     expect(res.status).toBe(200);
   });
 });
@@ -429,7 +486,9 @@ describe(`DELETE ${BASE}/:userId/contact/:id`, () => {
     const userId = await createTestUser();
     const contactId = await createTestContact(userId);
 
-    const res = await request(app).delete(`${BASE}/${userId}/contact/${contactId}`);
+    const res = await request(app).delete(
+      `${BASE}/${userId}/contact/${contactId}`
+    );
     expect(res.status).toBe(200);
   });
 });

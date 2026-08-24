@@ -7,7 +7,23 @@ import {
   users,
 } from "@/database";
 import type { PgDbClientType } from "@/libs/db.connect";
-import type { CreateUserAddressInputType, CreateUserContactInputType, CreateUserCoreInputType, CreateUserEmailInputType, CreateUserPhoneInputType, CreateUserProfileInputType, DeleteByUserWithContextIdInputType, IdInputType, UpdateAddressInputType, UpdateContactInputType, UpdateEmailInputType, UpdatePhoneInputType, UpdateProfileInputType, UpdateUserInputType, VerifyCodeInputType } from "@/zod";
+import type {
+  CreateUserAddressInputType,
+  CreateUserContactInputType,
+  CreateUserCoreInputType,
+  CreateUserEmailInputType,
+  CreateUserPhoneInputType,
+  CreateUserProfileInputType,
+  DeleteByUserWithContextIdInputType,
+  IdInputType,
+  UpdateAddressInputType,
+  UpdateContactInputType,
+  UpdateEmailInputType,
+  UpdatePhoneInputType,
+  UpdateProfileInputType,
+  UpdateUserInputType,
+  VerifyCodeInputType,
+} from "@/zod";
 
 import { and, eq } from "drizzle-orm";
 import type z from "zod";
@@ -21,28 +37,22 @@ interface UserServiceType {
     db: PgDbClientType
   ): Promise<string>;
   createUserProfile(
-
     payload: CreateUserProfileInputType,
     db: PgDbClientType
   ): Promise<string>;
   createUserContact(
-
     payload: CreateUserContactInputType,
     db: PgDbClientType
   ): Promise<string>;
   createUserPhone(
-
-
     payload: CreateUserPhoneInputType,
     db: PgDbClientType
   ): Promise<string>;
   createUserEmail(
-
     payload: CreateUserEmailInputType,
     db: PgDbClientType
   ): Promise<string>;
   createUserAddress(
-
     payload: CreateUserAddressInputType,
     db: PgDbClientType
   ): Promise<string>;
@@ -105,7 +115,6 @@ export class UserService implements UserServiceType {
     payload: CreateUserCoreInputType,
     db: PgDbClientType
   ): Promise<string> {
-
     const [user] = await db
       .insert(users)
       .values(payload)
@@ -117,12 +126,9 @@ export class UserService implements UserServiceType {
   }
 
   async createUserAddress(
-
     payload: CreateUserAddressInputType,
     db: PgDbClientType
   ): Promise<string> {
-
-
     const [createdUserAddress] = await db
       .insert(userAddresses)
       .values(payload)
@@ -136,8 +142,6 @@ export class UserService implements UserServiceType {
     payload: CreateUserContactInputType,
     db: PgDbClientType
   ): Promise<string> {
-
-
     const [createdUserContact] = await db
       .insert(userContacts)
       .values(payload)
@@ -148,12 +152,9 @@ export class UserService implements UserServiceType {
   }
 
   async createUserEmail(
-
     payload: CreateUserEmailInputType,
     db: PgDbClientType
   ): Promise<string> {
-
-
     const [createdUserEmail] = await db
       .insert(userEmails)
       .values(payload)
@@ -165,11 +166,9 @@ export class UserService implements UserServiceType {
   }
 
   async createUserPhone(
-
     payload: CreateUserPhoneInputType,
     db: PgDbClientType
   ): Promise<string> {
-
     const [createdUserPhone] = await db
       .insert(userPhones)
       .values(payload)
@@ -183,7 +182,6 @@ export class UserService implements UserServiceType {
     payload: CreateUserProfileInputType,
     db: PgDbClientType
   ): Promise<string> {
-
     const [createdUserProfie] = await db
       .insert(userProfiles)
       .values({
@@ -202,12 +200,10 @@ export class UserService implements UserServiceType {
   // Update
   // ---------------------------------------------------------
   async updateUserCore(
-
     payload: UpdateUserInputType,
     db: PgDbClientType
   ): Promise<string> {
-
-const {  id, ...updateData } = payload;
+    const { id, ...updateData } = payload;
     const [updatedUser] = await db
       .update(users)
       .set(updateData)
@@ -219,11 +215,9 @@ const {  id, ...updateData } = payload;
   }
 
   async updateUserProfile(
-
     payload: UpdateProfileInputType,
     db: PgDbClientType
   ): Promise<string> {
-
     const { date_of_birth, user_id, ...updateData } = payload;
 
     const [updatedProfile] = await db
@@ -245,7 +239,7 @@ const {  id, ...updateData } = payload;
     payload: UpdatePhoneInputType,
     db: PgDbClientType
   ): Promise<string> {
-      const { user_id, id, ...updateData } = payload;
+    const { user_id, id, ...updateData } = payload;
 
     const [updatedPhone] = await db
       .update(userPhones)
@@ -258,11 +252,10 @@ const {  id, ...updateData } = payload;
   }
 
   async updateUserEmail(
-
     payload: UpdateEmailInputType,
     db: PgDbClientType
   ): Promise<string> {
-     const { user_id, id, ...updateData } = payload;
+    const { user_id, id, ...updateData } = payload;
 
     const [updatedEmail] = await db
       .update(userEmails)
@@ -275,18 +268,15 @@ const {  id, ...updateData } = payload;
   }
 
   async updateUserAddress(
-
     payload: UpdateAddressInputType,
     db: PgDbClientType
   ): Promise<string> {
- const { user_id, id, ...updateData } = payload;
+    const { user_id, id, ...updateData } = payload;
 
     const [updatedAddress] = await db
       .update(userAddresses)
       .set(updateData)
-      .where(
-        and(eq(userAddresses.user_id, user_id), eq(userAddresses.id, id))
-      )
+      .where(and(eq(userAddresses.user_id, user_id), eq(userAddresses.id, id)))
       .returning({ id: userAddresses.id });
 
     if (!updatedAddress?.id) return "";
@@ -297,7 +287,7 @@ const {  id, ...updateData } = payload;
     payload: UpdateContactInputType,
     db: PgDbClientType
   ): Promise<string> {
-const { user_id, ...updateData } = payload;
+    const { user_id, ...updateData } = payload;
 
     const [updatedContact] = await db
       .update(userContacts)
@@ -317,12 +307,13 @@ const { user_id, ...updateData } = payload;
     payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
   ): Promise<string> {
-
-
     const [deletedContact] = await db
       .delete(userContacts)
       .where(
-        and(eq(userContacts.id, payload.id), eq(userContacts.user_id, payload.user_id))
+        and(
+          eq(userContacts.id, payload.id),
+          eq(userContacts.user_id, payload.user_id)
+        )
       )
       .returning({ id: userContacts.id });
 
@@ -334,11 +325,14 @@ const { user_id, ...updateData } = payload;
     payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
   ): Promise<string> {
-
-
     const [deletedPhone] = await db
       .delete(userPhones)
-      .where(and(eq(userPhones.id, payload.id), eq(userPhones.user_id, payload.user_id)))
+      .where(
+        and(
+          eq(userPhones.id, payload.id),
+          eq(userPhones.user_id, payload.user_id)
+        )
+      )
       .returning({ id: userPhones.id });
 
     if (!deletedPhone?.id) return "";
@@ -349,10 +343,14 @@ const { user_id, ...updateData } = payload;
     payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
   ): Promise<string> {
-
     const [deletedEmail] = await db
       .delete(userEmails)
-      .where(and(eq(userEmails.id, payload.id), eq(userEmails.user_id, payload.user_id)))
+      .where(
+        and(
+          eq(userEmails.id, payload.id),
+          eq(userEmails.user_id, payload.user_id)
+        )
+      )
       .returning({ id: userEmails.id });
 
     if (!deletedEmail?.id) return "";
@@ -363,12 +361,13 @@ const { user_id, ...updateData } = payload;
     payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
   ): Promise<string> {
-
-
     const [deletedAddress] = await db
       .delete(userAddresses)
       .where(
-        and(eq(userAddresses.id, payload.id), eq(userAddresses.user_id, payload.user_id))
+        and(
+          eq(userAddresses.id, payload.id),
+          eq(userAddresses.user_id, payload.user_id)
+        )
       )
       .returning({ id: userAddresses.id });
 
@@ -376,11 +375,7 @@ const { user_id, ...updateData } = payload;
     return deletedAddress.id;
   }
 
-  async deleteUser(
-    payload: IdInputType,
-    db: PgDbClientType
-  ): Promise<string> {
-
+  async deleteUser(payload: IdInputType, db: PgDbClientType): Promise<string> {
     const [deletedUser] = await db
       .delete(users)
       .where(eq(users.id, payload))

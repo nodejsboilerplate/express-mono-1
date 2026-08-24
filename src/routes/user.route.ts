@@ -10,83 +10,83 @@ const userController = new UserController();
 // ---------------------------------------------------------
 router
   .route("/")
-  .post(asyncHandler(userController.createUser.bind(userController)));
+  .post(asyncHandler(userController.createUserHandler.bind(userController)));
 
 router
-  .route("/:userId/address")
-  .post(asyncHandler(userController.createAddress.bind(userController)));
-
-  router
-  .route("/:userId/contact")
-  .post(asyncHandler(userController.createContact.bind(userController)));
+  .route("/:user_id/address")
+  .post(asyncHandler(userController.createAddressHandler.bind(userController)));
 
 router
-  .route("/:userId/contact/:contactId/phone")
-  .post(asyncHandler(userController.createPhone.bind(userController)));
+  .route("/:user_id/contact")
+  .post(asyncHandler(userController.createContactHandler.bind(userController)));
 
 router
-  .route("/:userId/contact/:contactId/email")
-  .post(asyncHandler(userController.createEmail.bind(userController)));
+  .route("/:user_id/contact/:contactId/phone")
+  .post(asyncHandler(userController.createPhoneHandler.bind(userController)));
+
+router
+  .route("/:user_id/contact/:contactId/email")
+  .post(asyncHandler(userController.createEmailHandler.bind(userController)));
 
 // ---------------------------------------------------------
 // Verify
 // ---------------------------------------------------------
 router
-  .route("/verify")
-  .post(asyncHandler(userController.verifyUser.bind(userController)));
+  .route("/:id/verify")
+  .post(asyncHandler(userController.verifyUserHandler.bind(userController)));
 
 router
-  .route("/:userId/phone/:id/verify")
-  .post(asyncHandler(userController.verifyContactPhone.bind(userController)));
+  .route("/:user_id/phone/:id/verify")
+  .post(asyncHandler(userController.verifyContactPhoneHandler.bind(userController)));
 
 router
-  .route("/:userId/email/:id/verify")
-  .post(asyncHandler(userController.verifyContactEmail.bind(userController)));
+  .route("/:user_id/email/:id/verify")
+  .post(asyncHandler(userController.verifyContactEmailHandler.bind(userController)));
 
 // ---------------------------------------------------------
 // Update
 // ---------------------------------------------------------
 router
-  .route("/:userId/profile")
-  .patch(asyncHandler(userController.updateProfile.bind(userController)));
+  .route("/:user_id/profile")
+  .patch(asyncHandler(userController.updateProfileHandler.bind(userController)));
 
 router
-  .route("/:userId/address/:id")
-  .patch(asyncHandler(userController.updateAddress.bind(userController)));
+  .route("/:user_id/address/:id")
+  .patch(asyncHandler(userController.updateAddressHandler.bind(userController)));
 
 router
-  .route("/:userId/contact")
-  .patch(asyncHandler(userController.updateContact.bind(userController)));
+  .route("/:user_id/contact")
+  .patch(asyncHandler(userController.updateContactHandler.bind(userController)));
 
 router
-  .route("/:userId/phone/:id")
-  .patch(asyncHandler(userController.updatePhone.bind(userController)));
+  .route("/:user_id/phone/:id")
+  .patch(asyncHandler(userController.updatePhoneHandler.bind(userController)));
 
 router
-  .route("/:userId/email/:id")
-  .patch(asyncHandler(userController.updateEmail.bind(userController)));
+  .route("/:user_id/email/:id")
+  .patch(asyncHandler(userController.updateEmailHandler.bind(userController)));
 
 // ---------------------------------------------------------
 // Delete
 // ---------------------------------------------------------
 router
-  .route("/:userId")
-  .delete(asyncHandler(userController.deleteProfile.bind(userController)));
+  .route("/:user_id")
+  .delete(asyncHandler(userController.deleteProfileHandler.bind(userController)));
 
 router
-  .route("/:userId/address/:id")
-  .delete(asyncHandler(userController.deleteAddress.bind(userController)));
+  .route("/:user_id/address/:id")
+  .delete(asyncHandler(userController.deleteAddressHandler.bind(userController)));
 
 router
-  .route("/:userId/contact/:id")
-  .delete(asyncHandler(userController.deleteContact.bind(userController)));
+  .route("/:user_id/contact/:id")
+  .delete(asyncHandler(userController.deleteContactHandler.bind(userController)));
 
 router
-  .route("/:userId/phone/:id")
-  .delete(asyncHandler(userController.deletePhone.bind(userController)));
+  .route("/:user_id/phone/:id")
+  .delete(asyncHandler(userController.deletePhoneHandler.bind(userController)));
 
 router
-  .route("/:userId/email/:id")
-  .delete(asyncHandler(userController.deleteEmail.bind(userController)));
+  .route("/:user_id/email/:id")
+  .delete(asyncHandler(userController.deleteEmailHandler.bind(userController)));
 
 export default router;
