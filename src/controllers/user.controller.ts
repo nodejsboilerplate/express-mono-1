@@ -535,13 +535,18 @@ export class UserController extends UserService implements UserControllerType {
   async deleteProfileHandler(req: Request, res: Response): Promise<Response> {
     const { userId } = req.params as { userId: string };
 
+  
+    const parse_id = userValidators.idInput(userId)
+
+    if (isZodError(parse_id)) throw validationError(parse_id)
+
     // `user_profiles` is 1:1 with `users` and cascade-deletes via the FK
     // (onDelete: "cascade"), so there's no standalone "delete profile"
     // operation on the service layer — deleting the user is what removes
     // the profile row. `id` here is the user id.
-    const result = await this.deleteUser(userId, pgDb);
+    const result = await this.deleteUser(parse_id, pgDb);
 
-    if (isZodError(result)) throw validationError(result);
+
     if (!result) {
       throw new ApiError(
         404,
