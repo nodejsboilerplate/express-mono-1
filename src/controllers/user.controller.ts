@@ -23,37 +23,37 @@ import { UserInputValidators } from "@/validators/inputs/user.validator";
 import type { CreateUserAddressInputType, CreateUserContactInputType } from "@/zod";
 
 interface UserControllerType {
-  createUser(req: Request, res: Response): Promise<Response>;
-  createAddress(req: Request, res: Response): Promise<Response>;
-  createContact(req: Request, res: Response): Promise<Response>;
-  createPhone(req: Request, res: Response): Promise<Response>;
-  createEmail(req: Request, res: Response): Promise<Response>;
+  createUserHandler(req: Request, res: Response): Promise<Response>;
+  createAddressHandler(req: Request, res: Response): Promise<Response>;
+  createContactHandler(req: Request, res: Response): Promise<Response>;
+  createPhoneHandler(req: Request, res: Response): Promise<Response>;
+  createEmailHandler(req: Request, res: Response): Promise<Response>;
 
-  verifyUser(req: Request, res: Response): Promise<Response>;
-  verifyContactPhone(req: Request, res: Response): Promise<Response>;
-  verifyContactEmail(req: Request, res: Response): Promise<Response>;
+  verifyUserHandler(req: Request, res: Response): Promise<Response>;
+  verifyContactPhoneHandler(req: Request, res: Response): Promise<Response>;
+  verifyContactEmailHandler(req: Request, res: Response): Promise<Response>;
 
-  updateProfile(req: Request, res: Response): Promise<Response>;
-  updateAddress(req: Request, res: Response): Promise<Response>;
-  updateContact(req: Request, res: Response): Promise<Response>;
-  updatePhone(req: Request, res: Response): Promise<Response>;
-  updateEmail(req: Request, res: Response): Promise<Response>;
+  updateProfileHandler(req: Request, res: Response): Promise<Response>;
+  updateAddressHandler(req: Request, res: Response): Promise<Response>;
+  updateContactHandler(req: Request, res: Response): Promise<Response>;
+  updatePhoneHandler(req: Request, res: Response): Promise<Response>;
+  updateEmailHandler(req: Request, res: Response): Promise<Response>;
 
-  deleteProfile(req: Request, res: Response): Promise<Response>;
-  deleteAddress(req: Request, res: Response): Promise<Response>;
-  deleteContact(req: Request, res: Response): Promise<Response>;
-  deletePhone(req: Request, res: Response): Promise<Response>;
-  deleteEmail(req: Request, res: Response): Promise<Response>;
+  deleteProfileHandler(req: Request, res: Response): Promise<Response>;
+  deleteAddressHandler(req: Request, res: Response): Promise<Response>;
+  deleteContactHandler(req: Request, res: Response): Promise<Response>;
+  deletePhoneHandler(req: Request, res: Response): Promise<Response>;
+  deleteEmailHandler(req: Request, res: Response): Promise<Response>;
 }
 
 const userValidators = new UserInputValidators()
-export class UserController implements UserControllerType {
-  private userService = new UserService();
+export class UserController extends UserService implements UserControllerType  {
+  
 
   // ---------------------------------------------------------
   // Create
   // ---------------------------------------------------------
-  async createUser(req: Request, res: Response): Promise<Response> {
+  async createUserHandler(req: Request, res: Response): Promise<Response> {
     const {
       email,
       username,
@@ -81,7 +81,7 @@ export class UserController implements UserControllerType {
     if (isZodError(parse_core_user)) throw validationError(parse_core_user);
 
     const result = await pgDb.transaction(async (tx) => {
-      const userId = await this.userService.createUserCore(
+      const userId = await this.createUserCore(
         parse_core_user,
         tx
       );
@@ -97,7 +97,7 @@ export class UserController implements UserControllerType {
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      await this.userService.updateUserCore(
+      await this.updateUserCore(
         { password: hashedPassword, verify_code, verify_expiry, id: userId },
         tx
       );
@@ -116,7 +116,7 @@ export class UserController implements UserControllerType {
 
       if (isZodError(parse_user_profile)) throw validationError(parse_user_profile);
 
-      const profileId = await this.userService.createUserProfile(
+      const profileId = await this.createUserProfile(
         parse_user_profile,
         tx
       );
@@ -144,7 +144,7 @@ export class UserController implements UserControllerType {
       );
   }
 
-  async createAddress(req: Request, res: Response): Promise<Response> {
+  async createAddressHandler(req: Request, res: Response): Promise<Response> {
     const { userId } = req.params as { userId: string };
     const payload = req.body as Omit<CreateUserAddressInputType, "user_id">
 
@@ -152,7 +152,7 @@ export class UserController implements UserControllerType {
 
     if (isZodError(parse_payload)) throw validationError(parse_payload)
 
-    const result = await this.userService.createUserAddress(
+    const result = await this.createUserAddress(
       parse_payload,
       pgDb
     );
@@ -173,7 +173,7 @@ export class UserController implements UserControllerType {
       );
   }
 
-  async createContact(req: Request, res: Response): Promise<Response> {
+  async createContactHandler(req: Request, res: Response): Promise<Response> {
     const { userId } = req.params as { userId: string };
 
     const payload = req.body as Omit<CreateUserContactInputType, "user_id">
@@ -182,7 +182,7 @@ export class UserController implements UserControllerType {
 
     if (isZodError(parse_payload)) throw validationError(parse_payload)
 
-    const result = await this.userService.createUserContact(
+    const result = await this.createUserContact(
       parse_payload,
       pgDb
     );
@@ -201,7 +201,7 @@ export class UserController implements UserControllerType {
       .json(new ApiResponse(201, "Contact added successfully.", { id: result }));
   }
 
-  async createPhone(req: Request, res: Response): Promise<Response> {
+  async createPhoneHandler(req: Request, res: Response): Promise<Response> {
     const { contactId, userId } = req.params as {
       contactId: string;
       userId: string;
@@ -213,7 +213,7 @@ export class UserController implements UserControllerType {
 
     if(isZodError(parsed_payload)) throw validationError(parsed_payload)
 
-    const result = await this.userService.createUserPhone(
+    const result = await this.createUserPhone(
       parsed_payload,
       pgDb
     );
@@ -232,7 +232,7 @@ export class UserController implements UserControllerType {
       );
   }
 
-  async createEmail(req: Request, res: Response): Promise<Response> {
+  async createEmailHandler(req: Request, res: Response): Promise<Response> {
     const { contactId, userId } = req.params as {
       contactId: string;
       userId: string;
@@ -243,7 +243,7 @@ export class UserController implements UserControllerType {
 
     if(isZodError(parse_payload)) throw validationError(parse_payload)
 
-    const result = await this.userService.createUserEmail(
+    const result = await this.createUserEmail(
       parse_payload,
       pgDb
     );
@@ -264,10 +264,11 @@ export class UserController implements UserControllerType {
   // Verify
   // ---------------------------------------------------------
 
-  async verifyUser(req: Request, res: Response): Promise<Response> {
+  async verifyUserHandler(req: Request, res: Response): Promise<Response> {
     const { id, code } = req.body;
 
-
+    const parsed_payload = userValidators.verifyCodeInput({id, code})
+    if(isZodError(parsed_payload)) throw validationError(parsed_payload)
 
     const [user] = await pgDb
       .select({
@@ -277,7 +278,7 @@ export class UserController implements UserControllerType {
         verify_expiry: users.verify_expiry,
       })
       .from(users)
-      .where(eq(users.id, id));
+      .where(eq(users.id, parsed_payload.id));
 
     if (!user) {
       throw new ApiError(
@@ -293,7 +294,7 @@ export class UserController implements UserControllerType {
       );
     }
 
-    if (!user.verify_code || user.verify_code !== code) {
+    if (!user.verify_code || user.verify_code !== parsed_payload.code) {
       throw new ApiError(
         400,
         SystemCustomErrorMsgByCode[
@@ -311,13 +312,12 @@ export class UserController implements UserControllerType {
       );
     }
 
-    const [verifiedUser] = await pgDb
-      .update(users)
-      .set({ is_verified: true, verify_code: null, verify_expiry: null })
-      .where(eq(users.id, id))
-      .returning({ id: users.id });
+    const verifiedUserId = await this.updateUserCore({
+      id: parsed_payload.id,
+      is_verified: true, verify_code: null, verify_expiry: null
+    }, pgDb)
 
-    if (!verifiedUser?.id) {
+    if (!verifiedUserId) {
       throw new ApiError(
         500,
         SystemCustomErrorMsgByCode[SystemCustomErrorCode.USER_UPDATE_FAILED]!
@@ -326,12 +326,12 @@ export class UserController implements UserControllerType {
 
     return res.status(200).json(
       new ApiResponse(200, "Account verified successfully.", {
-        id: verifiedUser.id,
+        id: verifiedUserId,
       })
     );
   }
 
-  async verifyContactPhone(req: Request, res: Response): Promise<Response> {
+  async verifyContactPhoneHandler(req: Request, res: Response): Promise<Response> {
     const { id, userId } = req.params as { id: string; userId: string };
     const { code } = req.body ?? {};
 
@@ -344,7 +344,7 @@ export class UserController implements UserControllerType {
       );
     }
 
-    const result = await this.userService.updateUserPhone(
+    const result = await this.updateUserPhone(
       id,
       userId,
       { id, is_verified: true } as UserPhonesInsertType,
@@ -366,7 +366,7 @@ export class UserController implements UserControllerType {
     );
   }
 
-  async verifyContactEmail(req: Request, res: Response): Promise<Response> {
+  async verifyContactEmailHandler(req: Request, res: Response): Promise<Response> {
     const { id, userId } = req.params as { id: string; userId: string };
     const { code } = req.body ?? {};
 
@@ -379,7 +379,7 @@ export class UserController implements UserControllerType {
       );
     }
 
-    const result = await this.userService.updateUserEmail(
+    const result = await this.updateUserEmail(
       id,
       userId,
       { id, is_verified: true } as UserEmailsInsertType,
@@ -405,9 +405,9 @@ export class UserController implements UserControllerType {
   // Update
   // ---------------------------------------------------------
 
-  async updateProfile(req: Request, res: Response): Promise<Response> {
+  async updateProfileHandler(req: Request, res: Response): Promise<Response> {
     const { userId } = req.params as { userId: string };
-    const result = await this.userService.updateUserProfile(
+    const result = await this.updateUserProfile(
       userId,
       req.body as UserProfileInsertType,
       pgDb
@@ -428,9 +428,9 @@ export class UserController implements UserControllerType {
       );
   }
 
-  async updateAddress(req: Request, res: Response): Promise<Response> {
+  async updateAddressHandler(req: Request, res: Response): Promise<Response> {
     const { id, userId } = req.params as { id: string; userId: string };
-    const result = await this.userService.updateUserAddress(
+    const result = await this.updateUserAddress(
       userId,
       id,
       req.body as UserAddressInsertType,
@@ -452,9 +452,9 @@ export class UserController implements UserControllerType {
       );
   }
 
-  async updateContact(req: Request, res: Response): Promise<Response> {
+  async updateContactHandler(req: Request, res: Response): Promise<Response> {
     const { userId } = req.params as { userId: string };
-    const result = await this.userService.updateUserContact(
+    const result = await this.updateUserContact(
       userId,
 
       req.body as UserContactInsertType,
@@ -476,10 +476,10 @@ export class UserController implements UserControllerType {
       );
   }
 
-  async updatePhone(req: Request, res: Response): Promise<Response> {
+  async updatePhoneHandler(req: Request, res: Response): Promise<Response> {
     const { id, userId } = req.params as { id: string; userId: string };
 
-    const result = await this.userService.updateUserPhone(
+    const result = await this.updateUserPhone(
       userId,
       id,
       req.body as Partial<UserPhonesInsertType>,
@@ -501,10 +501,10 @@ export class UserController implements UserControllerType {
     );
   }
 
-  async updateEmail(req: Request, res: Response): Promise<Response> {
+  async updateEmailHandler(req: Request, res: Response): Promise<Response> {
     const { id, userId } = req.params as { id: string; userId: string };
 
-    const result = await this.userService.updateUserEmail(
+    const result = await this.updateUserEmail(
       userId,
       id,
       req.body as Partial<UserEmailsInsertType>,
@@ -530,14 +530,14 @@ export class UserController implements UserControllerType {
   // Delete
   // ---------------------------------------------------------
 
-  async deleteProfile(req: Request, res: Response): Promise<Response> {
+  async deleteProfileHandler(req: Request, res: Response): Promise<Response> {
     const { userId } = req.params as { userId: string };
 
     // `user_profiles` is 1:1 with `users` and cascade-deletes via the FK
     // (onDelete: "cascade"), so there's no standalone "delete profile"
     // operation on the service layer — deleting the user is what removes
     // the profile row. `id` here is the user id.
-    const result = await this.userService.deleteUser(userId, pgDb);
+    const result = await this.deleteUser(userId, pgDb);
 
     if (isZodError(result)) throw validationError(result);
     if (!result) {
@@ -554,10 +554,10 @@ export class UserController implements UserControllerType {
       );
   }
 
-  async deleteAddress(req: Request, res: Response): Promise<Response> {
+  async deleteAddressHandler(req: Request, res: Response): Promise<Response> {
     const { id, userId } = req.params as { id: string; userId: string };
 
-    const result = await this.userService.deleteUserAddress(userId, id, pgDb);
+    const result = await this.deleteUserAddress(userId, id, pgDb);
 
     if (isZodError(result)) throw validationError(result);
     if (!result) {
@@ -574,10 +574,10 @@ export class UserController implements UserControllerType {
       );
   }
 
-  async deleteContact(req: Request, res: Response): Promise<Response> {
+  async deleteContactHandler(req: Request, res: Response): Promise<Response> {
     const { id, userId } = req.params as { id: string; userId: string };
 
-    const result = await this.userService.deleteUserContact(userId, id, pgDb);
+    const result = await this.deleteUserContact(userId, id, pgDb);
 
     if (isZodError(result)) throw validationError(result);
     if (!result) {
@@ -594,10 +594,10 @@ export class UserController implements UserControllerType {
       );
   }
 
-  async deletePhone(req: Request, res: Response): Promise<Response> {
+  async deletePhoneHandler(req: Request, res: Response): Promise<Response> {
     const { id, userId } = req.params as { id: string; userId: string };
 
-    const result = await this.userService.deleteUserPhone(userId, id, pgDb);
+    const result = await this.deleteUserPhone(userId, id, pgDb);
 
     if (isZodError(result)) throw validationError(result);
     if (!result) {
@@ -614,10 +614,10 @@ export class UserController implements UserControllerType {
     );
   }
 
-  async deleteEmail(req: Request, res: Response): Promise<Response> {
+  async deleteEmailHandler(req: Request, res: Response): Promise<Response> {
     const { id, userId } = req.params as { id: string; userId: string };
 
-    const result = await this.userService.deleteUserEmail(userId, id, pgDb);
+    const result = await this.deleteUserEmail(userId, id, pgDb);
 
     if (isZodError(result)) throw validationError(result);
     if (!result) {
