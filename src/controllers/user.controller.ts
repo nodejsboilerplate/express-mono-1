@@ -237,6 +237,7 @@ export class UserController implements UserControllerType {
       contactId: string;
       userId: string;
     };
+    const payload = req.body
 
     const parse_payload = userValidators.createUserEmailInput({...payload, user_id: userId, contact_id: contactId})
 
