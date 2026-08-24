@@ -1,10 +1,21 @@
 import { defineConfig } from "vitest/config";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  plugins: [tsconfigPaths()],
+  resolve: {
+    tsconfigPaths: true,
+  },
   test: {
     environment: "node",
     globals: true,
+    tags: [
+      {
+        name: "apis/user",
+        description: "Tests written for user apis.",
+      },
+      {
+        name: "services/user",
+        description: "Tests written for user services.",
+      },
+    ],
   },
 });

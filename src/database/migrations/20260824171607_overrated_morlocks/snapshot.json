@@ -1,8 +1,8 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "6fab9421-0098-49f6-8b31-28505c49ceba",
-  "prevIds": ["040d308a-dd35-461d-9ced-57c362cda3e3"],
+  "id": "efe2fd22-c0fd-415f-a609-ad762bed5743",
+  "prevIds": ["6fab9421-0098-49f6-8b31-28505c49ceba"],
   "ddl": [
     {
       "values": ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"],
@@ -339,6 +339,32 @@
       "table": "user_emails"
     },
     {
+      "type": "varchar(10)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "verify_code",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user_emails"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "verify_expiry",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user_emails"
+    },
+    {
       "type": "boolean",
       "typeSchema": null,
       "notNull": true,
@@ -438,6 +464,32 @@
       "generated": null,
       "identity": null,
       "name": "is_verified",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user_phones"
+    },
+    {
+      "type": "varchar(10)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "verify_code",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user_phones"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "verify_expiry",
       "entityType": "columns",
       "schema": "public",
       "table": "user_phones"

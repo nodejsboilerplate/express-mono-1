@@ -2,7 +2,11 @@ import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { userEmails, userPhones, users } from "@/database";
-import { SystemCustomErrorCode, SystemCustomErrorMsgByCode } from "@/events";
+import {
+  getSystemCustomErrorMsgByKey,
+  SystemCustomErrorCode,
+  SystemCustomErrorMsgByCode,
+} from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
 import { pgDb } from "@/libs/db.connect";
 import { UserService } from "@/services/user.service";
@@ -24,22 +28,34 @@ import type {
 } from "@/zod";
 
 interface UserControllerType {
+  // ---------------------------------------------------------------
+  // Create
+  // ---------------------------------------------------------------
   createUserHandler(req: Request, res: Response): Promise<Response>;
   createAddressHandler(req: Request, res: Response): Promise<Response>;
   createContactHandler(req: Request, res: Response): Promise<Response>;
   createPhoneHandler(req: Request, res: Response): Promise<Response>;
   createEmailHandler(req: Request, res: Response): Promise<Response>;
 
+  // ---------------------------------------------------------------
+  // Verify
+  // ---------------------------------------------------------------
   verifyUserHandler(req: Request, res: Response): Promise<Response>;
   verifyContactPhoneHandler(req: Request, res: Response): Promise<Response>;
   verifyContactEmailHandler(req: Request, res: Response): Promise<Response>;
 
+  // ---------------------------------------------------------------
+  // Update
+  // ---------------------------------------------------------------
   updateProfileHandler(req: Request, res: Response): Promise<Response>;
   updateAddressHandler(req: Request, res: Response): Promise<Response>;
   updateContactHandler(req: Request, res: Response): Promise<Response>;
   updatePhoneHandler(req: Request, res: Response): Promise<Response>;
   updateEmailHandler(req: Request, res: Response): Promise<Response>;
 
+  // ---------------------------------------------------------------
+  // Delete
+  // ---------------------------------------------------------------
   deleteProfileHandler(req: Request, res: Response): Promise<Response>;
   deleteAddressHandler(req: Request, res: Response): Promise<Response>;
   deleteContactHandler(req: Request, res: Response): Promise<Response>;
@@ -85,9 +101,7 @@ export class UserController extends UserService implements UserControllerType {
       if (!userId) {
         throw new ApiError(
           500,
-          SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.USER_CREATION_FAILED
-          ]!
+          getSystemCustomErrorMsgByKey("USER_CREATION_FAILED")
         );
       }
 
@@ -117,9 +131,7 @@ export class UserController extends UserService implements UserControllerType {
       if (!profileId) {
         throw new ApiError(
           500,
-          SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.PROFILE_CREATION_FAILED
-          ]!
+          getSystemCustomErrorMsgByKey("PROFILE_CREATION_FAILED")
         );
       }
 
@@ -153,9 +165,7 @@ export class UserController extends UserService implements UserControllerType {
     if (!result) {
       throw new ApiError(
         500,
-        SystemCustomErrorMsgByCode[
-        SystemCustomErrorCode.ADDRESS_CREATION_FAILED
-        ]!
+        getSystemCustomErrorMsgByKey("ADDRESS_CREATION_FAILED")
       );
     }
 
@@ -183,9 +193,7 @@ export class UserController extends UserService implements UserControllerType {
     if (!result) {
       throw new ApiError(
         500,
-        SystemCustomErrorMsgByCode[
-        SystemCustomErrorCode.CONTACT_CREATION_FAILED
-        ]!
+        getSystemCustomErrorMsgByKey("CONTACT_CREATION_FAILED")
       );
     }
 
@@ -204,20 +212,20 @@ export class UserController extends UserService implements UserControllerType {
 
     const payload = req.body;
 
-    const parsed_payload = userValidators.createUserPhoneInput({
+    const parse_payload = userValidators.createUserPhoneInput({
       ...payload,
       user_id,
       contact_id: contactId,
     });
 
-    if (isZodError(parsed_payload)) throw validationError(parsed_payload);
+    if (isZodError(parse_payload)) throw validationError(parse_payload);
 
-    const result = await this.createUserPhone(parsed_payload, pgDb);
+    const result = await this.createUserPhone(parse_payload, pgDb);
 
     if (!result) {
       throw new ApiError(
         500,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_CREATION_FAILED]!
+        getSystemCustomErrorMsgByKey("PHONE_CREATION_FAILED")
       );
     }
 
@@ -248,7 +256,7 @@ export class UserController extends UserService implements UserControllerType {
     if (!result) {
       throw new ApiError(
         500,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_CREATION_FAILED]!
+        getSystemCustomErrorMsgByKey("EMAIL_CREATION_FAILED")
       );
     }
 
@@ -265,8 +273,8 @@ export class UserController extends UserService implements UserControllerType {
     const { id } = req.params as { id: string };
     const { code } = req.body;
 
-    const parsed_payload = userValidators.verifyCodeInput({ id, code });
-    if (isZodError(parsed_payload)) throw validationError(parsed_payload);
+    const parse_payload = userValidators.verifyCodeInput({ id, code });
+    if (isZodError(parse_payload)) throw validationError(parse_payload);
 
     const [user] = await pgDb
       .select({
@@ -276,43 +284,36 @@ export class UserController extends UserService implements UserControllerType {
         verify_expiry: users.verify_expiry,
       })
       .from(users)
-      .where(eq(users.id, parsed_payload.id));
+      .where(eq(users.id, parse_payload.id));
 
     if (!user) {
-      throw new ApiError(
-        404,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.USER_NOT_FOUND]!
-      );
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
     }
 
     if (user.is_verified) {
       throw new ApiError(
         400,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.USER_ALREADY_VERIFIED]!
+        getSystemCustomErrorMsgByKey("USER_ALREADY_VERIFIED")
       );
     }
 
-    if (!user.verify_code || user.verify_code !== parsed_payload.code) {
+    if (!user.verify_code || user.verify_code !== parse_payload.code) {
       throw new ApiError(
         400,
-        SystemCustomErrorMsgByCode[
-        SystemCustomErrorCode.INVALID_VERIFICATION_CODE
-        ]!
+        getSystemCustomErrorMsgByKey("INVALID_VERIFICATION_CODE")
       );
     }
 
     if (!user.verify_expiry || user.verify_expiry.getTime() < Date.now()) {
       throw new ApiError(
         400,
-        SystemCustomErrorMsgByCode[
-        SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED
-        ]!
+        getSystemCustomErrorMsgByKey("VERIFICATION_CODE_EXPIRED")
       );
     }
 
     const verifiedUserId = await this.updateUserCore(
       {
-        id: parsed_payload.id,
+        id: parse_payload.id,
         is_verified: true,
         verify_code: null,
         verify_expiry: null,
@@ -323,7 +324,7 @@ export class UserController extends UserService implements UserControllerType {
     if (!verifiedUserId) {
       throw new ApiError(
         500,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.USER_UPDATE_FAILED]!
+        getSystemCustomErrorMsgByKey("USER_UPDATE_FAILED")
       );
     }
 
@@ -334,143 +335,149 @@ export class UserController extends UserService implements UserControllerType {
     );
   }
 
-async verifyContactPhoneHandler(
-  req: Request,
-  res: Response
-): Promise<Response> {
-  const { id, user_id } = req.params as { id: string; user_id: string };
-  const { code } = req.body;
+  async verifyContactPhoneHandler(
+    req: Request,
+    res: Response
+  ): Promise<Response> {
+    const { id, user_id } = req.params as { id: string; user_id: string };
+    const { code } = req.body;
 
-  const parse_payload = userValidators.verifyCodeWithUserId({
-    code,
-    id,
-    user_id,
-  });
+    const parse_payload = userValidators.verifyCodeWithUserId({
+      code,
+      id,
+      user_id,
+    });
 
-  if (isZodError(parse_payload)) throw validationError(parse_payload);
+    if (isZodError(parse_payload)) throw validationError(parse_payload);
 
-  const [user_phone] = await pgDb
-    .select({
-      id: userPhones.id,
-      is_verified: userPhones.is_verified,
-      verify_code: userPhones.verify_code,
-      verify_expiry: userPhones.verify_expiry,
-    })
-    .from(userPhones)
-    .where(eq(userPhones.id, parse_payload.id));
+    const [user_phone] = await pgDb
+      .select({
+        id: userPhones.id,
+        is_verified: userPhones.is_verified,
+        verify_code: userPhones.verify_code,
+        verify_expiry: userPhones.verify_expiry,
+      })
+      .from(userPhones)
+      .where(eq(userPhones.id, parse_payload.id));
 
-  if (!user_phone) {
-    throw new ApiError(
-      404,
-      SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_NOT_FOUND]!
+    if (!user_phone) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
+    }
+
+    if (user_phone.is_verified) {
+      throw new ApiError(
+        409,
+        getSystemCustomErrorMsgByKey("PHONE_ALREADY_VERIFIED")
+      );
+    }
+
+    if (
+      !user_phone.verify_code ||
+      user_phone.verify_code !== parse_payload.code
+    ) {
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("INVALID_VERIFICATION_CODE")
+      );
+    }
+
+    if (
+      !user_phone.verify_expiry ||
+      user_phone.verify_expiry.getTime() < Date.now()
+    ) {
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("VERIFICATION_CODE_EXPIRED")
+      );
+    }
+
+    const result = await this.updateUserPhone(
+      { ...parse_payload, is_verified: true },
+      pgDb
+    );
+
+    if (!result) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
+    }
+
+    return res.status(200).json(
+      new ApiResponse(200, "Phone number verified successfully.", {
+        id: result,
+      })
     );
   }
 
-  if (user_phone.is_verified) {
-    throw new ApiError(
-      409,
-      SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_ALREADY_VERIFIED]!
+  async verifyContactEmailHandler(
+    req: Request,
+    res: Response
+  ): Promise<Response> {
+    const { id, user_id } = req.params as { id: string; user_id: string };
+    const { code } = req.body ?? {};
+
+    const parse_payload = userValidators.verifyCodeWithUserId({
+      code,
+      id,
+      user_id,
+    });
+
+    if (isZodError(parse_payload)) throw validationError(parse_payload);
+
+    const [user_email] = await pgDb
+      .select({
+        id: userEmails.id,
+        is_verified: userEmails.is_verified,
+        verify_code: userEmails.verify_code,
+        verify_expiry: userEmails.verify_expiry,
+      })
+      .from(userEmails)
+      .where(eq(userEmails.id, parse_payload.id));
+
+    if (!user_email) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
+    }
+
+    if (user_email.is_verified) {
+      throw new ApiError(
+        409,
+        getSystemCustomErrorMsgByKey("EMAIL_ALREADY_VERIFIED")
+      );
+    }
+
+    if (
+      !user_email.verify_code ||
+      user_email.verify_code !== parse_payload.code
+    ) {
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("INVALID_VERIFICATION_CODE")
+      );
+    }
+
+    if (
+      !user_email.verify_expiry ||
+      user_email.verify_expiry.getTime() < Date.now()
+    ) {
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("VERIFICATION_CODE_EXPIRED")
+      );
+    }
+
+    const result = await this.updateUserEmail(
+      { ...parse_payload, is_verified: true },
+      pgDb
     );
+
+    if (!result) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, "Email verified successfully.", { id: result })
+      );
   }
-
-  if (!user_phone.verify_code || user_phone.verify_code !== parse_payload.code) {
-    throw new ApiError(
-      400,
-      SystemCustomErrorMsgByCode[SystemCustomErrorCode.INVALID_VERIFICATION_CODE]!
-    );
-  }
-
-  if (!user_phone.verify_expiry || user_phone.verify_expiry.getTime() < Date.now()) {
-    throw new ApiError(
-      400,
-      SystemCustomErrorMsgByCode[SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED]!
-    );
-  }
-
-  const result = await this.updateUserPhone({ ...parse_payload, is_verified: true }, pgDb);
-
-  if (!result) {
-    throw new ApiError(
-      404,
-      SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_NOT_FOUND]!
-    );
-  }
-
-  return res.status(200).json(
-    new ApiResponse(200, "Phone number verified successfully.", {
-      id: result,
-    })
-  );
-}
-
-async verifyContactEmailHandler(
-  req: Request,
-  res: Response
-): Promise<Response> {
-  const { id, user_id } = req.params as { id: string; user_id: string };
-  const { code } = req.body ?? {};
-
-  const parse_payload = userValidators.verifyCodeWithUserId({
-    code,
-    id,
-    user_id,
-  });
-
-  if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-  const [user_email] = await pgDb
-    .select({
-      id: userEmails.id,
-      is_verified: userEmails.is_verified,
-      verify_code: userEmails.verify_code,
-      verify_expiry: userEmails.verify_expiry,
-    })
-    .from(userEmails)
-    .where(eq(userEmails.id, parse_payload.id));
-
-  if (!user_email) {
-    throw new ApiError(
-      404,
-      SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_NOT_FOUND]!
-    );
-  }
-
-  if (user_email.is_verified) {
-    throw new ApiError(
-      409,
-      SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_ALREADY_VERIFIED]!
-    );
-  }
-
-  if (!user_email.verify_code || user_email.verify_code !== parse_payload.code) {
-    throw new ApiError(
-      400,
-      SystemCustomErrorMsgByCode[SystemCustomErrorCode.INVALID_VERIFICATION_CODE]!
-    );
-  }
-
-  if (!user_email.verify_expiry || user_email.verify_expiry.getTime() < Date.now()) {
-    throw new ApiError(
-      400,
-      SystemCustomErrorMsgByCode[SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED]!
-    );
-  }
-
-  const result = await this.updateUserEmail({ ...parse_payload, is_verified: true }, pgDb);
-
-  if (!result) {
-    throw new ApiError(
-      404,
-      SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_NOT_FOUND]!
-    );
-  }
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, "Email verified successfully.", { id: result })
-    );
-}
 
   // ---------------------------------------------------------
   // Update
@@ -490,10 +497,7 @@ async verifyContactEmailHandler(
     const result = await this.updateUserProfile(parse_payload, pgDb);
 
     if (!result) {
-      throw new ApiError(
-        404,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.PROFILE_NOT_FOUND]!
-      );
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
     }
 
     return res
@@ -519,7 +523,7 @@ async verifyContactEmailHandler(
     if (!result) {
       throw new ApiError(
         404,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.ADDRESS_NOT_FOUND]!
+        getSystemCustomErrorMsgByKey("ADDRESS_NOT_FOUND")
       );
     }
 
@@ -546,7 +550,7 @@ async verifyContactEmailHandler(
     if (!result) {
       throw new ApiError(
         404,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.CONTACT_NOT_FOUND]!
+        getSystemCustomErrorMsgByKey("CONTACT_NOT_FOUND")
       );
     }
 
@@ -572,10 +576,7 @@ async verifyContactEmailHandler(
     const result = await this.updateUserPhone(parse_payload, pgDb);
 
     if (!result) {
-      throw new ApiError(
-        404,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_NOT_FOUND]!
-      );
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
     }
 
     return res.status(200).json(
@@ -600,10 +601,7 @@ async verifyContactEmailHandler(
     const result = await this.updateUserEmail(parse_payload, pgDb);
 
     if (!result) {
-      throw new ApiError(
-        404,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_NOT_FOUND]!
-      );
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
     }
 
     return res
@@ -631,10 +629,7 @@ async verifyContactEmailHandler(
     const result = await this.deleteUser(parse_id, pgDb);
 
     if (!result) {
-      throw new ApiError(
-        404,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.USER_NOT_FOUND]!
-      );
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
     }
 
     return res
@@ -659,7 +654,7 @@ async verifyContactEmailHandler(
     if (!result) {
       throw new ApiError(
         404,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.ADDRESS_NOT_FOUND]!
+        getSystemCustomErrorMsgByKey("ADDRESS_NOT_FOUND")
       );
     }
 
@@ -685,7 +680,7 @@ async verifyContactEmailHandler(
     if (!result) {
       throw new ApiError(
         404,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.CONTACT_NOT_FOUND]!
+        getSystemCustomErrorMsgByKey("CONTACT_NOT_FOUND")
       );
     }
 
@@ -708,10 +703,7 @@ async verifyContactEmailHandler(
     const result = await this.deleteUserPhone(parse_payload, pgDb);
 
     if (!result) {
-      throw new ApiError(
-        404,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.PHONE_NOT_FOUND]!
-      );
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
     }
 
     return res.status(200).json(
@@ -733,10 +725,7 @@ async verifyContactEmailHandler(
     const result = await this.deleteUserEmail(parse_payload, pgDb);
 
     if (!result) {
-      throw new ApiError(
-        404,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.EMAIL_NOT_FOUND]!
-      );
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
     }
 
     return res

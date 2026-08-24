@@ -28,9 +28,9 @@ import { and, eq } from "drizzle-orm";
 import type z from "zod";
 
 interface UserServiceType {
-  // =========================================================
+  // ---------------------------------------------------------
   // Create
-  // =========================================================
+  // ---------------------------------------------------------
   createUserCore(
     payload: CreateUserCoreInputType,
     db: PgDbClientType
@@ -56,9 +56,9 @@ interface UserServiceType {
     db: PgDbClientType
   ): Promise<string>;
 
-  // =========================================================
+  // ---------------------------------------------------------
   // Update
-  // =========================================================
+  // ---------------------------------------------------------
   updateUserCore(
     payload: UpdateUserInputType,
     db: PgDbClientType
@@ -84,9 +84,9 @@ interface UserServiceType {
     db: PgDbClientType
   ): Promise<string>;
 
-  // =========================================================
+  // ---------------------------------------------------------
   // Delete
-  // =========================================================
+  // ---------------------------------------------------------
   deleteUserContact(
     payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
