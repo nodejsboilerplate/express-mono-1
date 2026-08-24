@@ -6,13 +6,6 @@ import { SystemCustomErrorCode, SystemCustomErrorMsgByCode } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
 import { pgDb } from "@/libs/db.connect";
 import { UserService } from "@/services/user.service";
-import type {
-  UserAddressInsertType,
-  UserContactInsertType,
-  UserEmailsInsertType,
-  UserPhonesInsertType,
-  UserProfileInsertType,
-} from "@/database/type";
 import {
   generateVerificationCode,
   getVerifyExpiry,

@@ -22,7 +22,6 @@ import type {
   UpdatePhoneInputType,
   UpdateProfileInputType,
   UpdateUserInputType,
-  VerifyCodeInputType,
 } from "@/zod";
 
 import { and, eq } from "drizzle-orm";

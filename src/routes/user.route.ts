@@ -37,26 +37,36 @@ router
 
 router
   .route("/:user_id/phone/:id/verify")
-  .post(asyncHandler(userController.verifyContactPhoneHandler.bind(userController)));
+  .post(
+    asyncHandler(userController.verifyContactPhoneHandler.bind(userController))
+  );
 
 router
   .route("/:user_id/email/:id/verify")
-  .post(asyncHandler(userController.verifyContactEmailHandler.bind(userController)));
+  .post(
+    asyncHandler(userController.verifyContactEmailHandler.bind(userController))
+  );
 
 // ---------------------------------------------------------
 // Update
 // ---------------------------------------------------------
 router
   .route("/:user_id/profile")
-  .patch(asyncHandler(userController.updateProfileHandler.bind(userController)));
+  .patch(
+    asyncHandler(userController.updateProfileHandler.bind(userController))
+  );
 
 router
   .route("/:user_id/address/:id")
-  .patch(asyncHandler(userController.updateAddressHandler.bind(userController)));
+  .patch(
+    asyncHandler(userController.updateAddressHandler.bind(userController))
+  );
 
 router
   .route("/:user_id/contact")
-  .patch(asyncHandler(userController.updateContactHandler.bind(userController)));
+  .patch(
+    asyncHandler(userController.updateContactHandler.bind(userController))
+  );
 
 router
   .route("/:user_id/phone/:id")
@@ -71,15 +81,21 @@ router
 // ---------------------------------------------------------
 router
   .route("/:user_id")
-  .delete(asyncHandler(userController.deleteProfileHandler.bind(userController)));
+  .delete(
+    asyncHandler(userController.deleteProfileHandler.bind(userController))
+  );
 
 router
   .route("/:user_id/address/:id")
-  .delete(asyncHandler(userController.deleteAddressHandler.bind(userController)));
+  .delete(
+    asyncHandler(userController.deleteAddressHandler.bind(userController))
+  );
 
 router
   .route("/:user_id/contact/:id")
-  .delete(asyncHandler(userController.deleteContactHandler.bind(userController)));
+  .delete(
+    asyncHandler(userController.deleteContactHandler.bind(userController))
+  );
 
 router
   .route("/:user_id/phone/:id")
