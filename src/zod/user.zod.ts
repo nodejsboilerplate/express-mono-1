@@ -167,7 +167,7 @@ export class UserZSchema {
       .optional(),
   });
 
-  static verifyUserByCodeInput = z4.object({
+  static verifyCode = z4.object({
     id: this.id,
     code: z4
       .string({ error: "Code is required" })
@@ -238,7 +238,7 @@ export type CreateUserAddressInputType = z4.infer<typeof UserZSchema.createAddre
 // ---------------------------------------------------------
 // Verification types
 // ---------------------------------------------------------
-export type VerifyUserByCodeInputType = z4.infer<typeof UserZSchema.verifyUserByCodeInput>
+export type VerifyCodeInputType = z4.infer<typeof UserZSchema.verifyCode>
 
 // ---------------------------------------------------------
 // Update types

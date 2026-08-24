@@ -1,8 +1,8 @@
 import { validateWithZod } from "@/utils";
-import { UserZSchema, type CreateUserAddressInputType, type CreateUserContactInputType, type CreateUserCoreInputType, type CreateUserEmailInputType, type CreateUserPhoneInputType, type CreateUserProfileInputType, type DeleteByUserWithContextIdInputType, type IdInputType, type UpdateAddressInputType, type UpdateContactInputType, type UpdateEmailInputType, type UpdatePhoneInputType, type UpdateProfileInputType, type UpdateUserInputType } from "@/zod";
+import { UserZSchema, type CreateUserAddressInputType, type CreateUserContactInputType, type CreateUserCoreInputType, type CreateUserEmailInputType, type CreateUserPhoneInputType, type CreateUserProfileInputType, type DeleteByUserWithContextIdInputType, type IdInputType, type UpdateAddressInputType, type UpdateContactInputType, type UpdateEmailInputType, type UpdatePhoneInputType, type UpdateProfileInputType, type UpdateUserInputType, type VerifyCodeInputType } from "@/zod";
 import type z from "zod";
 
-interface UserInputValidationsType {
+interface UserInputValidatorsType {
     idInput(payload: IdInputType): IdInputType | z.ZodError
 
     createUserCoreInput(payload: CreateUserCoreInputType): CreateUserCoreInputType | z.ZodError
@@ -10,7 +10,9 @@ interface UserInputValidationsType {
     createUserContactInput(payload: CreateUserContactInputType): CreateUserContactInputType | z.ZodError
     createUserEmailInput(payload: CreateUserEmailInputType): CreateUserEmailInputType | z.ZodError
     createUserPhoneInput(payload: CreateUserPhoneInputType): CreateUserPhoneInputType | z.ZodError
-    createUserProfile(payload: CreateUserProfileInputType): CreateUserProfileInputType | z.ZodError
+    createUserProfileInput(payload: CreateUserProfileInputType): CreateUserProfileInputType | z.ZodError
+
+    verifyCodeInput(payload: VerifyCodeInputType): VerifyCodeInputType | z.ZodError
 
     updateUserCoreInput(payload: UpdateUserInputType): UpdateUserInputType | z.ZodError
     updateUserProfileInput(payload: UpdateProfileInputType): UpdateProfileInputType | z.ZodError
@@ -19,11 +21,11 @@ interface UserInputValidationsType {
     updateUserAddressInput(payload: UpdateAddressInputType): UpdateAddressInputType | z.ZodError
     updateUserContactInput(payload: UpdateContactInputType): UpdateContactInputType | z.ZodError
 
-    deleteByUserIdWithContextId(payload: DeleteByUserWithContextIdInputType): DeleteByUserWithContextIdInputType | z.ZodError
+    deleteByUserIdWithContextIdInput(payload: DeleteByUserWithContextIdInputType): DeleteByUserWithContextIdInputType | z.ZodError
 
 }
 
-export class UserInputValidations implements UserInputValidationsType {
+export class UserInputValidators implements UserInputValidatorsType {
     idInput(payload: IdInputType): IdInputType | z.ZodError {
         const {
             data,
@@ -86,10 +88,20 @@ export class UserInputValidations implements UserInputValidationsType {
         return data
     }
 
-    createUserProfile(payload: CreateUserProfileInputType): CreateUserProfileInputType | z.ZodError {
+    createUserProfileInput(payload: CreateUserProfileInputType): CreateUserProfileInputType | z.ZodError {
         const { data, success, error } = validateWithZod(
             payload,
             UserZSchema.createProfile
+        );
+        if (!success)
+            return error
+        return data
+    }
+
+    verifyCodeInput(payload: VerifyCodeInputType): VerifyCodeInputType | z.ZodError {
+            const { data, success, error } = validateWithZod(
+            payload,
+            UserZSchema.verifyCode
         );
         if (!success)
             return error
@@ -175,7 +187,7 @@ export class UserInputValidations implements UserInputValidationsType {
         return data
     }
 
-    deleteByUserIdWithContextId(payload: DeleteByUserWithContextIdInputType): DeleteByUserWithContextIdInputType | z.ZodError {
+    deleteByUserIdWithContextIdInput(payload: DeleteByUserWithContextIdInputType): DeleteByUserWithContextIdInputType | z.ZodError {
         const {
             data,
             success,

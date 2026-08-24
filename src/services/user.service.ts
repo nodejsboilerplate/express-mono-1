@@ -7,7 +7,7 @@ import {
   users,
 } from "@/database";
 import type { PgDbClientType } from "@/libs/db.connect";
-import type { CreateUserAddressInputType, CreateUserContactInputType, CreateUserCoreInputType, CreateUserEmailInputType, CreateUserPhoneInputType, CreateUserProfileInputType, DeleteByUserWithContextIdInputType, IdInputType, UpdateAddressInputType, UpdateContactInputType, UpdateEmailInputType, UpdatePhoneInputType, UpdateProfileInputType, UpdateUserInputType } from "@/zod";
+import type { CreateUserAddressInputType, CreateUserContactInputType, CreateUserCoreInputType, CreateUserEmailInputType, CreateUserPhoneInputType, CreateUserProfileInputType, DeleteByUserWithContextIdInputType, IdInputType, UpdateAddressInputType, UpdateContactInputType, UpdateEmailInputType, UpdatePhoneInputType, UpdateProfileInputType, UpdateUserInputType, VerifyCodeInputType } from "@/zod";
 
 import { and, eq } from "drizzle-orm";
 import type z from "zod";
@@ -19,67 +19,61 @@ interface UserServiceType {
   createUserCore(
     payload: CreateUserCoreInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
   createUserProfile(
 
     payload: CreateUserProfileInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
   createUserContact(
 
     payload: CreateUserContactInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
   createUserPhone(
 
 
     payload: CreateUserPhoneInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
   createUserEmail(
 
     payload: CreateUserEmailInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
   createUserAddress(
 
     payload: CreateUserAddressInputType,
     db: PgDbClientType
-  ): Promise<string >;
-
-  // TODO: add these methods also
-  // updateUserVerifyStatus(userId: string, code: string): Promise<string >;
-  // updateContactPhoneVerifyStatus(): Promise<string >;
-  // updateContactEmailVerifyStatus(): Promise<string >;
+  ): Promise<string>;
 
   // =========================================================
   // Update
   // =========================================================
   updateUserCore(
-
     payload: UpdateUserInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
   updateUserProfile(
     payload: UpdateProfileInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
   updateUserPhone(
     payload: UpdatePhoneInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
   updateUserEmail(
     payload: UpdateEmailInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
   updateUserAddress(
     payload: UpdateAddressInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
   updateUserContact(
     payload: UpdateContactInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
 
   // =========================================================
   // Delete
@@ -87,20 +81,20 @@ interface UserServiceType {
   deleteUserContact(
     payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
   deleteUserPhone(
     payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
   deleteUserEmail(
     payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
-  ): Promise<string >;
+  ): Promise<string>;
   deleteUserAddress(
     payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
-  ): Promise<string >;
-  deleteUser(id: string, db: PgDbClientType): Promise<string >;
+  ): Promise<string>;
+  deleteUser(id: string, db: PgDbClientType): Promise<string>;
 }
 
 export class UserService implements UserServiceType {
@@ -110,7 +104,7 @@ export class UserService implements UserServiceType {
   async createUserCore(
     payload: CreateUserCoreInputType,
     db: PgDbClientType
-  ): Promise<string > {
+  ): Promise<string> {
 
     const [user] = await db
       .insert(users)
@@ -126,7 +120,7 @@ export class UserService implements UserServiceType {
 
     payload: CreateUserAddressInputType,
     db: PgDbClientType
-  ): Promise<string > {
+  ): Promise<string> {
 
 
     const [createdUserAddress] = await db
@@ -142,8 +136,8 @@ export class UserService implements UserServiceType {
 
     payload: CreateUserContactInputType,
     db: PgDbClientType
-  ): Promise<string > {
-    
+  ): Promise<string> {
+
 
     const [createdUserContact] = await db
       .insert(userContacts)
@@ -158,8 +152,8 @@ export class UserService implements UserServiceType {
 
     payload: CreateUserEmailInputType,
     db: PgDbClientType
-  ): Promise<string > {
-   
+  ): Promise<string> {
+
 
     const [createdUserEmail] = await db
       .insert(userEmails)
@@ -175,7 +169,7 @@ export class UserService implements UserServiceType {
 
     payload: CreateUserPhoneInputType,
     db: PgDbClientType
-  ): Promise<string > {
+  ): Promise<string> {
 
     const [createdUserPhone] = await db
       .insert(userPhones)
@@ -187,10 +181,9 @@ export class UserService implements UserServiceType {
   }
 
   async createUserProfile(
-    
     payload: CreateUserProfileInputType,
     db: PgDbClientType
-  ): Promise<string > {
+  ): Promise<string> {
 
     const [createdUserProfie] = await db
       .insert(userProfiles)
@@ -210,10 +203,10 @@ export class UserService implements UserServiceType {
   // Update
   // ---------------------------------------------------------
   async updateUserCore(
-   
+
     payload: UpdateUserInputType,
     db: PgDbClientType
-  ): Promise<string > {
+  ): Promise<string> {
 
 
     const [updatedUser] = await db
@@ -227,11 +220,11 @@ export class UserService implements UserServiceType {
   }
 
   async updateUserProfile(
-    
+
     payload: UpdateProfileInputType,
     db: PgDbClientType
-  ): Promise<string > {
-   
+  ): Promise<string> {
+
     const { date_of_birth, ...updateData } = payload;
 
     const [updatedProfile] = await db
@@ -250,10 +243,10 @@ export class UserService implements UserServiceType {
   }
 
   async updateUserPhone(
-   
+
     payload: UpdatePhoneInputType,
     db: PgDbClientType
-  ): Promise<string > {
+  ): Promise<string> {
 
     const [updatedPhone] = await db
       .update(userPhones)
@@ -266,10 +259,10 @@ export class UserService implements UserServiceType {
   }
 
   async updateUserEmail(
-  
+
     payload: UpdateEmailInputType,
     db: PgDbClientType
-  ): Promise<string > {
+  ): Promise<string> {
 
 
     const [updatedEmail] = await db
@@ -286,7 +279,7 @@ export class UserService implements UserServiceType {
 
     payload: UpdateAddressInputType,
     db: PgDbClientType
-  ): Promise<string > {
+  ): Promise<string> {
 
 
     const [updatedAddress] = await db
@@ -339,7 +332,7 @@ export class UserService implements UserServiceType {
   }
 
   async deleteUserPhone(
-     payload: DeleteByUserWithContextIdInputType,
+    payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
   ): Promise<string> {
 
@@ -354,7 +347,7 @@ export class UserService implements UserServiceType {
   }
 
   async deleteUserEmail(
-        payload: DeleteByUserWithContextIdInputType,
+    payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
   ): Promise<string> {
 
@@ -368,7 +361,7 @@ export class UserService implements UserServiceType {
   }
 
   async deleteUserAddress(
-        payload: DeleteByUserWithContextIdInputType,
+    payload: DeleteByUserWithContextIdInputType,
     db: PgDbClientType
   ): Promise<string> {
 

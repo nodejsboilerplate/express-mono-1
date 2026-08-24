@@ -4,7 +4,7 @@ import type { Request, Response } from "express";
 import { users } from "@/database";
 import { SystemCustomErrorCode, SystemCustomErrorMsgByCode } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
-import { pgDb, type PgDbClientType } from "@/libs/db.connect";
+import { pgDb } from "@/libs/db.connect";
 import { UserService } from "@/services/user.service";
 import type {
   UserAddressInsertType,
@@ -19,7 +19,7 @@ import {
   isZodError,
   validationError,
 } from "@/utils";
-import type { CreateUserContactInput } from "@/zod";
+import { UserInputValidators } from "@/validators/inputs/user.validator";
 
 interface UserControllerType {
   createUser(req: Request, res: Response): Promise<Response>;
@@ -45,6 +45,7 @@ interface UserControllerType {
   deleteEmail(req: Request, res: Response): Promise<Response>;
 }
 
+const userValidators = new UserInputValidators()
 export class UserController implements UserControllerType {
   private userService = new UserService();
 
@@ -69,18 +70,26 @@ export class UserController implements UserControllerType {
     const verify_code = generateVerificationCode();
     const verify_expiry = getVerifyExpiry();
 
+    const parse_core_user = userValidators.createUserCoreInput({
+      email,
+      password,
+      username,
+      role
+    })
+
+    if (isZodError(parse_core_user)) throw validationError(parse_core_user);
+
     const result = await pgDb.transaction(async (tx) => {
       const userId = await this.userService.createUserCore(
-        { email, username, password, role },
+        parse_core_user,
         tx
       );
 
-      if (isZodError(userId)) throw validationError(userId);
       if (!userId) {
         throw new ApiError(
           500,
           SystemCustomErrorMsgByCode[
-            SystemCustomErrorCode.USER_CREATION_FAILED
+          SystemCustomErrorCode.USER_CREATION_FAILED
           ]!
         );
       }
@@ -88,31 +97,34 @@ export class UserController implements UserControllerType {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       await this.userService.updateUserCore(
-        userId,
-        { password: hashedPassword, verify_code, verify_expiry },
+        { password: hashedPassword, verify_code, verify_expiry, id: userId },
         tx
       );
+
+      const parse_user_profile = userValidators.createUserProfileInput({
+        user_id: userId,
+        first_name,
+        last_name,
+        avatar,
+        cover_img,
+        nickname,
+        date_of_birth,
+        gender,
+
+      })
+
+      if (isZodError(parse_user_profile)) throw validationError(parse_user_profile);
 
       const profileId = await this.userService.createUserProfile(
-        userId,
-        {
-          first_name,
-          last_name,
-          avatar,
-          cover_img,
-          nickname,
-          date_of_birth,
-          gender,
-        },
+        parse_user_profile,
         tx
       );
 
-      if (isZodError(profileId)) throw validationError(profileId);
       if (!profileId) {
         throw new ApiError(
           500,
           SystemCustomErrorMsgByCode[
-            SystemCustomErrorCode.PROFILE_CREATION_FAILED
+          SystemCustomErrorCode.PROFILE_CREATION_FAILED
           ]!
         );
       }
@@ -145,7 +157,7 @@ export class UserController implements UserControllerType {
       throw new ApiError(
         500,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.ADDRESS_CREATION_FAILED
+        SystemCustomErrorCode.ADDRESS_CREATION_FAILED
         ]!
       );
     }
@@ -157,7 +169,7 @@ export class UserController implements UserControllerType {
       );
   }
 
-    async createContact(req: Request, res: Response): Promise<Response> {
+  async createContact(req: Request, res: Response): Promise<Response> {
     const { userId } = req.params as { userId: string };
 
     const result = await this.userService.createUserContact(
@@ -171,7 +183,7 @@ export class UserController implements UserControllerType {
       throw new ApiError(
         500,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.CONTACT_CREATION_FAILED
+        SystemCustomErrorCode.CONTACT_CREATION_FAILED
         ]!
       );
     }
@@ -240,16 +252,9 @@ export class UserController implements UserControllerType {
   // ---------------------------------------------------------
 
   async verifyUser(req: Request, res: Response): Promise<Response> {
-    const { id, code } = req.body ;
+    const { id, code } = req.body;
 
-    if (!id || !code) {
-      throw new ApiError(
-        400,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.VALIDATION_ERROR]!,
-        undefined,
-        ["id and code are required"]
-      );
-    }
+
 
     const [user] = await pgDb
       .select({
@@ -279,7 +284,7 @@ export class UserController implements UserControllerType {
       throw new ApiError(
         400,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.INVALID_VERIFICATION_CODE
+        SystemCustomErrorCode.INVALID_VERIFICATION_CODE
         ]!
       );
     }
@@ -288,7 +293,7 @@ export class UserController implements UserControllerType {
       throw new ApiError(
         400,
         SystemCustomErrorMsgByCode[
-          SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED
+        SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED
         ]!
       );
     }
