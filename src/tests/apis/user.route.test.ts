@@ -3,9 +3,6 @@ import request from "supertest";
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
 
-import { setupDatabase } from "../utils";
-import userRouter from "@/routes/user.route";
-import { errorHandlerMiddleware } from "@/middlewares/error-handler.middleware";
 import {
   users,
   userProfiles,
@@ -15,20 +12,10 @@ import {
   userAddresses,
 } from "@/database";
 import { pgDb } from "@/libs/db.connect";
+import { app } from "@/server";
 
-setupDatabase();
 
 const BASE = "/api/v1/user";
-
-function buildApp(): Express {
-  const app = express();
-  app.use(express.json());
-  app.use(BASE, userRouter);
-  app.use(errorHandlerMiddleware);
-  return app;
-}
-
-const app = buildApp();
 
 // ---------------------------------------------------------------
 // Payload builders

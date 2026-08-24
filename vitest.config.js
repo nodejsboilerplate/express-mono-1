@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
+    globalSetup: "./src/tests/setup.ts",
     tags: [
       {
         name: "apis/user",

@@ -1,4 +1,3 @@
-import { setupDatabase } from "../utils";
 import { describe, expect, test } from "vitest";
 import { pgDb } from "@/libs/db.connect";
 import { UserService } from "@/services/user.service";
@@ -12,8 +11,6 @@ import {
 } from "@/database";
 import { eq } from "drizzle-orm";
 import { Socials } from "@/constants";
-
-setupDatabase();
 
 const userService = new UserService();
 
