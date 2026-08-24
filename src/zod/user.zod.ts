@@ -68,7 +68,6 @@ export class UserZSchema {
   });
 
   static createContact = z4.object({
-    id: this.id,
         user_id: this.id,
     socials: z4
       .array(this.socialLink, { error: "Socials must be an array" })
@@ -175,6 +174,10 @@ export class UserZSchema {
       .regex(/^\d{6}$/, { error: "Code must be a 6-digit number" }),
   });
 
+  static verifyCodeWithUserId = this.verifyCode.extend({
+    user_id: this.id
+  })
+
   // ┌─────────────────────────────────────────────────────┐
   // │ Update Validations                                  │
   // │ All fields optional (partial update) + id required  │
@@ -239,6 +242,7 @@ export type CreateUserAddressInputType = z4.infer<typeof UserZSchema.createAddre
 // Verification types
 // ---------------------------------------------------------
 export type VerifyCodeInputType = z4.infer<typeof UserZSchema.verifyCode>
+export type VerifyCodeWithUserIdInput = z4.infer<typeof UserZSchema.verifyCodeWithUserId>
 
 // ---------------------------------------------------------
 // Update types

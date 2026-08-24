@@ -207,11 +207,11 @@ export class UserService implements UserServiceType {
     db: PgDbClientType
   ): Promise<string> {
 
-
+const {  id, ...updateData } = payload;
     const [updatedUser] = await db
       .update(users)
-      .set(payload)
-      .where(eq(users.id, payload.id))
+      .set(updateData)
+      .where(eq(users.id, id))
       .returning({ id: users.id });
 
     if (!updatedUser?.id) return "";
@@ -224,7 +224,7 @@ export class UserService implements UserServiceType {
     db: PgDbClientType
   ): Promise<string> {
 
-    const { date_of_birth, ...updateData } = payload;
+    const { date_of_birth, user_id, ...updateData } = payload;
 
     const [updatedProfile] = await db
       .update(userProfiles)
@@ -234,7 +234,7 @@ export class UserService implements UserServiceType {
           ? date_of_birth.toISOString().split("T")[0]
           : undefined,
       })
-      .where(eq(userProfiles.user_id, payload.user_id))
+      .where(eq(userProfiles.user_id, user_id))
       .returning({ id: userProfiles.id });
 
     if (!updatedProfile?.id) return "";
@@ -242,15 +242,15 @@ export class UserService implements UserServiceType {
   }
 
   async updateUserPhone(
-
     payload: UpdatePhoneInputType,
     db: PgDbClientType
   ): Promise<string> {
+      const { user_id, id, ...updateData } = payload;
 
     const [updatedPhone] = await db
       .update(userPhones)
-      .set(payload)
-      .where(and(eq(userPhones.user_id, payload.user_id), eq(userPhones.id, payload.id)))
+      .set(updateData)
+      .where(and(eq(userPhones.user_id, user_id), eq(userPhones.id, id)))
       .returning({ id: userPhones.id });
 
     if (!updatedPhone?.id) return "";
@@ -262,12 +262,12 @@ export class UserService implements UserServiceType {
     payload: UpdateEmailInputType,
     db: PgDbClientType
   ): Promise<string> {
-
+     const { user_id, id, ...updateData } = payload;
 
     const [updatedEmail] = await db
       .update(userEmails)
-      .set(payload)
-      .where(and(eq(userEmails.user_id, payload.user_id), eq(userEmails.id, payload.id)))
+      .set(updateData)
+      .where(and(eq(userEmails.user_id, user_id), eq(userEmails.id, id)))
       .returning({ id: userEmails.id });
 
     if (!updatedEmail?.id) return "";
@@ -279,13 +279,13 @@ export class UserService implements UserServiceType {
     payload: UpdateAddressInputType,
     db: PgDbClientType
   ): Promise<string> {
-
+ const { user_id, id, ...updateData } = payload;
 
     const [updatedAddress] = await db
       .update(userAddresses)
-      .set(payload)
+      .set(updateData)
       .where(
-        and(eq(userAddresses.user_id, payload.user_id), eq(userAddresses.id, payload.id))
+        and(eq(userAddresses.user_id, user_id), eq(userAddresses.id, id))
       )
       .returning({ id: userAddresses.id });
 
@@ -297,12 +297,12 @@ export class UserService implements UserServiceType {
     payload: UpdateContactInputType,
     db: PgDbClientType
   ): Promise<string> {
-
+const { user_id, ...updateData } = payload;
 
     const [updatedContact] = await db
       .update(userContacts)
-      .set(payload)
-      .where(eq(userContacts.user_id, payload.user_id))
+      .set(updateData)
+      .where(eq(userContacts.user_id, user_id))
       .returning({ id: userContacts.id });
 
     if (!updatedContact?.id) return "";

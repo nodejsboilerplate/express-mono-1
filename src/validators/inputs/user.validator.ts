@@ -1,5 +1,5 @@
 import { validateWithZod } from "@/utils";
-import { UserZSchema, type CreateUserAddressInputType, type CreateUserContactInputType, type CreateUserCoreInputType, type CreateUserEmailInputType, type CreateUserPhoneInputType, type CreateUserProfileInputType, type DeleteByUserWithContextIdInputType, type IdInputType, type UpdateAddressInputType, type UpdateContactInputType, type UpdateEmailInputType, type UpdatePhoneInputType, type UpdateProfileInputType, type UpdateUserInputType, type VerifyCodeInputType } from "@/zod";
+import { UserZSchema, type CreateUserAddressInputType, type CreateUserContactInputType, type CreateUserCoreInputType, type CreateUserEmailInputType, type CreateUserPhoneInputType, type CreateUserProfileInputType, type DeleteByUserWithContextIdInputType, type IdInputType, type UpdateAddressInputType, type UpdateContactInputType, type UpdateEmailInputType, type UpdatePhoneInputType, type UpdateProfileInputType, type UpdateUserInputType, type VerifyCodeInputType, type VerifyCodeWithUserIdInput } from "@/zod";
 import type z from "zod";
 
 interface UserInputValidatorsType {
@@ -13,6 +13,7 @@ interface UserInputValidatorsType {
     createUserProfileInput(payload: CreateUserProfileInputType): CreateUserProfileInputType | z.ZodError
 
     verifyCodeInput(payload: VerifyCodeInputType): VerifyCodeInputType | z.ZodError
+    verifyCodeWithUserId(payload: VerifyCodeWithUserIdInput): VerifyCodeWithUserIdInput | z.ZodError
 
     updateUserCoreInput(payload: UpdateUserInputType): UpdateUserInputType | z.ZodError
     updateUserProfileInput(payload: UpdateProfileInputType): UpdateProfileInputType | z.ZodError
@@ -99,9 +100,19 @@ export class UserInputValidators implements UserInputValidatorsType {
     }
 
     verifyCodeInput(payload: VerifyCodeInputType): VerifyCodeInputType | z.ZodError {
-            const { data, success, error } = validateWithZod(
+        const { data, success, error } = validateWithZod(
             payload,
             UserZSchema.verifyCode
+        );
+        if (!success)
+            return error
+        return data
+    }
+
+    verifyCodeWithUserId(payload: VerifyCodeWithUserIdInput): VerifyCodeWithUserIdInput | z.ZodError {
+        const { data, success, error } = validateWithZod(
+            payload,
+            UserZSchema.verifyCodeWithUserId
         );
         if (!success)
             return error

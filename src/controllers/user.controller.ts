@@ -265,7 +265,8 @@ export class UserController extends UserService implements UserControllerType  {
   // ---------------------------------------------------------
 
   async verifyUserHandler(req: Request, res: Response): Promise<Response> {
-    const { id, code } = req.body;
+    const { id } = req.params as {id: string};
+    const { code } = req.body;
 
     const parsed_payload = userValidators.verifyCodeInput({id, code})
     if(isZodError(parsed_payload)) throw validationError(parsed_payload)
@@ -332,26 +333,19 @@ export class UserController extends UserService implements UserControllerType  {
   }
 
   async verifyContactPhoneHandler(req: Request, res: Response): Promise<Response> {
-    const { id, userId } = req.params as { id: string; userId: string };
-    const { code } = req.body ?? {};
+    const { id, user_id } = req.params as { id: string; user_id: string };
+    const { code } = req.body ;
 
-    if (!code) {
-      throw new ApiError(
-        400,
-        SystemCustomErrorMsgByCode[SystemCustomErrorCode.VALIDATION_ERROR]!,
-        undefined,
-        ["code is required"]
-      );
-    }
+    const parse_payload = userValidators.verifyCodeWithUserId({code, id, user_id})
+
+    if(isZodError(parse_payload)) throw validationError(parse_payload)
 
     const result = await this.updateUserPhone(
-      id,
-      userId,
-      { id, is_verified: true } as UserPhonesInsertType,
+     parse_payload,
       pgDb
     );
 
-    if (isZodError(result)) throw validationError(result);
+  
     if (!result) {
       throw new ApiError(
         404,
