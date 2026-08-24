@@ -20,7 +20,7 @@ import {
   validationError,
 } from "@/utils";
 import { UserInputValidators } from "@/validators/inputs/user.validator";
-import type { CreateUserAddressInputType, CreateUserContactInputType } from "@/zod";
+import type { CreateUserAddressInputType, CreateUserContactInputType, UpdateProfileInputType } from "@/zod";
 
 interface UserControllerType {
   createUserHandler(req: Request, res: Response): Promise<Response>;
@@ -392,14 +392,18 @@ export class UserController extends UserService implements UserControllerType {
   // ---------------------------------------------------------
 
   async updateProfileHandler(req: Request, res: Response): Promise<Response> {
-    const { userId } = req.params as { userId: string };
+    const { user_id } = req.params as { user_id: string };
+    const payload = req.body as Omit<UpdateProfileInputType, "user_id">
+
+    const parse_payload = userValidators.updateUserProfileInput({ ...payload, user_id })
+
+    if(isZodError(parse_payload)) throw validationError(parse_payload)
+
     const result = await this.updateUserProfile(
-      userId,
-      req.body as UserProfileInsertType,
+      parse_payload,
       pgDb
     );
 
-    if (isZodError(result)) throw validationError(result);
     if (!result) {
       throw new ApiError(
         404,
