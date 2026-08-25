@@ -1,6 +1,6 @@
 import {
   userAddresses,
-  userContacts,
+  userContactsTable,
   userEmails,
   userPhones,
   userProfilesTable,
@@ -141,9 +141,9 @@ export class UserService implements UserServiceType {
     db: PgDbClientType
   ): Promise<string> {
     const [createdUserContact] = await db
-      .insert(userContacts)
+      .insert(userContactsTable)
       .values(payload)
-      .returning({ id: userContacts.id });
+      .returning({ id: userContactsTable.id });
 
     if (!createdUserContact?.id) return "";
     return createdUserContact?.id;
@@ -288,10 +288,10 @@ export class UserService implements UserServiceType {
     const { user_id, ...updateData } = payload;
 
     const [updatedContact] = await db
-      .update(userContacts)
+      .update(userContactsTable)
       .set(updateData)
-      .where(eq(userContacts.user_id, user_id))
-      .returning({ id: userContacts.id });
+      .where(eq(userContactsTable.user_id, user_id))
+      .returning({ id: userContactsTable.id });
 
     if (!updatedContact?.id) return "";
     return updatedContact.id;
@@ -306,14 +306,14 @@ export class UserService implements UserServiceType {
     db: PgDbClientType
   ): Promise<string> {
     const [deletedContact] = await db
-      .delete(userContacts)
+      .delete(userContactsTable)
       .where(
         and(
-          eq(userContacts.id, payload.id),
-          eq(userContacts.user_id, payload.user_id)
+          eq(userContactsTable.id, payload.id),
+          eq(userContactsTable.user_id, payload.user_id)
         )
       )
-      .returning({ id: userContacts.id });
+      .returning({ id: userContactsTable.id });
 
     if (!deletedContact?.id) return "";
     return deletedContact.id;

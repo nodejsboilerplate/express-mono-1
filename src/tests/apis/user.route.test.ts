@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import {
   usersTable,
   userProfilesTable,
-  userContacts,
+  userContactsTable,
   userPhones,
   userEmails,
   userAddresses,
@@ -242,8 +242,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userContacts)
-        .where(eq(userContacts.id, res.body.data.id));
+        .from(userContactsTable)
+        .where(eq(userContactsTable.id, res.body.data.id));
       expect(row?.user_id).toBe(userId);
     });
 
@@ -666,8 +666,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userContacts)
-        .where(eq(userContacts.user_id, userId));
+        .from(userContactsTable)
+        .where(eq(userContactsTable.user_id, userId));
       expect(row?.socials).toEqual([
         { type: "facebook", url: "https://facebook.com/mahin" },
       ]);

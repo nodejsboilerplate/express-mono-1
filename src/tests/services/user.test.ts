@@ -3,7 +3,7 @@ import { pgDb } from "@/libs/db.connect";
 import { UserService } from "@/services/user.service";
 import {
   usersTable,
-  userContacts,
+  userContactsTable,
   userPhones,
   userEmails,
   userAddresses,
@@ -158,8 +158,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userContacts)
-        .where(eq(userContacts.id, contactId));
+        .from(userContactsTable)
+        .where(eq(userContactsTable.id, contactId));
       expect(row?.user_id).toBe(userId);
     });
 
@@ -418,8 +418,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userContacts)
-        .where(eq(userContacts.user_id, userId));
+        .from(userContactsTable)
+        .where(eq(userContactsTable.user_id, userId));
       expect(row?.socials).toEqual([
         { type: "facebook", url: "https://facebook.com/mahin" },
       ]);
@@ -453,8 +453,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const rows = await pgDb
         .select()
-        .from(userContacts)
-        .where(eq(userContacts.id, contactId));
+        .from(userContactsTable)
+        .where(eq(userContactsTable.id, contactId));
       expect(rows).toHaveLength(0);
     });
 
@@ -471,8 +471,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const rows = await pgDb
         .select()
-        .from(userContacts)
-        .where(eq(userContacts.id, contactId));
+        .from(userContactsTable)
+        .where(eq(userContactsTable.id, contactId));
       expect(rows).toHaveLength(1);
     });
 
@@ -554,8 +554,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const rows = await pgDb
         .select()
-        .from(userContacts)
-        .where(eq(userContacts.id, contactId));
+        .from(userContactsTable)
+        .where(eq(userContactsTable.id, contactId));
       expect(rows).toHaveLength(0);
     });
 

@@ -1,7 +1,7 @@
 import { defineRelations } from "drizzle-orm";
 import {
   userAddresses,
-  userContacts,
+  userContactsTable,
   userEmails,
   userPhones,
   userProfilesTable,
@@ -9,16 +9,16 @@ import {
 } from "../schemas";
 
 export const userRelations = defineRelations(
-  { usersTable, userProfilesTable, userContacts, userPhones, userEmails, userAddresses },
+  { usersTable, userProfilesTable, userContactsTable, userPhones, userEmails, userAddresses },
   (r) => ({
     users: {
       profile: r.one.userProfilesTable({
         from: r.usersTable.id,
         to: r.userProfilesTable.user_id,
       }),
-      contact: r.one.userContacts({
+      contact: r.one.userContactsTable({
         from: r.usersTable.id,
-        to: r.userContacts.user_id,
+        to: r.userContactsTable.user_id,
       }),
       contact_phones: r.many.userPhones({
         from: r.usersTable.id,
@@ -41,22 +41,22 @@ export const userRelations = defineRelations(
     },
     userContacts: {
       user: r.one.usersTable({
-        from: r.userContacts.user_id,
+        from: r.userContactsTable.user_id,
         to: r.usersTable.id,
       }),
       phones: r.many.userPhones({
-        from: r.userContacts.id,
+        from: r.userContactsTable.id,
         to: r.userPhones.contact_id,
       }),
       emails: r.many.userEmails({
-        from: r.userContacts.id,
+        from: r.userContactsTable.id,
         to: r.userEmails.contact_id,
       }),
     },
     userPhones: {
-      contact: r.one.userContacts({
+      contact: r.one.userContactsTable({
         from: r.userPhones.contact_id,
-        to: r.userContacts.id,
+        to: r.userContactsTable.id,
       }),
       user: r.one.usersTable({
         from: r.userPhones.user_id,
@@ -64,9 +64,9 @@ export const userRelations = defineRelations(
       }),
     },
     userEmails: {
-      contact: r.one.userContacts({
+      contact: r.one.userContactsTable({
         from: r.userEmails.contact_id,
-        to: r.userContacts.id,
+        to: r.userContactsTable.id,
       }),
       user: r.one.usersTable({
         from: r.userEmails.user_id,

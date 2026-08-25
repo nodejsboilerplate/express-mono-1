@@ -55,7 +55,7 @@ export const userProfilesTable = pgTable("user_profiles", {
 // ---------------------------------------------------------
 // User contacts
 // ---------------------------------------------------------
-export const userContacts = pgTable("user_contacts", {
+export const userContactsTable = pgTable("user_contacts", {
   id: t
     .uuid()
     .primaryKey()
@@ -80,7 +80,7 @@ export const userPhones = pgTable("user_phones", {
   contact_id: t
     .uuid()
     .notNull()
-    .references(() => userContacts.id, { onDelete: "cascade" }),
+    .references(() => userContactsTable.id, { onDelete: "cascade" }),
   user_id: t
     .uuid()
     .notNull()
@@ -106,7 +106,7 @@ export const userEmails = pgTable("user_emails", {
   contact_id: t
     .uuid()
     .notNull()
-    .references(() => userContacts.id, { onDelete: "cascade" }),
+    .references(() => userContactsTable.id, { onDelete: "cascade" }),
   user_id: t
     .uuid()
     .notNull()
