@@ -3,7 +3,7 @@ import {
   userContacts,
   userEmails,
   userPhones,
-  userProfiles,
+  userProfilesTable,
   usersTable,
 } from "@/database";
 import type { PgDbClientType } from "@/libs/db.connect";
@@ -181,14 +181,14 @@ export class UserService implements UserServiceType {
     db: PgDbClientType
   ): Promise<string> {
     const [createdUserProfie] = await db
-      .insert(userProfiles)
+      .insert(userProfilesTable)
       .values({
         ...payload,
         date_of_birth: payload.date_of_birth
           ? payload.date_of_birth.toISOString().split("T")[0]
           : undefined,
       })
-      .returning({ id: userProfiles.id });
+      .returning({ id: userProfilesTable.id });
     if (!createdUserProfie?.id) return "";
 
     return createdUserProfie.id;
@@ -219,15 +219,15 @@ export class UserService implements UserServiceType {
     const { date_of_birth, user_id, ...updateData } = payload;
 
     const [updatedProfile] = await db
-      .update(userProfiles)
+      .update(userProfilesTable)
       .set({
         ...updateData,
         date_of_birth: date_of_birth
           ? date_of_birth.toISOString().split("T")[0]
           : undefined,
       })
-      .where(eq(userProfiles.user_id, user_id))
-      .returning({ id: userProfiles.id });
+      .where(eq(userProfilesTable.user_id, user_id))
+      .returning({ id: userProfilesTable.id });
 
     if (!updatedProfile?.id) return "";
     return updatedProfile.id;

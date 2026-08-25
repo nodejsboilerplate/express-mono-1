@@ -3,7 +3,7 @@ import type {
   userContacts,
   userEmails,
   userPhones,
-  userProfiles,
+  userProfilesTable,
   usersTable,
 } from "./schemas";
 
@@ -13,8 +13,8 @@ import type {
 export type UserSelectType = typeof usersTable.$inferSelect;
 export type UserInsertType = typeof usersTable.$inferInsert;
 
-export type UserProfileSelectType = typeof userProfiles.$inferSelect;
-export type UserProfileInsertType = typeof userProfiles.$inferInsert;
+export type UserProfileSelectType = typeof userProfilesTable.$inferSelect;
+export type UserProfileInsertType = typeof userProfilesTable.$inferInsert;
 
 export type UserContactSelectType = typeof userContacts.$inferSelect;
 export type UserContactInsertType = typeof userContacts.$inferInsert;

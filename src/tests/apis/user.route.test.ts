@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 
 import {
   usersTable,
-  userProfiles,
+  userProfilesTable,
   userContacts,
   userPhones,
   userEmails,
@@ -602,8 +602,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userProfiles)
-        .where(eq(userProfiles.user_id, userId));
+        .from(userProfilesTable)
+        .where(eq(userProfilesTable.user_id, userId));
       expect(row?.first_name).toBe("Updated");
     });
 

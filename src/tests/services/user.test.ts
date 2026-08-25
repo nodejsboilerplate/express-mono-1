@@ -7,7 +7,7 @@ import {
   userPhones,
   userEmails,
   userAddresses,
-  userProfiles,
+  userProfilesTable,
 } from "@/database";
 import { eq } from "drizzle-orm";
 import { Socials } from "@/constants";
@@ -120,8 +120,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userProfiles)
-        .where(eq(userProfiles.id, profileId));
+        .from(userProfilesTable)
+        .where(eq(userProfilesTable.id, profileId));
       expect(row?.user_id).toBe(userId);
       expect(row?.first_name).toBe("Mahin");
     });
@@ -137,8 +137,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userProfiles)
-        .where(eq(userProfiles.id, profileId));
+        .from(userProfilesTable)
+        .where(eq(userProfilesTable.id, profileId));
       expect(row?.date_of_birth).toBe("1998-04-12");
     });
   });
@@ -288,8 +288,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userProfiles)
-        .where(eq(userProfiles.id, profileId));
+        .from(userProfilesTable)
+        .where(eq(userProfilesTable.id, profileId));
       expect(row?.first_name).toBe("New");
     });
 
@@ -584,8 +584,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const [profileRow] = await pgDb
         .select()
-        .from(userProfiles)
-        .where(eq(userProfiles.user_id, userId));
+        .from(userProfilesTable)
+        .where(eq(userProfilesTable.user_id, userId));
       const [phoneRow] = await pgDb
         .select()
         .from(userPhones)

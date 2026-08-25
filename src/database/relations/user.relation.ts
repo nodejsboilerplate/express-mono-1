@@ -4,17 +4,17 @@ import {
   userContacts,
   userEmails,
   userPhones,
-  userProfiles,
+  userProfilesTable,
   usersTable,
 } from "../schemas";
 
 export const userRelations = defineRelations(
-  { usersTable, userProfiles, userContacts, userPhones, userEmails, userAddresses },
+  { usersTable, userProfilesTable, userContacts, userPhones, userEmails, userAddresses },
   (r) => ({
     users: {
-      profile: r.one.userProfiles({
+      profile: r.one.userProfilesTable({
         from: r.usersTable.id,
-        to: r.userProfiles.user_id,
+        to: r.userProfilesTable.user_id,
       }),
       contact: r.one.userContacts({
         from: r.usersTable.id,
@@ -35,7 +35,7 @@ export const userRelations = defineRelations(
     },
     userProfiles: {
       user: r.one.usersTable({
-        from: r.userProfiles.user_id,
+        from: r.userProfilesTable.user_id,
         to: r.usersTable.id,
       }),
     },

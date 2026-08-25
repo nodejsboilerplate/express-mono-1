@@ -32,7 +32,7 @@ export const usersTable = pgTable("users", {
 // ---------------------------------------------------------
 // User Profiles
 // ---------------------------------------------------------
-export const userProfiles = pgTable("user_profiles", {
+export const userProfilesTable = pgTable("user_profiles", {
   id: t
     .uuid()
     .primaryKey()
