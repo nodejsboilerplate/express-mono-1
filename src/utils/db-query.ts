@@ -80,10 +80,6 @@ function buildSqlFilters(
   return sql_filters;
 }
 
-/**
- * Internal implementation. Always returns the raw row array — never
- * unwraps to a single record. Not exported; call through `getDbRecord`.
- */
 async function createQuery(
   table: PgTable,
   selects: string[],
