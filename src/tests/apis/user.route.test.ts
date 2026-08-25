@@ -4,12 +4,12 @@ import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
 
 import {
-  users,
-  userProfiles,
-  userContacts,
-  userPhones,
-  userEmails,
-  userAddresses,
+  usersTable,
+  userProfilesTable,
+  userContactsTable,
+  userPhonesTable,
+  userEmailsTable,
+  userAddressesTable,
 } from "@/database";
 import { pgDb } from "@/libs/db.connect";
 import { app } from "@/server";
@@ -113,12 +113,12 @@ async function seedPhoneVerifyCode(
   expiresInMs = 10 * 60 * 1000
 ) {
   await pgDb
-    .update(userPhones)
+    .update(userPhonesTable)
     .set({
       verify_code: code,
       verify_expiry: new Date(Date.now() + expiresInMs),
     })
-    .where(eq(userPhones.id, phoneId));
+    .where(eq(userPhonesTable.id, phoneId));
 }
 
 async function seedEmailVerifyCode(
@@ -127,12 +127,12 @@ async function seedEmailVerifyCode(
   expiresInMs = 10 * 60 * 1000
 ) {
   await pgDb
-    .update(userEmails)
+    .update(userEmailsTable)
     .set({
       verify_code: code,
       verify_expiry: new Date(Date.now() + expiresInMs),
     })
-    .where(eq(userEmails.id, emailId));
+    .where(eq(userEmailsTable.id, emailId));
 }
 
 // ---------------------------------------------------------------
@@ -150,8 +150,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(users)
-        .where(eq(users.id, res.body.data.id));
+        .from(usersTable)
+        .where(eq(usersTable.id, res.body.data.id));
       expect(row?.role).toBe("USER");
       expect(row?.is_verified).toBe(false);
       expect(row?.verify_code).toBeTruthy();
@@ -208,8 +208,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userAddresses)
-        .where(eq(userAddresses.id, res.body.data.id));
+        .from(userAddressesTable)
+        .where(eq(userAddressesTable.id, res.body.data.id));
       expect(row?.user_id).toBe(userId);
       expect(row?.city).toBe("Dhaka");
     });
@@ -242,8 +242,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userContacts)
-        .where(eq(userContacts.id, res.body.data.id));
+        .from(userContactsTable)
+        .where(eq(userContactsTable.id, res.body.data.id));
       expect(row?.user_id).toBe(userId);
     });
 
@@ -282,8 +282,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userPhones)
-        .where(eq(userPhones.id, res.body.data.id));
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, res.body.data.id));
       expect(row?.contact_id).toBe(contactId);
       expect(row?.user_id).toBe(userId);
       expect(row?.is_verified).toBe(false);
@@ -329,9 +329,9 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("verifies a user with the correct code", async () => {
       const userId = await createTestUser();
       const [row] = await pgDb
-        .select({ verify_code: users.verify_code })
-        .from(users)
-        .where(eq(users.id, userId));
+        .select({ verify_code: usersTable.verify_code })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId));
 
       const res = await request(app)
         .post(`${BASE}/${userId}/verify`)
@@ -340,8 +340,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [updated] = await pgDb
         .select()
-        .from(users)
-        .where(eq(users.id, userId));
+        .from(usersTable)
+        .where(eq(usersTable.id, userId));
       expect(updated?.is_verified).toBe(true);
       expect(updated?.verify_code).toBeNull();
     });
@@ -379,9 +379,9 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 400 for an already-verified user", async () => {
       const userId = await createTestUser();
       const [row] = await pgDb
-        .select({ verify_code: users.verify_code })
-        .from(users)
-        .where(eq(users.id, userId));
+        .select({ verify_code: usersTable.verify_code })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId));
 
       await request(app)
         .post(`${BASE}/${userId}/verify`)
@@ -418,8 +418,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userPhones)
-        .where(eq(userPhones.id, phoneId));
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, phoneId));
       expect(row?.is_verified).toBe(true);
     });
 
@@ -520,8 +520,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userEmails)
-        .where(eq(userEmails.id, emailId));
+        .from(userEmailsTable)
+        .where(eq(userEmailsTable.id, emailId));
       expect(row?.is_verified).toBe(true);
     });
 
@@ -602,8 +602,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userProfiles)
-        .where(eq(userProfiles.user_id, userId));
+        .from(userProfilesTable)
+        .where(eq(userProfilesTable.user_id, userId));
       expect(row?.first_name).toBe("Updated");
     });
 
@@ -638,8 +638,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userAddresses)
-        .where(eq(userAddresses.id, addressId));
+        .from(userAddressesTable)
+        .where(eq(userAddressesTable.id, addressId));
       expect(row?.city).toBe("Chattogram");
     });
 
@@ -666,8 +666,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userContacts)
-        .where(eq(userContacts.user_id, userId));
+        .from(userContactsTable)
+        .where(eq(userContactsTable.user_id, userId));
       expect(row?.socials).toEqual([
         { type: "facebook", url: "https://facebook.com/mahin" },
       ]);
@@ -698,8 +698,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userPhones)
-        .where(eq(userPhones.id, phoneId));
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, phoneId));
       expect(row?.phone).toBe("1999999999");
     });
 
@@ -729,8 +729,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userEmails)
-        .where(eq(userEmails.id, emailId));
+        .from(userEmailsTable)
+        .where(eq(userEmailsTable.id, emailId));
       expect(row?.email).toBe(newEmail);
     });
   });
@@ -745,7 +745,10 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const res = await request(app).delete(`${BASE}/${userId}`);
       expect(res.status).toBe(200);
 
-      const rows = await pgDb.select().from(users).where(eq(users.id, userId));
+      const rows = await pgDb
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, userId));
       expect(rows).toHaveLength(0);
     });
 

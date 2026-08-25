@@ -1,82 +1,89 @@
 import { defineRelations } from "drizzle-orm";
 import {
-  userAddresses,
-  userContacts,
-  userEmails,
-  userPhones,
-  userProfiles,
-  users,
+  userAddressesTable,
+  userContactsTable,
+  userEmailsTable,
+  userPhonesTable,
+  userProfilesTable,
+  usersTable,
 } from "../schemas";
 
 export const userRelations = defineRelations(
-  { users, userProfiles, userContacts, userPhones, userEmails, userAddresses },
+  {
+    usersTable,
+    userProfilesTable,
+    userContactsTable,
+    userPhonesTable,
+    userEmailsTable,
+    userAddressesTable,
+  },
   (r) => ({
-    users: {
-      profile: r.one.userProfiles({
-        from: r.users.id,
-        to: r.userProfiles.user_id,
+    usersTable: {
+      profile: r.one.userProfilesTable({
+        from: r.usersTable.id,
+        to: r.userProfilesTable.user_id,
       }),
-      contact: r.one.userContacts({
-        from: r.users.id,
-        to: r.userContacts.user_id,
+      contact: r.one.userContactsTable({
+        from: r.usersTable.id,
+        to: r.userContactsTable.user_id,
       }),
-      contact_phones: r.many.userPhones({
-        from: r.users.id,
-        to: r.userPhones.user_id,
+      contact_phones: r.many.userPhonesTable({
+        from: r.usersTable.id,
+        to: r.userPhonesTable.user_id,
       }),
-      contact_emails: r.many.userEmails({
-        from: r.users.id,
-        to: r.userEmails.user_id,
+      contact_emails: r.many.userEmailsTable({
+        from: r.usersTable.id,
+        to: r.userEmailsTable.user_id,
       }),
-      addresses: r.many.userAddresses({
-        from: r.users.id,
-        to: r.userAddresses.user_id,
-      }),
-    },
-    userProfiles: {
-      user: r.one.users({
-        from: r.userProfiles.user_id,
-        to: r.users.id,
+      addresses: r.many.userAddressesTable({
+        from: r.usersTable.id,
+        to: r.userAddressesTable.user_id,
       }),
     },
-    userContacts: {
-      user: r.one.users({
-        from: r.userContacts.user_id,
-        to: r.users.id,
-      }),
-      phones: r.many.userPhones({
-        from: r.userContacts.id,
-        to: r.userPhones.contact_id,
-      }),
-      emails: r.many.userEmails({
-        from: r.userContacts.id,
-        to: r.userEmails.contact_id,
+    userProfilesTable: {
+      user: r.one.usersTable({
+        from: r.userProfilesTable.user_id,
+        to: r.usersTable.id,
       }),
     },
-    userPhones: {
-      contact: r.one.userContacts({
-        from: r.userPhones.contact_id,
-        to: r.userContacts.id,
+    userContactsTable: {
+      user: r.one.usersTable({
+        from: r.userContactsTable.user_id,
+        to: r.usersTable.id,
       }),
-      user: r.one.users({
-        from: r.userPhones.user_id,
-        to: r.users.id,
+      phones: r.many.userPhonesTable({
+        from: r.userContactsTable.id,
+        to: r.userPhonesTable.contact_id,
       }),
-    },
-    userEmails: {
-      contact: r.one.userContacts({
-        from: r.userEmails.contact_id,
-        to: r.userContacts.id,
-      }),
-      user: r.one.users({
-        from: r.userEmails.user_id,
-        to: r.users.id,
+      emails: r.many.userEmailsTable({
+        from: r.userContactsTable.id,
+        to: r.userEmailsTable.contact_id,
       }),
     },
-    userAddresses: {
-      user: r.one.users({
-        from: r.userAddresses.user_id,
-        to: r.users.id,
+    userPhonesTable: {
+      contact: r.one.userContactsTable({
+        from: r.userPhonesTable.contact_id,
+        to: r.userContactsTable.id,
+      }),
+      user: r.one.usersTable({
+        from: r.userPhonesTable.user_id,
+        to: r.usersTable.id,
+      }),
+    },
+    userEmailsTable: {
+      contact: r.one.userContactsTable({
+        from: r.userEmailsTable.contact_id,
+        to: r.userContactsTable.id,
+      }),
+      user: r.one.usersTable({
+        from: r.userEmailsTable.user_id,
+        to: r.usersTable.id,
+      }),
+    },
+    userAddressesTable: {
+      user: r.one.usersTable({
+        from: r.userAddressesTable.user_id,
+        to: r.usersTable.id,
       }),
     },
   })

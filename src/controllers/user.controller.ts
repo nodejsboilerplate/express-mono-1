@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 import type { Request, Response } from "express";
-import { userEmails, userPhones, users } from "@/database";
+import { userEmailsTable, userPhonesTable, usersTable } from "@/database";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
 import { pgDb } from "@/libs/db.connect";
@@ -274,13 +274,13 @@ export class UserController extends UserService implements UserControllerType {
 
     const [user] = await pgDb
       .select({
-        id: users.id,
-        is_verified: users.is_verified,
-        verify_code: users.verify_code,
-        verify_expiry: users.verify_expiry,
+        id: usersTable.id,
+        is_verified: usersTable.is_verified,
+        verify_code: usersTable.verify_code,
+        verify_expiry: usersTable.verify_expiry,
       })
-      .from(users)
-      .where(eq(users.id, parse_payload.id));
+      .from(usersTable)
+      .where(eq(usersTable.id, parse_payload.id));
 
     if (!user) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
@@ -348,13 +348,13 @@ export class UserController extends UserService implements UserControllerType {
 
     const [user_phone] = await pgDb
       .select({
-        id: userPhones.id,
-        is_verified: userPhones.is_verified,
-        verify_code: userPhones.verify_code,
-        verify_expiry: userPhones.verify_expiry,
+        id: userPhonesTable.id,
+        is_verified: userPhonesTable.is_verified,
+        verify_code: userPhonesTable.verify_code,
+        verify_expiry: userPhonesTable.verify_expiry,
       })
-      .from(userPhones)
-      .where(eq(userPhones.id, parse_payload.id));
+      .from(userPhonesTable)
+      .where(eq(userPhonesTable.id, parse_payload.id));
 
     if (!user_phone) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
@@ -420,13 +420,13 @@ export class UserController extends UserService implements UserControllerType {
 
     const [user_email] = await pgDb
       .select({
-        id: userEmails.id,
-        is_verified: userEmails.is_verified,
-        verify_code: userEmails.verify_code,
-        verify_expiry: userEmails.verify_expiry,
+        id: userEmailsTable.id,
+        is_verified: userEmailsTable.is_verified,
+        verify_code: userEmailsTable.verify_code,
+        verify_expiry: userEmailsTable.verify_expiry,
       })
-      .from(userEmails)
-      .where(eq(userEmails.id, parse_payload.id));
+      .from(userEmailsTable)
+      .where(eq(userEmailsTable.id, parse_payload.id));
 
     if (!user_email) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));

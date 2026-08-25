@@ -14,7 +14,7 @@ export const userGenderRoleEnum = pgEnum("user_gender_role", USER_GENDERS);
 // ---------------------------------------------------------
 // Users
 // ---------------------------------------------------------
-export const users = pgTable("users", {
+export const usersTable = pgTable("users", {
   id: t
     .uuid()
     .primaryKey()
@@ -32,7 +32,7 @@ export const users = pgTable("users", {
 // ---------------------------------------------------------
 // User Profiles
 // ---------------------------------------------------------
-export const userProfiles = pgTable("user_profiles", {
+export const userProfilesTable = pgTable("user_profiles", {
   id: t
     .uuid()
     .primaryKey()
@@ -41,7 +41,7 @@ export const userProfiles = pgTable("user_profiles", {
     .uuid()
     .notNull()
     .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => usersTable.id, { onDelete: "cascade" }),
   first_name: t.varchar({ length: 100 }).notNull(),
   last_name: t.varchar({ length: 100 }),
   avatar: t.text(),
@@ -55,7 +55,7 @@ export const userProfiles = pgTable("user_profiles", {
 // ---------------------------------------------------------
 // User contacts
 // ---------------------------------------------------------
-export const userContacts = pgTable("user_contacts", {
+export const userContactsTable = pgTable("user_contacts", {
   id: t
     .uuid()
     .primaryKey()
@@ -64,7 +64,7 @@ export const userContacts = pgTable("user_contacts", {
     .uuid()
     .notNull()
     .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => usersTable.id, { onDelete: "cascade" }),
   socials: t.jsonb().$type<SocialLink[]>().notNull().default([]),
   ...table_timestamps,
 });
@@ -72,7 +72,7 @@ export const userContacts = pgTable("user_contacts", {
 // ---------------------------------------------------------
 // User Phones
 // ---------------------------------------------------------
-export const userPhones = pgTable("user_phones", {
+export const userPhonesTable = pgTable("user_phones", {
   id: t
     .uuid()
     .primaryKey()
@@ -80,12 +80,12 @@ export const userPhones = pgTable("user_phones", {
   contact_id: t
     .uuid()
     .notNull()
-    .references(() => userContacts.id, { onDelete: "cascade" }),
+    .references(() => userContactsTable.id, { onDelete: "cascade" }),
   user_id: t
     .uuid()
     .notNull()
     .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => usersTable.id, { onDelete: "cascade" }),
   is_verified: t.boolean().notNull().default(false),
   verify_code: t.varchar({ length: 10 }),
   verify_expiry: t.timestamp({ withTimezone: true }),
@@ -98,7 +98,7 @@ export const userPhones = pgTable("user_phones", {
 // ---------------------------------------------------------
 // User emails
 // ---------------------------------------------------------
-export const userEmails = pgTable("user_emails", {
+export const userEmailsTable = pgTable("user_emails", {
   id: t
     .uuid()
     .primaryKey()
@@ -106,12 +106,12 @@ export const userEmails = pgTable("user_emails", {
   contact_id: t
     .uuid()
     .notNull()
-    .references(() => userContacts.id, { onDelete: "cascade" }),
+    .references(() => userContactsTable.id, { onDelete: "cascade" }),
   user_id: t
     .uuid()
     .notNull()
     .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => usersTable.id, { onDelete: "cascade" }),
   is_verified: t.boolean().notNull().default(false),
   verify_code: t.varchar({ length: 10 }),
   verify_expiry: t.timestamp({ withTimezone: true }),
@@ -123,7 +123,7 @@ export const userEmails = pgTable("user_emails", {
 // ---------------------------------------------------------
 // User Address
 // ---------------------------------------------------------
-export const userAddresses = pgTable("user_addresses", {
+export const userAddressesTable = pgTable("user_addresses", {
   id: t
     .uuid()
     .primaryKey()
@@ -131,7 +131,7 @@ export const userAddresses = pgTable("user_addresses", {
   user_id: t
     .uuid()
     .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => usersTable.id, { onDelete: "cascade" }),
   addr_name: t.varchar({ length: 100 }).notNull(),
   addr_line_1: t.varchar({ length: 255 }).notNull(),
   addr_line_2: t.varchar({ length: 255 }),
