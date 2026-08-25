@@ -1,6 +1,6 @@
 import { defineRelations } from "drizzle-orm";
 import {
-  userAddresses,
+  userAddressesTable,
   userContactsTable,
   userEmailsTable,
   userPhonesTable,
@@ -9,9 +9,16 @@ import {
 } from "../schemas";
 
 export const userRelations = defineRelations(
-  { usersTable, userProfilesTable, userContactsTable, userPhonesTable, userEmailsTable, userAddresses },
+  {
+    usersTable,
+    userProfilesTable,
+    userContactsTable,
+    userPhonesTable,
+    userEmailsTable,
+    userAddressesTable,
+  },
   (r) => ({
-    users: {
+    usersTable: {
       profile: r.one.userProfilesTable({
         from: r.usersTable.id,
         to: r.userProfilesTable.user_id,
@@ -28,18 +35,18 @@ export const userRelations = defineRelations(
         from: r.usersTable.id,
         to: r.userEmailsTable.user_id,
       }),
-      addresses: r.many.userAddresses({
+      addresses: r.many.userAddressesTable({
         from: r.usersTable.id,
-        to: r.userAddresses.user_id,
+        to: r.userAddressesTable.user_id,
       }),
     },
-    userProfiles: {
+    userProfilesTable: {
       user: r.one.usersTable({
         from: r.userProfilesTable.user_id,
         to: r.usersTable.id,
       }),
     },
-    userContacts: {
+    userContactsTable: {
       user: r.one.usersTable({
         from: r.userContactsTable.user_id,
         to: r.usersTable.id,
@@ -53,7 +60,7 @@ export const userRelations = defineRelations(
         to: r.userEmailsTable.contact_id,
       }),
     },
-    userPhones: {
+    userPhonesTable: {
       contact: r.one.userContactsTable({
         from: r.userPhonesTable.contact_id,
         to: r.userContactsTable.id,
@@ -63,7 +70,7 @@ export const userRelations = defineRelations(
         to: r.usersTable.id,
       }),
     },
-    userEmails: {
+    userEmailsTable: {
       contact: r.one.userContactsTable({
         from: r.userEmailsTable.contact_id,
         to: r.userContactsTable.id,
@@ -73,9 +80,9 @@ export const userRelations = defineRelations(
         to: r.usersTable.id,
       }),
     },
-    userAddresses: {
+    userAddressesTable: {
       user: r.one.usersTable({
-        from: r.userAddresses.user_id,
+        from: r.userAddressesTable.user_id,
         to: r.usersTable.id,
       }),
     },

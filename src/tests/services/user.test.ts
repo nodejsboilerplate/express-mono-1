@@ -6,7 +6,7 @@ import {
   userContactsTable,
   userPhonesTable,
   userEmailsTable,
-  userAddresses,
+  userAddressesTable,
   userProfilesTable,
 } from "@/database";
 import { eq } from "drizzle-orm";
@@ -73,7 +73,10 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       expect(typeof result).toBe("string");
       expect(result).not.toBe("");
 
-      const [row] = await pgDb.select().from(usersTable).where(eq(usersTable.id, result));
+      const [row] = await pgDb
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, result));
       expect(row).toBeDefined();
       expect(row?.role).toBe("USER");
       expect(row?.is_verified).toBe(false);
@@ -236,8 +239,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userAddresses)
-        .where(eq(userAddresses.id, addressId));
+        .from(userAddressesTable)
+        .where(eq(userAddressesTable.id, addressId));
       expect(row?.user_id).toBe(userId);
       expect(row?.city).toBe("Dhaka");
     });
@@ -258,7 +261,10 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       );
       expect(result).toBe(userId);
 
-      const [row] = await pgDb.select().from(usersTable).where(eq(usersTable.id, userId));
+      const [row] = await pgDb
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, userId));
       expect(row?.username).toBe(newUsername);
     });
 
@@ -393,8 +399,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userAddresses)
-        .where(eq(userAddresses.id, addressId));
+        .from(userAddressesTable)
+        .where(eq(userAddressesTable.id, addressId));
       expect(row?.city).toBe("Chattogram");
     });
   });
@@ -537,7 +543,10 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const result = await userService.deleteUser(userId, pgDb);
       expect(result).toBe(userId);
 
-      const [row] = await pgDb.select().from(usersTable).where(eq(usersTable.id, userId));
+      const [row] = await pgDb
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, userId));
       expect(row).toBeUndefined();
     });
 
@@ -592,8 +601,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
         .where(eq(userPhonesTable.id, phoneId));
       const [addressRow] = await pgDb
         .select()
-        .from(userAddresses)
-        .where(eq(userAddresses.id, addressId));
+        .from(userAddressesTable)
+        .where(eq(userAddressesTable.id, addressId));
 
       expect(profileRow).toBeUndefined();
       expect(phoneRow).toBeUndefined();

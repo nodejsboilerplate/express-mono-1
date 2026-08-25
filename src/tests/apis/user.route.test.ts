@@ -9,7 +9,7 @@ import {
   userContactsTable,
   userPhonesTable,
   userEmailsTable,
-  userAddresses,
+  userAddressesTable,
 } from "@/database";
 import { pgDb } from "@/libs/db.connect";
 import { app } from "@/server";
@@ -208,8 +208,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userAddresses)
-        .where(eq(userAddresses.id, res.body.data.id));
+        .from(userAddressesTable)
+        .where(eq(userAddressesTable.id, res.body.data.id));
       expect(row?.user_id).toBe(userId);
       expect(row?.city).toBe("Dhaka");
     });
@@ -638,8 +638,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userAddresses)
-        .where(eq(userAddresses.id, addressId));
+        .from(userAddressesTable)
+        .where(eq(userAddressesTable.id, addressId));
       expect(row?.city).toBe("Chattogram");
     });
 
@@ -745,7 +745,10 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const res = await request(app).delete(`${BASE}/${userId}`);
       expect(res.status).toBe(200);
 
-      const rows = await pgDb.select().from(usersTable).where(eq(usersTable.id, userId));
+      const rows = await pgDb
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, userId));
       expect(rows).toHaveLength(0);
     });
 

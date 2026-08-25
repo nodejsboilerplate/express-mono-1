@@ -1,5 +1,5 @@
 import {
-  userAddresses,
+  userAddressesTable,
   userContactsTable,
   userEmailsTable,
   userPhonesTable,
@@ -128,9 +128,9 @@ export class UserService implements UserServiceType {
     db: PgDbClientType
   ): Promise<string> {
     const [createdUserAddress] = await db
-      .insert(userAddresses)
+      .insert(userAddressesTable)
       .values(payload)
-      .returning({ id: userAddresses.id });
+      .returning({ id: userAddressesTable.id });
 
     if (!createdUserAddress?.id) return "";
     return createdUserAddress?.id;
@@ -242,7 +242,9 @@ export class UserService implements UserServiceType {
     const [updatedPhone] = await db
       .update(userPhonesTable)
       .set(updateData)
-      .where(and(eq(userPhonesTable.user_id, user_id), eq(userPhonesTable.id, id)))
+      .where(
+        and(eq(userPhonesTable.user_id, user_id), eq(userPhonesTable.id, id))
+      )
       .returning({ id: userPhonesTable.id });
 
     if (!updatedPhone?.id) return "";
@@ -258,7 +260,9 @@ export class UserService implements UserServiceType {
     const [updatedEmail] = await db
       .update(userEmailsTable)
       .set(updateData)
-      .where(and(eq(userEmailsTable.user_id, user_id), eq(userEmailsTable.id, id)))
+      .where(
+        and(eq(userEmailsTable.user_id, user_id), eq(userEmailsTable.id, id))
+      )
       .returning({ id: userEmailsTable.id });
 
     if (!updatedEmail?.id) return "";
@@ -272,10 +276,15 @@ export class UserService implements UserServiceType {
     const { user_id, id, ...updateData } = payload;
 
     const [updatedAddress] = await db
-      .update(userAddresses)
+      .update(userAddressesTable)
       .set(updateData)
-      .where(and(eq(userAddresses.user_id, user_id), eq(userAddresses.id, id)))
-      .returning({ id: userAddresses.id });
+      .where(
+        and(
+          eq(userAddressesTable.user_id, user_id),
+          eq(userAddressesTable.id, id)
+        )
+      )
+      .returning({ id: userAddressesTable.id });
 
     if (!updatedAddress?.id) return "";
     return updatedAddress.id;
@@ -360,14 +369,14 @@ export class UserService implements UserServiceType {
     db: PgDbClientType
   ): Promise<string> {
     const [deletedAddress] = await db
-      .delete(userAddresses)
+      .delete(userAddressesTable)
       .where(
         and(
-          eq(userAddresses.id, payload.id),
-          eq(userAddresses.user_id, payload.user_id)
+          eq(userAddressesTable.id, payload.id),
+          eq(userAddressesTable.user_id, payload.user_id)
         )
       )
-      .returning({ id: userAddresses.id });
+      .returning({ id: userAddressesTable.id });
 
     if (!deletedAddress?.id) return "";
     return deletedAddress.id;

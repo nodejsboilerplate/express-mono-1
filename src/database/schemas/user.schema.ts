@@ -123,7 +123,7 @@ export const userEmailsTable = pgTable("user_emails", {
 // ---------------------------------------------------------
 // User Address
 // ---------------------------------------------------------
-export const userAddresses = pgTable("user_addresses", {
+export const userAddressesTable = pgTable("user_addresses", {
   id: t
     .uuid()
     .primaryKey()
