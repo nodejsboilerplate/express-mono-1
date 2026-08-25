@@ -4,7 +4,7 @@ import {
   userEmails,
   userPhones,
   userProfiles,
-  users,
+  usersTable,
 } from "@/database";
 import type { PgDbClientType } from "@/libs/db.connect";
 import type {
@@ -114,9 +114,9 @@ export class UserService implements UserServiceType {
     db: PgDbClientType
   ): Promise<string> {
     const [user] = await db
-      .insert(users)
+      .insert(usersTable)
       .values(payload)
-      .returning({ id: users.id });
+      .returning({ id: usersTable.id });
 
     if (!user?.id) return "";
 
@@ -203,10 +203,10 @@ export class UserService implements UserServiceType {
   ): Promise<string> {
     const { id, ...updateData } = payload;
     const [updatedUser] = await db
-      .update(users)
+      .update(usersTable)
       .set(updateData)
-      .where(eq(users.id, id))
-      .returning({ id: users.id });
+      .where(eq(usersTable.id, id))
+      .returning({ id: usersTable.id });
 
     if (!updatedUser?.id) return "";
     return updatedUser.id;
@@ -375,9 +375,9 @@ export class UserService implements UserServiceType {
 
   async deleteUser(payload: IdInputType, db: PgDbClientType): Promise<string> {
     const [deletedUser] = await db
-      .delete(users)
-      .where(eq(users.id, payload))
-      .returning({ id: users.id });
+      .delete(usersTable)
+      .where(eq(usersTable.id, payload))
+      .returning({ id: usersTable.id });
 
     if (!deletedUser?.id) return "";
     return deletedUser.id;

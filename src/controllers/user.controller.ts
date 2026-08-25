@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 import type { Request, Response } from "express";
-import { userEmails, userPhones, users } from "@/database";
+import { userEmails, userPhones, usersTable } from "@/database";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
 import { pgDb } from "@/libs/db.connect";
@@ -274,13 +274,13 @@ export class UserController extends UserService implements UserControllerType {
 
     const [user] = await pgDb
       .select({
-        id: users.id,
-        is_verified: users.is_verified,
-        verify_code: users.verify_code,
-        verify_expiry: users.verify_expiry,
+        id: usersTable.id,
+        is_verified: usersTable.is_verified,
+        verify_code: usersTable.verify_code,
+        verify_expiry: usersTable.verify_expiry,
       })
-      .from(users)
-      .where(eq(users.id, parse_payload.id));
+      .from(usersTable)
+      .where(eq(usersTable.id, parse_payload.id));
 
     if (!user) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));

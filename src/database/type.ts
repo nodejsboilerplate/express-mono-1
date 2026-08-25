@@ -4,14 +4,14 @@ import type {
   userEmails,
   userPhones,
   userProfiles,
-  users,
+  usersTable,
 } from "./schemas";
 
 // ---------------------------------------------------------
 // User Types
 // ---------------------------------------------------------
-export type UserSelectType = typeof users.$inferSelect;
-export type UserInsertType = typeof users.$inferInsert;
+export type UserSelectType = typeof usersTable.$inferSelect;
+export type UserInsertType = typeof usersTable.$inferInsert;
 
 export type UserProfileSelectType = typeof userProfiles.$inferSelect;
 export type UserProfileInsertType = typeof userProfiles.$inferInsert;

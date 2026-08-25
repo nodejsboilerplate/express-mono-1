@@ -14,7 +14,7 @@ export const userGenderRoleEnum = pgEnum("user_gender_role", USER_GENDERS);
 // ---------------------------------------------------------
 // Users
 // ---------------------------------------------------------
-export const users = pgTable("users", {
+export const usersTable = pgTable("users", {
   id: t
     .uuid()
     .primaryKey()
@@ -41,7 +41,7 @@ export const userProfiles = pgTable("user_profiles", {
     .uuid()
     .notNull()
     .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => usersTable.id, { onDelete: "cascade" }),
   first_name: t.varchar({ length: 100 }).notNull(),
   last_name: t.varchar({ length: 100 }),
   avatar: t.text(),
@@ -64,7 +64,7 @@ export const userContacts = pgTable("user_contacts", {
     .uuid()
     .notNull()
     .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => usersTable.id, { onDelete: "cascade" }),
   socials: t.jsonb().$type<SocialLink[]>().notNull().default([]),
   ...table_timestamps,
 });
@@ -85,7 +85,7 @@ export const userPhones = pgTable("user_phones", {
     .uuid()
     .notNull()
     .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => usersTable.id, { onDelete: "cascade" }),
   is_verified: t.boolean().notNull().default(false),
   verify_code: t.varchar({ length: 10 }),
   verify_expiry: t.timestamp({ withTimezone: true }),
@@ -111,7 +111,7 @@ export const userEmails = pgTable("user_emails", {
     .uuid()
     .notNull()
     .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => usersTable.id, { onDelete: "cascade" }),
   is_verified: t.boolean().notNull().default(false),
   verify_code: t.varchar({ length: 10 }),
   verify_expiry: t.timestamp({ withTimezone: true }),
@@ -131,7 +131,7 @@ export const userAddresses = pgTable("user_addresses", {
   user_id: t
     .uuid()
     .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => usersTable.id, { onDelete: "cascade" }),
   addr_name: t.varchar({ length: 100 }).notNull(),
   addr_line_1: t.varchar({ length: 255 }).notNull(),
   addr_line_2: t.varchar({ length: 255 }),

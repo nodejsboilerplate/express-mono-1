@@ -5,44 +5,44 @@ import {
   userEmails,
   userPhones,
   userProfiles,
-  users,
+  usersTable,
 } from "../schemas";
 
 export const userRelations = defineRelations(
-  { users, userProfiles, userContacts, userPhones, userEmails, userAddresses },
+  { usersTable, userProfiles, userContacts, userPhones, userEmails, userAddresses },
   (r) => ({
     users: {
       profile: r.one.userProfiles({
-        from: r.users.id,
+        from: r.usersTable.id,
         to: r.userProfiles.user_id,
       }),
       contact: r.one.userContacts({
-        from: r.users.id,
+        from: r.usersTable.id,
         to: r.userContacts.user_id,
       }),
       contact_phones: r.many.userPhones({
-        from: r.users.id,
+        from: r.usersTable.id,
         to: r.userPhones.user_id,
       }),
       contact_emails: r.many.userEmails({
-        from: r.users.id,
+        from: r.usersTable.id,
         to: r.userEmails.user_id,
       }),
       addresses: r.many.userAddresses({
-        from: r.users.id,
+        from: r.usersTable.id,
         to: r.userAddresses.user_id,
       }),
     },
     userProfiles: {
-      user: r.one.users({
+      user: r.one.usersTable({
         from: r.userProfiles.user_id,
-        to: r.users.id,
+        to: r.usersTable.id,
       }),
     },
     userContacts: {
-      user: r.one.users({
+      user: r.one.usersTable({
         from: r.userContacts.user_id,
-        to: r.users.id,
+        to: r.usersTable.id,
       }),
       phones: r.many.userPhones({
         from: r.userContacts.id,
@@ -58,9 +58,9 @@ export const userRelations = defineRelations(
         from: r.userPhones.contact_id,
         to: r.userContacts.id,
       }),
-      user: r.one.users({
+      user: r.one.usersTable({
         from: r.userPhones.user_id,
-        to: r.users.id,
+        to: r.usersTable.id,
       }),
     },
     userEmails: {
@@ -68,15 +68,15 @@ export const userRelations = defineRelations(
         from: r.userEmails.contact_id,
         to: r.userContacts.id,
       }),
-      user: r.one.users({
+      user: r.one.usersTable({
         from: r.userEmails.user_id,
-        to: r.users.id,
+        to: r.usersTable.id,
       }),
     },
     userAddresses: {
-      user: r.one.users({
+      user: r.one.usersTable({
         from: r.userAddresses.user_id,
-        to: r.users.id,
+        to: r.usersTable.id,
       }),
     },
   })

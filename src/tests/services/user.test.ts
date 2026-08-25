@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { pgDb } from "@/libs/db.connect";
 import { UserService } from "@/services/user.service";
 import {
-  users,
+  usersTable,
   userContacts,
   userPhones,
   userEmails,
@@ -73,7 +73,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       expect(typeof result).toBe("string");
       expect(result).not.toBe("");
 
-      const [row] = await pgDb.select().from(users).where(eq(users.id, result));
+      const [row] = await pgDb.select().from(usersTable).where(eq(usersTable.id, result));
       expect(row).toBeDefined();
       expect(row?.role).toBe("USER");
       expect(row?.is_verified).toBe(false);
@@ -258,7 +258,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       );
       expect(result).toBe(userId);
 
-      const [row] = await pgDb.select().from(users).where(eq(users.id, userId));
+      const [row] = await pgDb.select().from(usersTable).where(eq(usersTable.id, userId));
       expect(row?.username).toBe(newUsername);
     });
 
@@ -537,7 +537,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const result = await userService.deleteUser(userId, pgDb);
       expect(result).toBe(userId);
 
-      const [row] = await pgDb.select().from(users).where(eq(users.id, userId));
+      const [row] = await pgDb.select().from(usersTable).where(eq(usersTable.id, userId));
       expect(row).toBeUndefined();
     });
 

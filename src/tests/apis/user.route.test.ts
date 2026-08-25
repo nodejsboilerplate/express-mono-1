@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
 
 import {
-  users,
+  usersTable,
   userProfiles,
   userContacts,
   userPhones,
@@ -150,8 +150,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(users)
-        .where(eq(users.id, res.body.data.id));
+        .from(usersTable)
+        .where(eq(usersTable.id, res.body.data.id));
       expect(row?.role).toBe("USER");
       expect(row?.is_verified).toBe(false);
       expect(row?.verify_code).toBeTruthy();
@@ -329,9 +329,9 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("verifies a user with the correct code", async () => {
       const userId = await createTestUser();
       const [row] = await pgDb
-        .select({ verify_code: users.verify_code })
-        .from(users)
-        .where(eq(users.id, userId));
+        .select({ verify_code: usersTable.verify_code })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId));
 
       const res = await request(app)
         .post(`${BASE}/${userId}/verify`)
@@ -340,8 +340,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [updated] = await pgDb
         .select()
-        .from(users)
-        .where(eq(users.id, userId));
+        .from(usersTable)
+        .where(eq(usersTable.id, userId));
       expect(updated?.is_verified).toBe(true);
       expect(updated?.verify_code).toBeNull();
     });
@@ -379,9 +379,9 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 400 for an already-verified user", async () => {
       const userId = await createTestUser();
       const [row] = await pgDb
-        .select({ verify_code: users.verify_code })
-        .from(users)
-        .where(eq(users.id, userId));
+        .select({ verify_code: usersTable.verify_code })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId));
 
       await request(app)
         .post(`${BASE}/${userId}/verify`)
@@ -745,7 +745,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const res = await request(app).delete(`${BASE}/${userId}`);
       expect(res.status).toBe(200);
 
-      const rows = await pgDb.select().from(users).where(eq(users.id, userId));
+      const rows = await pgDb.select().from(usersTable).where(eq(usersTable.id, userId));
       expect(rows).toHaveLength(0);
     });
 
