@@ -5,7 +5,7 @@ import {
   usersTable,
   userContactsTable,
   userPhonesTable,
-  userEmails,
+  userEmailsTable,
   userAddresses,
   userProfilesTable,
 } from "@/database";
@@ -373,8 +373,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userEmails)
-        .where(eq(userEmails.id, emailId));
+        .from(userEmailsTable)
+        .where(eq(userEmailsTable.id, emailId));
       expect(row?.email).toBe(newEmail);
     });
 

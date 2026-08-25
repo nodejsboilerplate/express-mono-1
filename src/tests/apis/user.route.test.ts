@@ -8,7 +8,7 @@ import {
   userProfilesTable,
   userContactsTable,
   userPhonesTable,
-  userEmails,
+  userEmailsTable,
   userAddresses,
 } from "@/database";
 import { pgDb } from "@/libs/db.connect";
@@ -127,12 +127,12 @@ async function seedEmailVerifyCode(
   expiresInMs = 10 * 60 * 1000
 ) {
   await pgDb
-    .update(userEmails)
+    .update(userEmailsTable)
     .set({
       verify_code: code,
       verify_expiry: new Date(Date.now() + expiresInMs),
     })
-    .where(eq(userEmails.id, emailId));
+    .where(eq(userEmailsTable.id, emailId));
 }
 
 // ---------------------------------------------------------------
@@ -520,8 +520,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userEmails)
-        .where(eq(userEmails.id, emailId));
+        .from(userEmailsTable)
+        .where(eq(userEmailsTable.id, emailId));
       expect(row?.is_verified).toBe(true);
     });
 
@@ -729,8 +729,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userEmails)
-        .where(eq(userEmails.id, emailId));
+        .from(userEmailsTable)
+        .where(eq(userEmailsTable.id, emailId));
       expect(row?.email).toBe(newEmail);
     });
   });

@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 import type { Request, Response } from "express";
-import { userEmails, userPhonesTable, usersTable } from "@/database";
+import { userEmailsTable, userPhonesTable, usersTable } from "@/database";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
 import { pgDb } from "@/libs/db.connect";
@@ -420,13 +420,13 @@ export class UserController extends UserService implements UserControllerType {
 
     const [user_email] = await pgDb
       .select({
-        id: userEmails.id,
-        is_verified: userEmails.is_verified,
-        verify_code: userEmails.verify_code,
-        verify_expiry: userEmails.verify_expiry,
+        id: userEmailsTable.id,
+        is_verified: userEmailsTable.is_verified,
+        verify_code: userEmailsTable.verify_code,
+        verify_expiry: userEmailsTable.verify_expiry,
       })
-      .from(userEmails)
-      .where(eq(userEmails.id, parse_payload.id));
+      .from(userEmailsTable)
+      .where(eq(userEmailsTable.id, parse_payload.id));
 
     if (!user_email) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));

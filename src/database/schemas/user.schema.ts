@@ -98,7 +98,7 @@ export const userPhonesTable = pgTable("user_phones", {
 // ---------------------------------------------------------
 // User emails
 // ---------------------------------------------------------
-export const userEmails = pgTable("user_emails", {
+export const userEmailsTable = pgTable("user_emails", {
   id: t
     .uuid()
     .primaryKey()

@@ -1,7 +1,7 @@
 import type {
   userAddresses,
   userContactsTable,
-  userEmails,
+  userEmailsTable,
   userPhonesTable,
   userProfilesTable,
   usersTable,
@@ -22,8 +22,8 @@ export type UserContactInsertType = typeof userContactsTable.$inferInsert;
 export type UserPhonesSelectType = typeof userPhonesTable.$inferSelect;
 export type UserPhonesInsertType = typeof userPhonesTable.$inferInsert;
 
-export type UserEmailsSelectType = typeof userEmails.$inferSelect;
-export type UserEmailsInsertType = typeof userEmails.$inferInsert;
+export type UserEmailsSelectType = typeof userEmailsTable.$inferSelect;
+export type UserEmailsInsertType = typeof userEmailsTable.$inferInsert;
 
 export type UserAddressSelectType = typeof userAddresses.$inferSelect;
 export type UserAddressInsertType = typeof userAddresses.$inferInsert;

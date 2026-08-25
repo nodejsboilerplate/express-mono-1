@@ -2,14 +2,14 @@ import { defineRelations } from "drizzle-orm";
 import {
   userAddresses,
   userContactsTable,
-  userEmails,
+  userEmailsTable,
   userPhonesTable,
   userProfilesTable,
   usersTable,
 } from "../schemas";
 
 export const userRelations = defineRelations(
-  { usersTable, userProfilesTable, userContactsTable, userPhonesTable, userEmails, userAddresses },
+  { usersTable, userProfilesTable, userContactsTable, userPhonesTable, userEmailsTable, userAddresses },
   (r) => ({
     users: {
       profile: r.one.userProfilesTable({
@@ -24,9 +24,9 @@ export const userRelations = defineRelations(
         from: r.usersTable.id,
         to: r.userPhonesTable.user_id,
       }),
-      contact_emails: r.many.userEmails({
+      contact_emails: r.many.userEmailsTable({
         from: r.usersTable.id,
-        to: r.userEmails.user_id,
+        to: r.userEmailsTable.user_id,
       }),
       addresses: r.many.userAddresses({
         from: r.usersTable.id,
@@ -48,9 +48,9 @@ export const userRelations = defineRelations(
         from: r.userContactsTable.id,
         to: r.userPhonesTable.contact_id,
       }),
-      emails: r.many.userEmails({
+      emails: r.many.userEmailsTable({
         from: r.userContactsTable.id,
-        to: r.userEmails.contact_id,
+        to: r.userEmailsTable.contact_id,
       }),
     },
     userPhones: {
@@ -65,11 +65,11 @@ export const userRelations = defineRelations(
     },
     userEmails: {
       contact: r.one.userContactsTable({
-        from: r.userEmails.contact_id,
+        from: r.userEmailsTable.contact_id,
         to: r.userContactsTable.id,
       }),
       user: r.one.usersTable({
-        from: r.userEmails.user_id,
+        from: r.userEmailsTable.user_id,
         to: r.usersTable.id,
       }),
     },
