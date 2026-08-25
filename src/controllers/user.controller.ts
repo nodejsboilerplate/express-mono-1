@@ -2,9 +2,7 @@ import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { userEmails, userPhones, users } from "@/database";
-import {
-  getSystemCustomErrorMsgByKey,
-} from "@/events";
+import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
 import { pgDb } from "@/libs/db.connect";
 import { UserService } from "@/services/user.service";

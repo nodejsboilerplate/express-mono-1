@@ -14,7 +14,6 @@ import {
 import { pgDb } from "@/libs/db.connect";
 import { app } from "@/server";
 
-
 const BASE = "/api/v1/user";
 
 // ---------------------------------------------------------------

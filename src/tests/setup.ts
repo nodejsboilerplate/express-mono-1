@@ -1,4 +1,4 @@
-import "dotenv/config"
+import "dotenv/config";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { execSync } from "child_process";
 

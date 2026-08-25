@@ -38,7 +38,7 @@ const operators = {
 
 type DrizzleOperator = keyof typeof operators;
 
-export type FilterConditionType = "OR" | "AND"
+export type FilterConditionType = "OR" | "AND";
 
 export interface FilterGroup<T> {
   type: DrizzleOperator;

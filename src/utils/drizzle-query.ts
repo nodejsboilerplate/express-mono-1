@@ -1,12 +1,31 @@
 import {
-  and, or, eq, ne, gt, gte, lt, lte,
-  isNull, isNotNull, inArray, notInArray,
-  like, ilike, notLike, notIlike, between, notBetween,
-  SQL
+  and,
+  or,
+  eq,
+  ne,
+  gt,
+  gte,
+  lt,
+  lte,
+  isNull,
+  isNotNull,
+  inArray,
+  notInArray,
+  like,
+  ilike,
+  notLike,
+  notIlike,
+  between,
+  notBetween,
+  SQL,
 } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { PgDbClientType } from "@/libs/db.connect";
-import type { DrizzleOperator, FilterConditionType, FilterGroup } from "@/types/db";
+import type {
+  DrizzleOperator,
+  FilterConditionType,
+  FilterGroup,
+} from "@/types";
 import type { InferSelectModel } from "drizzle-orm";
 
 function buildSqlFilters(
@@ -22,22 +41,28 @@ function buildSqlFilters(
 
       switch (item.type as DrizzleOperator) {
         case "eq":
-          if (value !== undefined && value !== null) sql_filters.push(eq(column, value));
+          if (value !== undefined && value !== null)
+            sql_filters.push(eq(column, value));
           break;
         case "ne":
-          if (value !== undefined && value !== null) sql_filters.push(ne(column, value));
+          if (value !== undefined && value !== null)
+            sql_filters.push(ne(column, value));
           break;
         case "gt":
-          if (value !== undefined && value !== null) sql_filters.push(gt(column, value));
+          if (value !== undefined && value !== null)
+            sql_filters.push(gt(column, value));
           break;
         case "gte":
-          if (value !== undefined && value !== null) sql_filters.push(gte(column, value));
+          if (value !== undefined && value !== null)
+            sql_filters.push(gte(column, value));
           break;
         case "lt":
-          if (value !== undefined && value !== null) sql_filters.push(lt(column, value));
+          if (value !== undefined && value !== null)
+            sql_filters.push(lt(column, value));
           break;
         case "lte":
-          if (value !== undefined && value !== null) sql_filters.push(lte(column, value));
+          if (value !== undefined && value !== null)
+            sql_filters.push(lte(column, value));
           break;
         case "like":
           if (value) sql_filters.push(like(column, value as string));
@@ -52,10 +77,12 @@ function buildSqlFilters(
           if (value) sql_filters.push(notIlike(column, value as string));
           break;
         case "inArray":
-          if (Array.isArray(value) && value.length) sql_filters.push(inArray(column, value));
+          if (Array.isArray(value) && value.length)
+            sql_filters.push(inArray(column, value));
           break;
         case "notInArray":
-          if (Array.isArray(value) && value.length) sql_filters.push(notInArray(column, value));
+          if (Array.isArray(value) && value.length)
+            sql_filters.push(notInArray(column, value));
           break;
         case "between":
           if (Array.isArray(value) && value.length === 2) {
@@ -90,14 +117,15 @@ async function createQuery(
   const sql_filters = buildSqlFilters(table, filters);
 
   const selection = Object.fromEntries(
-    selects
-      .map((key) => [key, (table as any)[key]])
+    selects.map((key) => [key, (table as any)[key]])
   );
 
   return await db
     .select(selection)
     .from(table)
-    .where(filterConditionType === "AND" ? and(...sql_filters) : or(...sql_filters));
+    .where(
+      filterConditionType === "AND" ? and(...sql_filters) : or(...sql_filters)
+    );
 }
 
 /**
@@ -136,7 +164,7 @@ async function createQuery(
  */
 export function getDbRecord<
   TTable extends PgTable<any>,
-  TKeys extends keyof InferSelectModel<TTable>
+  TKeys extends keyof InferSelectModel<TTable>,
 >(
   table: TTable,
   selects: TKeys[],
