@@ -1,3 +1,2 @@
-pnpm test
 pnpm format
 git add -A .

@@ -4,7 +4,7 @@ import { UserService } from "@/services/user.service";
 import {
   usersTable,
   userContactsTable,
-  userPhones,
+  userPhonesTable,
   userEmails,
   userAddresses,
   userProfilesTable,
@@ -182,8 +182,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userPhones)
-        .where(eq(userPhones.id, phoneId));
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, phoneId));
       expect(row?.user_id).toBe(userId);
       expect(row?.contact_id).toBe(contactId);
     });
@@ -326,8 +326,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userPhones)
-        .where(eq(userPhones.id, phoneId));
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, phoneId));
       expect(row?.phone).toBe("5559999999");
     });
 
@@ -588,8 +588,8 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
         .where(eq(userProfilesTable.user_id, userId));
       const [phoneRow] = await pgDb
         .select()
-        .from(userPhones)
-        .where(eq(userPhones.id, phoneId));
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, phoneId));
       const [addressRow] = await pgDb
         .select()
         .from(userAddresses)

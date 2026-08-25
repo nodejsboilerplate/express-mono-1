@@ -3,13 +3,13 @@ import {
   userAddresses,
   userContactsTable,
   userEmails,
-  userPhones,
+  userPhonesTable,
   userProfilesTable,
   usersTable,
 } from "../schemas";
 
 export const userRelations = defineRelations(
-  { usersTable, userProfilesTable, userContactsTable, userPhones, userEmails, userAddresses },
+  { usersTable, userProfilesTable, userContactsTable, userPhonesTable, userEmails, userAddresses },
   (r) => ({
     users: {
       profile: r.one.userProfilesTable({
@@ -20,9 +20,9 @@ export const userRelations = defineRelations(
         from: r.usersTable.id,
         to: r.userContactsTable.user_id,
       }),
-      contact_phones: r.many.userPhones({
+      contact_phones: r.many.userPhonesTable({
         from: r.usersTable.id,
-        to: r.userPhones.user_id,
+        to: r.userPhonesTable.user_id,
       }),
       contact_emails: r.many.userEmails({
         from: r.usersTable.id,
@@ -44,9 +44,9 @@ export const userRelations = defineRelations(
         from: r.userContactsTable.user_id,
         to: r.usersTable.id,
       }),
-      phones: r.many.userPhones({
+      phones: r.many.userPhonesTable({
         from: r.userContactsTable.id,
-        to: r.userPhones.contact_id,
+        to: r.userPhonesTable.contact_id,
       }),
       emails: r.many.userEmails({
         from: r.userContactsTable.id,
@@ -55,11 +55,11 @@ export const userRelations = defineRelations(
     },
     userPhones: {
       contact: r.one.userContactsTable({
-        from: r.userPhones.contact_id,
+        from: r.userPhonesTable.contact_id,
         to: r.userContactsTable.id,
       }),
       user: r.one.usersTable({
-        from: r.userPhones.user_id,
+        from: r.userPhonesTable.user_id,
         to: r.usersTable.id,
       }),
     },

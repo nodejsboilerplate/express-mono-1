@@ -72,7 +72,7 @@ export const userContactsTable = pgTable("user_contacts", {
 // ---------------------------------------------------------
 // User Phones
 // ---------------------------------------------------------
-export const userPhones = pgTable("user_phones", {
+export const userPhonesTable = pgTable("user_phones", {
   id: t
     .uuid()
     .primaryKey()

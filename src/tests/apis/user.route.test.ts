@@ -7,7 +7,7 @@ import {
   usersTable,
   userProfilesTable,
   userContactsTable,
-  userPhones,
+  userPhonesTable,
   userEmails,
   userAddresses,
 } from "@/database";
@@ -113,12 +113,12 @@ async function seedPhoneVerifyCode(
   expiresInMs = 10 * 60 * 1000
 ) {
   await pgDb
-    .update(userPhones)
+    .update(userPhonesTable)
     .set({
       verify_code: code,
       verify_expiry: new Date(Date.now() + expiresInMs),
     })
-    .where(eq(userPhones.id, phoneId));
+    .where(eq(userPhonesTable.id, phoneId));
 }
 
 async function seedEmailVerifyCode(
@@ -282,8 +282,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userPhones)
-        .where(eq(userPhones.id, res.body.data.id));
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, res.body.data.id));
       expect(row?.contact_id).toBe(contactId);
       expect(row?.user_id).toBe(userId);
       expect(row?.is_verified).toBe(false);
@@ -418,8 +418,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userPhones)
-        .where(eq(userPhones.id, phoneId));
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, phoneId));
       expect(row?.is_verified).toBe(true);
     });
 
@@ -698,8 +698,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
       const [row] = await pgDb
         .select()
-        .from(userPhones)
-        .where(eq(userPhones.id, phoneId));
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, phoneId));
       expect(row?.phone).toBe("1999999999");
     });
 
