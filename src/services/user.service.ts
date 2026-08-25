@@ -25,7 +25,6 @@ import type {
 } from "@/zod";
 
 import { and, eq } from "drizzle-orm";
-import type z from "zod";
 
 interface UserServiceType {
   // ---------------------------------------------------------

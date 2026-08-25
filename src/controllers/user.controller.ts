@@ -4,8 +4,6 @@ import type { Request, Response } from "express";
 import { userEmails, userPhones, users } from "@/database";
 import {
   getSystemCustomErrorMsgByKey,
-  SystemCustomErrorCode,
-  SystemCustomErrorMsgByCode,
 } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
 import { pgDb } from "@/libs/db.connect";
