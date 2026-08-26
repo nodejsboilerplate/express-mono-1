@@ -15,6 +15,8 @@ interface AuthServiceType {
   createTokens(payload: AccessTokenPayload): TokenPair;
   renewAccessToken(payload: AccessTokenPayload, refreshToken: string): string;
   renewRefreshToken(payload: RefreshTokenPayload): string;
+  getDataFromAccessToken(token: string): AccessTokenPayload;
+  getDataFromRefreshToken(token: string): RefreshTokenPayload;
 }
 
 export class AuthService implements AuthServiceType {
@@ -31,9 +33,7 @@ export class AuthService implements AuthServiceType {
 
     return { accessToken, refreshToken };
   }
-  // @ts-expect-error
   renewAccessToken(payload: AccessTokenPayload, refreshToken: string): string {
-    // const decoded = jwt.verify(refreshToken, authConfig.JWT_REFRESH_TOKEN_SECRET) as { id: string };
     // re-fetch user by decoded.id in caller if you need fresh email/role/username
     return jwt.sign(payload, authConfig.JWT_ACCESS_TOKEN_SECRET, {
       expiresIn: ACCESS_TOKEN_EXPIRY_SEC,
@@ -46,4 +46,21 @@ export class AuthService implements AuthServiceType {
       expiresIn: REFRESH_TOKEN_EXPIRY_SEC,
     });
   }
+
+  getDataFromAccessToken(token: string): AccessTokenPayload {
+    const decoded = jwt.verify(
+      token,
+      authConfig.JWT_ACCESS_TOKEN_SECRET
+    ) as AccessTokenPayload;
+    return decoded;
+  }
+  getDataFromRefreshToken(token: string): RefreshTokenPayload {
+    const decoded = jwt.verify(
+      token,
+      authConfig.JWT_REFRESH_TOKEN_SECRET
+    ) as RefreshTokenPayload;
+    return decoded;
+  }
 }
+
+export const authService = new AuthService();

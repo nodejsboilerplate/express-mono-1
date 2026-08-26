@@ -392,3 +392,5 @@ export class UserService implements UserServiceType {
     return deletedUser.id;
   }
 }
+
+export const userService = new UserService();

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { pgDb } from "@/libs/db.connect";
-import { UserService } from "@/services/user.service";
+import { userService } from "@/services/user.service";
 import {
   usersTable,
   userContactsTable,
@@ -11,8 +11,6 @@ import {
 } from "@/database";
 import { eq } from "drizzle-orm";
 import { Socials } from "@/constants";
-
-const userService = new UserService();
 
 function validUserPayload(overrides: Partial<any> = {}) {
   return {
