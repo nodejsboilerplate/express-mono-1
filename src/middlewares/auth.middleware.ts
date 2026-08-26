@@ -4,7 +4,7 @@ import { userRedisService } from "@/redis-a/user.redis";
 import {
   ACCESS_TOKEN_EXPIRY_SEC,
   CookieService,
-} from "@/services/cookie.server";
+} from "@/services/cookie.service";
 import { usersTable, type PgUserSelectType } from "@repo/database";
 import {
   ApiError,
