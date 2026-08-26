@@ -16,7 +16,8 @@
     "db:push": "drizzle-kit push",
     "db:reset": "tsx ./src/libs/reset.db.ts",
     "test": "vitest",
-    "check:types": "tsc --noEmit --listFiles"
+    "check:types": "node ./node_modules/typescript-7/bin/tsc --noEmit",
+    "clean": "rm -rf node_modules && echo 'Cleanup complete!'"
   },
   "keywords": [],
   "author": "",
@@ -53,8 +54,8 @@
     "supertest": "^7.2.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.23.12",
-    "typescript": "npm:@typescript/typescript6@^6.0.2",
-     "@typescript/native": "npm:typescript@^7.0.2",
+    "typescript": "^6.0.3",
+    "typescript-7": "npm:typescript@^7.0.2",
     "typescript-eslint": "^8.68.0",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.11"

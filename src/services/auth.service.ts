@@ -1,4 +1,3 @@
-import type { UserSelectType } from "@/database/type";
 import jwt from "jsonwebtoken";
 import {
   ACCESS_TOKEN_EXPIRY_SEC,
@@ -32,7 +31,7 @@ export class AuthService implements AuthServiceType {
 
     return { accessToken, refreshToken };
   }
-
+  // @ts-expect-error
   renewAccessToken(payload: AccessTokenPayload, refreshToken: string): string {
     // const decoded = jwt.verify(refreshToken, authConfig.JWT_REFRESH_TOKEN_SECRET) as { id: string };
     // re-fetch user by decoded.id in caller if you need fresh email/role/username

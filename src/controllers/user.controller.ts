@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { userEmailsTable, userPhonesTable, usersTable } from "@/database";
 import { getSystemCustomErrorMsgByKey } from "@/events";

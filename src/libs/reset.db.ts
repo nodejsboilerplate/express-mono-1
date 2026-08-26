@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import { pgDb as db } from "./db.connect";
 import path from "path";
 import fs from "fs";

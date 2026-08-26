@@ -21,9 +21,9 @@ import type { NextFunction, Request, Response } from "express";
  */
 export const errorHandlerMiddleware = (
   err: Error | ApiError,
-  req: Request,
+  _req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   let error: ApiError;
   /**

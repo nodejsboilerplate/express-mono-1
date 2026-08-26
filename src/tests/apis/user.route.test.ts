@@ -1,4 +1,3 @@
-import express, { type Express } from "express";
 import request from "supertest";
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
