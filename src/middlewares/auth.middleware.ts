@@ -1,16 +1,17 @@
 import { authConfig } from "@/config";
-import { postgres } from "@/libs";
-import { userRedisService } from "@/redis-a/user.redis";
+import { usersTable } from "@/database";
+import { getSystemCustomErrorMsgByKey } from "@/events";
+import { ApiError } from "@/libs";
+import { pgDb } from "@/libs/db.connect";
+import { userRedisManager } from "@/redis";
+import { authService } from "@/services";
 import {
   ACCESS_TOKEN_EXPIRY_SEC,
   CookieService,
 } from "@/services/cookie.service";
-import { usersTable, type PgUserSelectType } from "@repo/database";
-import {
-  ApiError,
-  ApiResponse,
-  getSystemCustomErrorMsgByKey,
-} from "@repo/shared";
+import type { AccessTokenPayload } from "@/types";
+import { getDbRecord } from "@/utils/drizzle-query";
+
 import { and, eq, sql } from "drizzle-orm";
 import type { NextFunction, Response, Request } from "express";
 import jwt from "jsonwebtoken";
@@ -32,30 +33,21 @@ export const AuthMiddlware = async (
   next: NextFunction
 ) => {
   try {
-    const incomingRefreshToken =
-      req.cookies?.[CookieService.REFRESH_TOKEN.name];
-    const incomingAccessToken = req.cookies?.[CookieService.ACCESS_TOKEN.name];
+    const { accessToken, refreshToken } = authService.getCookies(req);
 
-    // console.log("cookies are: ", incomingAccessToken, incomingRefreshToken);
+    // console.log("cookies are: ", accessToken, refreshToken);
 
     /**
      * Strategy 1: Fast-Path (Access Token)
      * If a valid Access Token exists, we trust the signed payload to avoid DB/Redis latency.
      */
-    if (incomingAccessToken) {
+    if (accessToken) {
       try {
-        const decode_access_token = (await jwt.verify(
-          incomingAccessToken,
-          AuthConfig.JWT_ACCESS_TOKEN
-        )) as { id: string; email: string; role: string };
+        const decode_data = authService.getDataFromAccessToken(accessToken);
 
         // Strict Requirement: Only ADMINs can pass this guard
-        if (decode_access_token.role == "ADMIN") {
-          req.user = {
-            id: decode_access_token.id,
-            email: decode_access_token.email,
-            role: decode_access_token.role,
-          };
+        if (decode_data.role == "ADMIN") {
+          req.auth_user = decode_data;
           // console.log("Token not refreshed", req.user);
           return next();
         }
@@ -68,16 +60,13 @@ export const AuthMiddlware = async (
      * Strategy 2: Silent Refresh (Refresh Token)
      * If we reach here, the Access Token is missing or invalid.
      */
-    if (!incomingRefreshToken) {
+    if (!refreshToken) {
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
     }
 
-    let decoded: { id: string };
+    let decoded;
     try {
-      decoded = jwt.verify(
-        incomingRefreshToken,
-        AuthConfig.JWT_REFRESH_TOKEN
-      ) as { id: string };
+      decoded = authService.getDataFromRefreshToken(refreshToken);
     } catch (err) {
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
     }
@@ -87,42 +76,39 @@ export const AuthMiddlware = async (
      * To ensure the user hasn't been banned or had their role changed,
      * we verify identity against our storage layers.
      */
-    type TempUserType = Pick<PgUserSelectType, "id" | "email" | "role">;
-    let temp_user: TempUserType;
+
+    let temp_user: AccessTokenPayload;
 
     // Layer A: Redis Lookup (Sub-millisecond latency)
-    const cache_data = (await userRedisService.getHashUserLoginInfo(
+    const get_cached_data = await userRedisManager.getCachedLoginData(
       decoded.id
-    )) as TempUserType;
+    );
+
     // Here redis should be implemented. fetch data from redis
 
-    // Layer B: Database Lookup (Prepared Statement for SQL optimization)
-    const prepareExistingUserQuery = await postgres
-
-      .select({
-        id: usersTable.id,
-        email: usersTable.email,
-        role: usersTable.role,
-      })
-      .from(usersTable)
-      .where(
-        and(
-          eq(usersTable.id, sql.placeholder("id")),
-          eq(usersTable.role, "ADMIN")
-        )
-      )
-      .prepare("prepareExistingUserQuery");
-
-    if (!cache_data) {
-      const [result] = await prepareExistingUserQuery.execute({
-        id: decoded.id,
-      });
-      temp_user = result as TempUserType;
+    if (!get_cached_data) {
+      const [result] = await getDbRecord(
+        usersTable,
+        ["id", "email", "username", "role", "is_verified"],
+        [
+          {
+            type: "eq",
+            data: {
+              id: decoded.id,
+              role: "USER",
+            },
+          },
+        ],
+        pgDb
+      );
+      temp_user = result as AccessTokenPayload;
     } else {
       temp_user = {
-        id: cache_data.id,
-        email: cache_data.email,
-        role: cache_data.role,
+        id: get_cached_data.id,
+        username: get_cached_data.username,
+        email: get_cached_data.email,
+        role: get_cached_data.role,
+        is_verified: get_cached_data.is_verified,
       };
     }
 
@@ -135,24 +121,23 @@ export const AuthMiddlware = async (
      * Token Rotation
      * Generate a new short-lived Access Token and update the client's cookie.
      */
-    const accessToken = jwt.sign(
-      { id: temp_user.id, email: temp_user.email, role: temp_user.role },
-      AuthConfig.JWT_ACCESS_TOKEN,
-      { expiresIn: ACCESS_TOKEN_EXPIRY_SEC }
-    );
+
+    const data = authService.createTokens(temp_user);
 
     res.cookie(
       CookieService.ACCESS_TOKEN.name,
-      accessToken,
+      data.accessToken,
       CookieService.ACCESS_TOKEN.cookie
     );
 
-    req.user = {
+    req.auth_user = {
       id: decoded.id,
-      email: temp_user.email as string,
-      role: temp_user.role as string,
+      email: temp_user.email,
+      role: temp_user.role,
+      is_verified: temp_user.is_verified,
+      username: temp_user.username,
     };
-    console.log("Token refreshed", req.user);
+    console.log("Token refreshed", req.auth_user);
     return next();
   } catch (error) {
     throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);

@@ -1,26 +1,25 @@
 import jwt from "jsonwebtoken";
+import type { Request } from "express";
 import {
   ACCESS_TOKEN_EXPIRY_SEC,
+  CookieService,
   REFRESH_TOKEN_EXPIRY_SEC,
 } from "./cookie.service";
 import { authConfig } from "@/config";
-import type { AccessTokenPayload, RefreshTokenPayload } from "@/types";
-
-interface TokenPair {
-  accessToken: string;
-  refreshToken: string;
-}
+import type { AccessTokenPayload, CookieNames, RefreshTokenPayload } from "@/types";
 
 interface AuthServiceType {
-  createTokens(payload: AccessTokenPayload): TokenPair;
+  createTokens(payload: AccessTokenPayload): CookieNames;
   renewAccessToken(payload: AccessTokenPayload, refreshToken: string): string;
   renewRefreshToken(payload: RefreshTokenPayload): string;
   getDataFromAccessToken(token: string): AccessTokenPayload;
   getDataFromRefreshToken(token: string): RefreshTokenPayload;
+
+  getCookies(req: Request): CookieNames
 }
 
 export class AuthService implements AuthServiceType {
-  createTokens(payload: AccessTokenPayload): TokenPair {
+  createTokens(payload: AccessTokenPayload): CookieNames {
     const accessToken = jwt.sign(payload, authConfig.JWT_ACCESS_TOKEN_SECRET, {
       expiresIn: ACCESS_TOKEN_EXPIRY_SEC,
     });
@@ -60,6 +59,16 @@ export class AuthService implements AuthServiceType {
       authConfig.JWT_REFRESH_TOKEN_SECRET
     ) as RefreshTokenPayload;
     return decoded;
+  }
+
+  getCookies(req: Request): CookieNames {
+       const refresh_token =
+      req.cookies?.[CookieService.REFRESH_TOKEN.name];
+    const access_token = req.cookies?.[CookieService.ACCESS_TOKEN.name];
+    return {
+      accessToken: access_token,
+      refreshToken: refresh_token
+    }
   }
 }
 

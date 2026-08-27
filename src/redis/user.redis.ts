@@ -38,3 +38,6 @@ export class UserRedisManager implements UserRedisManagerType {
     return result === RedisResponse.SUCCESS;
   }
 }
+
+
+export const userRedisManager = new UserRedisManager()
