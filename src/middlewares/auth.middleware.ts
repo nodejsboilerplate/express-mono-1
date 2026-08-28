@@ -38,7 +38,7 @@ export const AuthMiddlware = async (
     // console.log("cookies are: ", accessToken, refreshToken);
 
     /**
-     * Strategy 1: Fast-Path (Access Token)
+     * Fast-Path (Access Token)
      * If a valid Access Token exists, we trust the signed payload to avoid DB/Redis latency.
      */
     if (accessToken) {
@@ -57,7 +57,7 @@ export const AuthMiddlware = async (
     }
 
     /**
-     * Strategy 2: Silent Refresh (Refresh Token)
+     * Silent Refresh (Refresh Token)
      * If we reach here, the Access Token is missing or invalid.
      */
     if (!refreshToken) {
@@ -76,15 +76,12 @@ export const AuthMiddlware = async (
      * To ensure the user hasn't been banned or had their role changed,
      * we verify identity against our storage layers.
      */
-
     let temp_user: AccessTokenPayload;
 
-    // Layer A: Redis Lookup (Sub-millisecond latency)
+    // Redis Lookup
     const get_cached_data = await userRedisManager.getCachedLoginData(
       decoded.id
     );
-
-    // Here redis should be implemented. fetch data from redis
 
     if (!get_cached_data) {
       const [result] = await getDbRecord(
@@ -112,8 +109,8 @@ export const AuthMiddlware = async (
       };
     }
 
-    // Final sanity check: Does the user exist and are they an Admin?
-    if (!temp_user || temp_user.role !== "ADMIN") {
+  
+    if (!temp_user || temp_user.role !== "USER") {
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
     }
 
@@ -121,7 +118,6 @@ export const AuthMiddlware = async (
      * Token Rotation
      * Generate a new short-lived Access Token and update the client's cookie.
      */
-
     const data = authService.createTokens(temp_user);
 
     res.cookie(
