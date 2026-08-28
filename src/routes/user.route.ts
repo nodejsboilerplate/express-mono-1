@@ -36,13 +36,15 @@ router
   .route("/login")
   .post(asyncHandler(userController.loginUserHandler.bind(userController)));
 
-
-  // ---------------------------------------------------------
+// ---------------------------------------------------------
 // Read
 // ---------------------------------------------------------
 router
-.route("/core/:email")
-.get(authMiddlware, asyncHandler(userController.getUserCoreHandler.bind(userController)))
+  .route("/core/:email")
+  .get(
+    authMiddlware,
+    asyncHandler(userController.getUserCoreHandler.bind(userController))
+  );
 
 // ---------------------------------------------------------
 // Verify

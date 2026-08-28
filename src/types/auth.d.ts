@@ -6,12 +6,10 @@ export type AccessTokenPayload = Pick<
 >;
 export type RefreshTokenPayload = Pick<UserSelectType, "id" | "role">;
 
-
 export type CookieNames = {
   accessToken: string;
   refreshToken: string;
 };
-
 
 declare global {
   namespace Express {

@@ -17,7 +17,7 @@ import type { NextFunction, Response, Request } from "express";
  * 4. if refresh token is valid regenerate access token
  * 5. if there is a cache data via user id get data for access token payload
  * 6. if no cache fetch from database and cache in redis
- * 
+ *
  * @throws {ApiError} 401 Unauthorized if both tokens are invalid or user lacks Admin permissions.
  */
 export const authMiddlware = async (

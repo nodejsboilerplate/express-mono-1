@@ -2,27 +2,26 @@ import z4 from "zod";
 import { Socials, USER_GENDERS, USER_ROLES } from "@/constants";
 
 export class UserZSchema {
-
   // ---------------------------------------------------------
-// Base
-// ---------------------------------------------------------
+  // Base
+  // ---------------------------------------------------------
   static id = z4.uuidv4({ error: "Invalid id" });
   static email = z4
     .email({ error: "Invalid email" })
     .max(255, { error: "Email must be at most 255 characters" });
   static username = z4
-      .string({ error: "Username is required" })
-      .trim()
-      .min(3, { error: "Username must be at least 3 characters" })
-      .max(20, { error: "Username must be at most 20 characters" })
-      .regex(/^[a-zA-Z0-9_.]+$/, {
-        error:
-          "Username can only contain letters, numbers, underscores, and dots",
-      })
+    .string({ error: "Username is required" })
+    .trim()
+    .min(3, { error: "Username must be at least 3 characters" })
+    .max(20, { error: "Username must be at most 20 characters" })
+    .regex(/^[a-zA-Z0-9_.]+$/, {
+      error:
+        "Username can only contain letters, numbers, underscores, and dots",
+    });
 
   // ---------------------------------------------------------
-// User
-// ---------------------------------------------------------
+  // User
+  // ---------------------------------------------------------
   static createUser = z4.object({
     email: this.email,
     username: this.username,
@@ -33,10 +32,9 @@ export class UserZSchema {
     role: z4.enum(USER_ROLES, { error: "Invalid role" }).optional(),
   });
 
-
   // ---------------------------------------------------------
-// User Profile
-// ---------------------------------------------------------
+  // User Profile
+  // ---------------------------------------------------------
   static createProfile = z4.object({
     user_id: this.id,
     first_name: z4
@@ -59,10 +57,9 @@ export class UserZSchema {
     gender: z4.enum(USER_GENDERS, { error: "Invalid gender" }).nullish(),
   });
 
-
   // ---------------------------------------------------------
-// User Contact
-// ---------------------------------------------------------
+  // User Contact
+  // ---------------------------------------------------------
   static socialLink = z4.object({
     type: z4.enum(Socials, { error: "Invalid social platform type" }),
     url: z4.url({ error: "Invalid social link URL" }),
@@ -76,10 +73,9 @@ export class UserZSchema {
       .optional(),
   });
 
-
   // ---------------------------------------------------------
-// User Phone
-// ---------------------------------------------------------
+  // User Phone
+  // ---------------------------------------------------------
   static createPhone = z4.object({
     contact_id: this.id,
     user_id: this.id,
@@ -102,8 +98,8 @@ export class UserZSchema {
   });
 
   // ---------------------------------------------------------
-// User Email
-// ---------------------------------------------------------
+  // User Email
+  // ---------------------------------------------------------
   static createEmail = z4.object({
     contact_id: this.id,
     user_id: this.id,
@@ -113,13 +109,12 @@ export class UserZSchema {
     is_primary: z4
       .boolean({ error: "is_primary must be a boolean" })
       .optional(),
-    email: this.email
+    email: this.email,
   });
 
-
   // ---------------------------------------------------------
-// User Address
-// ---------------------------------------------------------
+  // User Address
+  // ---------------------------------------------------------
   static createAddress = z4.object({
     user_id: this.id,
     addr_name: z4
@@ -169,8 +164,8 @@ export class UserZSchema {
   });
 
   // ---------------------------------------------------------
-// Verification
-// ---------------------------------------------------------
+  // Verification
+  // ---------------------------------------------------------
   static verifyCode = z4.object({
     id: this.id,
     code: z4
@@ -184,17 +179,16 @@ export class UserZSchema {
   });
 
   // ---------------------------------------------------------
-// Auth
-// ---------------------------------------------------------
-static loginUser = z4.object({
-  identifier: z4.string({error: "Invalid email or username!"}),
-  password: z4
-      .string({ error: "Password is required" })
-})
+  // Auth
+  // ---------------------------------------------------------
+  static loginUser = z4.object({
+    identifier: z4.string({ error: "Invalid email or username!" }),
+    password: z4.string({ error: "Password is required" }),
+  });
 
   // ---------------------------------------------------------
-// Update
-// ---------------------------------------------------------
+  // Update
+  // ---------------------------------------------------------
   static updateUser = this.createUser.partial().extend({
     id: this.id,
     is_verified: z4
@@ -231,10 +225,9 @@ static loginUser = z4.object({
     user_id: this.createAddress.shape.user_id,
   });
 
-
   // ---------------------------------------------------------
-// Delete
-// ---------------------------------------------------------
+  // Delete
+  // ---------------------------------------------------------
   static deleteByUserWithContextId = z4.object({
     id: this.id,
     user_id: this.id,
@@ -271,7 +264,7 @@ export type VerifyCodeWithUserIdInput = z4.infer<
   typeof UserZSchema.verifyCodeWithUserId
 >;
 
-  // ---------------------------------------------------------
+// ---------------------------------------------------------
 // Auth
 // ---------------------------------------------------------
 export type LoginUserInputType = z4.infer<typeof UserZSchema.loginUser>;

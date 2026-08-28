@@ -364,7 +364,7 @@ export class UserController extends UserService implements UserControllerType {
     const { password, ...rest } = result;
 
     await userRedisManager.cacheUserLoginData(result?.id as string, rest);
-    
+
     return res.status(200).json(new ApiResponse(200, "Login Successful."));
   }
 
