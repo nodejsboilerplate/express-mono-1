@@ -6,7 +6,11 @@ import {
   REFRESH_TOKEN_EXPIRY_SEC,
 } from "./cookie.service";
 import { authConfig } from "@/config";
-import type { AccessTokenPayload, CookieNames, RefreshTokenPayload } from "@/types";
+import type {
+  AccessTokenPayload,
+  CookieNames,
+  RefreshTokenPayload,
+} from "@/types";
 
 interface AuthServiceType {
   createTokens(payload: AccessTokenPayload): CookieNames;
@@ -15,7 +19,7 @@ interface AuthServiceType {
   getDataFromAccessToken(token: string): AccessTokenPayload;
   getDataFromRefreshToken(token: string): RefreshTokenPayload;
 
-  getCookies(req: Request): CookieNames
+  getCookies(req: Request): CookieNames;
 }
 
 export class AuthService implements AuthServiceType {
@@ -25,22 +29,23 @@ export class AuthService implements AuthServiceType {
     });
 
     const refreshToken = jwt.sign(
-      payload,
+      {
+        id: payload.id,
+        role: payload.role,
+      } as RefreshTokenPayload,
       authConfig.JWT_REFRESH_TOKEN_SECRET,
       { expiresIn: REFRESH_TOKEN_EXPIRY_SEC }
     );
 
     return { accessToken, refreshToken };
   }
-  renewAccessToken(payload: AccessTokenPayload, refreshToken: string): string {
-    // re-fetch user by decoded.id in caller if you need fresh email/role/username
+  renewAccessToken(payload: AccessTokenPayload): string {
     return jwt.sign(payload, authConfig.JWT_ACCESS_TOKEN_SECRET, {
       expiresIn: ACCESS_TOKEN_EXPIRY_SEC,
     });
   }
 
   renewRefreshToken(payload: RefreshTokenPayload): string {
-    // const decoded = jwt.verify(refreshToken, authConfig.JWT_REFRESH_TOKEN_SECRET) as { id: string };
     return jwt.sign({ id: payload.id }, authConfig.JWT_REFRESH_TOKEN_SECRET, {
       expiresIn: REFRESH_TOKEN_EXPIRY_SEC,
     });
@@ -62,13 +67,12 @@ export class AuthService implements AuthServiceType {
   }
 
   getCookies(req: Request): CookieNames {
-       const refresh_token =
-      req.cookies?.[CookieService.REFRESH_TOKEN.name];
+    const refresh_token = req.cookies?.[CookieService.REFRESH_TOKEN.name];
     const access_token = req.cookies?.[CookieService.ACCESS_TOKEN.name];
     return {
       accessToken: access_token,
-      refreshToken: refresh_token
-    }
+      refreshToken: refresh_token,
+    };
   }
 }
 

@@ -3,7 +3,7 @@ import { redisClient } from "@/libs";
 import type { AccessTokenPayload } from "@/types";
 
 interface UserRedisManagerType {
-  cacheUserLoginData(payload: AccessTokenPayload): Promise<boolean>;
+  cacheUserLoginData(key: string, payload: AccessTokenPayload): Promise<boolean>;
   getCachedLoginData(key: string): Promise<AccessTokenPayload | null>;
   deleteCachedLoginData(key: string): Promise<boolean>;
   setCacheExpirationUserLoginData(
@@ -13,8 +13,8 @@ interface UserRedisManagerType {
 }
 
 export class UserRedisManager implements UserRedisManagerType {
-  async cacheUserLoginData(payload: AccessTokenPayload): Promise<boolean> {
-    const result = await redisClient.set(payload.id, JSON.stringify(payload), {
+  async cacheUserLoginData(key: string, payload: AccessTokenPayload): Promise<boolean> {
+    const result = await redisClient.set(key, JSON.stringify(payload), {
       condition: "NX",
     });
     return result === RedisResponse.OK;

@@ -1,20 +1,14 @@
-import { authConfig } from "@/config";
-import { usersTable } from "@/database";
+import { prepareGetUserLoginDataForCache } from "@/database/prepared-statements";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
-import { pgDb } from "@/libs/db.connect";
 import { userRedisManager } from "@/redis";
 import { authService } from "@/services";
 import {
-  ACCESS_TOKEN_EXPIRY_SEC,
   CookieService,
 } from "@/services/cookie.service";
 import type { AccessTokenPayload } from "@/types";
-import { getDbRecord } from "@/utils/drizzle-query";
-
-import { and, eq, sql } from "drizzle-orm";
+import { executePreparedStatement } from "@/utils";
 import type { NextFunction, Response, Request } from "express";
-import jwt from "jsonwebtoken";
 
 /**
  * Middleware to enforce authentication and manage token rotation.
@@ -33,6 +27,14 @@ export const AuthMiddlware = async (
   next: NextFunction
 ) => {
   try {
+    /**
+     * 1. Get access and refresh token
+     * 2. check if access token is valid
+     * 3. if invalid access token check is refresh token is valid
+     * 4. if refresh token is valid regenerate access token
+     * 5. if there is a cache data via user id get data for access token payload
+     * 6. if no cache fetch from database and cache in redis
+     */
     const { accessToken, refreshToken } = authService.getCookies(req);
 
     // console.log("cookies are: ", accessToken, refreshToken);
@@ -45,10 +47,8 @@ export const AuthMiddlware = async (
       try {
         const decode_data = authService.getDataFromAccessToken(accessToken);
 
-        // Strict Requirement: Only ADMINs can pass this guard
-        if (decode_data.role == "ADMIN") {
+        if (decode_data.id) {
           req.auth_user = decode_data;
-          // console.log("Token not refreshed", req.user);
           return next();
         }
       } catch {
@@ -84,19 +84,14 @@ export const AuthMiddlware = async (
     );
 
     if (!get_cached_data) {
-      const [result] = await getDbRecord(
-        usersTable,
-        ["id", "email", "username", "role", "is_verified"],
-        [
-          {
-            type: "eq",
-            data: {
-              id: decoded.id,
-              role: "USER",
-            },
-          },
-        ],
-        pgDb
+      const [result] = await executePreparedStatement(prepareGetUserLoginDataForCache, {
+        id: decoded.id,
+        role: decoded.role
+      })
+
+      await userRedisManager.cacheUserLoginData(
+        result?.id as string,
+        result as AccessTokenPayload
       );
       temp_user = result as AccessTokenPayload;
     } else {
@@ -109,8 +104,7 @@ export const AuthMiddlware = async (
       };
     }
 
-  
-    if (!temp_user || temp_user.role !== "USER") {
+    if (!temp_user) {
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
     }
 
@@ -118,11 +112,11 @@ export const AuthMiddlware = async (
      * Token Rotation
      * Generate a new short-lived Access Token and update the client's cookie.
      */
-    const data = authService.createTokens(temp_user);
+    const renewed_access_token = authService.renewAccessToken(temp_user);
 
     res.cookie(
       CookieService.ACCESS_TOKEN.name,
-      data.accessToken,
+      renewed_access_token,
       CookieService.ACCESS_TOKEN.cookie
     );
 
@@ -131,7 +125,7 @@ export const AuthMiddlware = async (
       email: temp_user.email,
       role: temp_user.role,
       is_verified: temp_user.is_verified,
-      username: temp_user.username,
+      username: temp_user.username
     };
     console.log("Token refreshed", req.auth_user);
     return next();
