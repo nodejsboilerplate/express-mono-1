@@ -3,9 +3,7 @@ import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
 import { userRedisManager } from "@/redis";
 import { authService } from "@/services";
-import {
-  CookieService,
-} from "@/services/cookie.service";
+import { CookieService } from "@/services/cookie.service";
 import type { AccessTokenPayload } from "@/types";
 import { executePreparedStatement } from "@/utils";
 import type { NextFunction, Response, Request } from "express";
@@ -13,28 +11,21 @@ import type { NextFunction, Response, Request } from "express";
 /**
  * Middleware to enforce authentication and manage token rotation.
  *
- * Logic Flow:
- * 1. Attempt to verify the Access Token for immediate authentication (High performance).
- * 2. If Access Token is expired/invalid, attempt to verify the Refresh Token.
- * 3. Validate user status and 'ADMIN' role via Redis (Cache) or PostgreSQL (Prepared Statement).
- * 4. Perform a 'Silent Refresh' by issuing a new Access Token if the Refresh Token is valid.
- *
+ * 1. Get access and refresh token
+ * 2. check if access token is valid
+ * 3. if invalid access token check is refresh token is valid
+ * 4. if refresh token is valid regenerate access token
+ * 5. if there is a cache data via user id get data for access token payload
+ * 6. if no cache fetch from database and cache in redis
+ * 
  * @throws {ApiError} 401 Unauthorized if both tokens are invalid or user lacks Admin permissions.
  */
-export const AuthMiddlware = async (
+export const authMiddlware = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    /**
-     * 1. Get access and refresh token
-     * 2. check if access token is valid
-     * 3. if invalid access token check is refresh token is valid
-     * 4. if refresh token is valid regenerate access token
-     * 5. if there is a cache data via user id get data for access token payload
-     * 6. if no cache fetch from database and cache in redis
-     */
     const { accessToken, refreshToken } = authService.getCookies(req);
 
     // console.log("cookies are: ", accessToken, refreshToken);
@@ -84,10 +75,13 @@ export const AuthMiddlware = async (
     );
 
     if (!get_cached_data) {
-      const [result] = await executePreparedStatement(prepareGetUserLoginDataForCache, {
-        id: decoded.id,
-        role: decoded.role
-      })
+      const [result] = await executePreparedStatement(
+        prepareGetUserLoginDataForCache,
+        {
+          id: decoded.id,
+          role: decoded.role,
+        }
+      );
 
       await userRedisManager.cacheUserLoginData(
         result?.id as string,
@@ -125,7 +119,7 @@ export const AuthMiddlware = async (
       email: temp_user.email,
       role: temp_user.role,
       is_verified: temp_user.is_verified,
-      username: temp_user.username
+      username: temp_user.username,
     };
     console.log("Token refreshed", req.auth_user);
     return next();

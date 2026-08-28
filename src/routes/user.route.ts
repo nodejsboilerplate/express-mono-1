@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { UserController } from "@/controllers/user.controller";
 import { asyncHandler } from "@/utils";
+import { authMiddlware } from "@/middlewares/auth.middleware";
 
 const router: Router = Router();
 const userController = new UserController();
@@ -27,6 +28,21 @@ router
 router
   .route("/:user_id/contact/:contactId/email")
   .post(asyncHandler(userController.createEmailHandler.bind(userController)));
+
+// ---------------------------------------------------------
+// Auth
+// ---------------------------------------------------------
+router
+  .route("/login")
+  .post(asyncHandler(userController.loginUserHandler.bind(userController)));
+
+
+  // ---------------------------------------------------------
+// Read
+// ---------------------------------------------------------
+router
+.route("/core/:email")
+.get(authMiddlware, asyncHandler(userController.getUserCoreHandler.bind(userController)))
 
 // ---------------------------------------------------------
 // Verify

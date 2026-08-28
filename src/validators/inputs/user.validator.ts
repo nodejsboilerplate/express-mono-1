@@ -8,7 +8,9 @@ import {
   type CreateUserPhoneInputType,
   type CreateUserProfileInputType,
   type DeleteByUserWithContextIdInputType,
+  type EmailInputType,
   type IdInputType,
+  type LoginUserInputType,
   type UpdateAddressInputType,
   type UpdateContactInputType,
   type UpdateEmailInputType,
@@ -22,6 +24,7 @@ import type z from "zod";
 
 interface UserInputValidatorsType {
   idInput(payload: IdInputType): IdInputType | z.ZodError;
+  emailInput(payload: EmailInputType): EmailInputType | z.ZodError;
 
   createUserCoreInput(
     payload: CreateUserCoreInputType
@@ -48,6 +51,8 @@ interface UserInputValidatorsType {
   verifyCodeWithUserId(
     payload: VerifyCodeWithUserIdInput
   ): VerifyCodeWithUserIdInput | z.ZodError;
+
+  loginUserInput(payload: LoginUserInputType): LoginUserInputType | z.ZodError;
 
   updateUserCoreInput(
     payload: UpdateUserInputType
@@ -76,6 +81,18 @@ interface UserInputValidatorsType {
 export class UserInputValidators implements UserInputValidatorsType {
   idInput(payload: IdInputType): IdInputType | z.ZodError {
     const { data, success, error } = validateWithZod(payload, UserZSchema.id);
+
+    if (!success) {
+      return error;
+    }
+    return data;
+  }
+
+  emailInput(payload: EmailInputType): EmailInputType | z.ZodError {
+    const { data, success, error } = validateWithZod(
+      payload,
+      UserZSchema.email
+    );
 
     if (!success) {
       return error;
@@ -166,6 +183,15 @@ export class UserInputValidators implements UserInputValidatorsType {
     const { data, success, error } = validateWithZod(
       payload,
       UserZSchema.verifyCodeWithUserId
+    );
+    if (!success) return error;
+    return data;
+  }
+
+  loginUserInput(payload: LoginUserInputType): LoginUserInputType | z.ZodError {
+    const { data, success, error } = validateWithZod(
+      payload,
+      UserZSchema.loginUser
     );
     if (!success) return error;
     return data;

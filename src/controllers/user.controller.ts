@@ -16,12 +16,16 @@ import { UserInputValidators } from "@/validators/inputs/user.validator";
 import type {
   CreateUserAddressInputType,
   CreateUserContactInputType,
+  LoginUserInputType,
   UpdateAddressInputType,
   UpdateContactInputType,
   UpdateEmailInputType,
   UpdatePhoneInputType,
   UpdateProfileInputType,
 } from "@/zod";
+import { authService, CookieService } from "@/services";
+import { userRedisManager } from "@/redis";
+import type { AccessTokenPayload } from "@/types";
 
 interface UserControllerType {
   // ---------------------------------------------------------------
@@ -32,6 +36,16 @@ interface UserControllerType {
   createContactHandler(req: Request, res: Response): Promise<Response>;
   createPhoneHandler(req: Request, res: Response): Promise<Response>;
   createEmailHandler(req: Request, res: Response): Promise<Response>;
+
+  // ---------------------------------------------------------------
+  // Read
+  // ---------------------------------------------------------------
+  getUserCoreHandler(req: Request, res: Response): Promise<Response>;
+
+  // ---------------------------------------------------------------
+  // Auth
+  // ---------------------------------------------------------------
+  loginUserHandler(req: Request, res: Response): Promise<Response>;
 
   // ---------------------------------------------------------------
   // Verify
@@ -259,6 +273,99 @@ export class UserController extends UserService implements UserControllerType {
     return res
       .status(201)
       .json(new ApiResponse(201, "Email added successfully.", { id: result }));
+  }
+
+  // ---------------------------------------------------------
+  // Read
+  // ---------------------------------------------------------
+  async getUserCoreHandler(req: Request, res: Response): Promise<Response> {
+    const { email } = req.params as { email: string };
+    const parse_payload = userValidators.emailInput(email);
+
+    if (isZodError(parse_payload)) throw validationError(parse_payload);
+
+    const result = await pgDb.query.usersTable.findFirst({
+      columns: {
+        id: true,
+        email: true,
+        username: true,
+        role: true,
+        created_at: true,
+        updated_at: true,
+      },
+      where: {
+        email: { eq: parse_payload },
+      },
+    });
+
+    if (!result) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
+    }
+
+    return res.status(200).json(new ApiResponse(200, "Ok", result));
+  }
+
+  // ---------------------------------------------------------
+  // Auth
+  // ---------------------------------------------------------
+  async loginUserHandler(req: Request, res: Response): Promise<Response> {
+    const payload = req.body as LoginUserInputType;
+    const parse_payload = userValidators.loginUserInput(payload);
+
+    if (isZodError(parse_payload)) throw validationError(parse_payload);
+
+    const result = await pgDb.query.usersTable.findFirst({
+      columns: {
+        id: true,
+        email: true,
+        password: true,
+        username: true,
+        role: true,
+        is_verified: true,
+      },
+      where: {
+        OR: [
+          {
+            email: { eq: parse_payload.identifier },
+          },
+          {
+            username: { eq: parse_payload.identifier },
+          },
+        ],
+      },
+    });
+
+    if (!result?.id) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
+    }
+
+    const isPassMatched = await bcrypt.compare(
+      parse_payload.password,
+      result.password
+    );
+    if (!isPassMatched) {
+      throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
+    }
+
+    const { accessToken, refreshToken } = authService.createTokens(result);
+
+    res.cookie(
+      CookieService.ACCESS_TOKEN.name,
+      accessToken,
+      CookieService.ACCESS_TOKEN.cookie
+    );
+
+    res.cookie(
+      CookieService.REFRESH_TOKEN.name,
+      refreshToken,
+      CookieService.REFRESH_TOKEN.cookie
+    );
+
+    const { password, ...rest } = result;
+
+    await userRedisManager.cacheUserLoginData(result?.id as string, rest);
+    
+    return res.status(200).json(new ApiResponse(200, "Login Successful."));
   }
 
   // ---------------------------------------------------------

@@ -150,7 +150,7 @@ export const SystemCustomErrorMsgByCode: SystemCustomErrorMessageType = {
   // -- 404 --
   [SystemCustomErrorCode.USER_NOT_FOUND]: {
     title: "User Not Found",
-    message: "No user exists with the given id.",
+    message: "No user exists with the given input.",
     code: SystemCustomErrorCode.USER_NOT_FOUND,
   },
   [SystemCustomErrorCode.PROFILE_NOT_FOUND]: {

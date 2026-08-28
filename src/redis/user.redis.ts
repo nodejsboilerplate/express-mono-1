@@ -1,5 +1,6 @@
 import { RedisResponse } from "@/constants";
 import { redisClient } from "@/libs";
+import { ACCESS_TOKEN_EXPIRY_MIN, ACCESS_TOKEN_EXPIRY_SEC } from "@/services";
 import type { AccessTokenPayload } from "@/types";
 
 interface UserRedisManagerType {
@@ -12,12 +13,13 @@ interface UserRedisManagerType {
   ): Promise<boolean>;
 }
 
-export class UserRedisManager implements UserRedisManagerType {
+export class UserRedisManager implements UserRedisManagerType { 
   async cacheUserLoginData(key: string, payload: AccessTokenPayload): Promise<boolean> {
-    const result = await redisClient.set(key, JSON.stringify(payload), {
+    const [result, expiry_result] = await redisClient.multi().set(key, JSON.stringify(payload), {
       condition: "NX",
-    });
-    return result === RedisResponse.OK;
+    }).expire(key, (ACCESS_TOKEN_EXPIRY_SEC + 1*60)).exec();
+   
+    return result as unknown as string === RedisResponse.OK ;  
   }
 
   async getCachedLoginData(key: string): Promise<AccessTokenPayload | null> {
