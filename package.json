@@ -74,6 +74,7 @@
     "rate-limit-redis": "^6.0.1",
     "redis": "^6.2.1",
     "request-ip": "^3.3.0",
+    "resend": "^6.24.0",
     "tsdown": "^0.22.14",
     "uuid": "^14.0.2",
     "zod": "^4.4.3"

@@ -25,6 +25,7 @@ import type {
 } from "@/zod";
 
 import { and, eq } from "drizzle-orm";
+import { ResendService } from "./resend.service";
 
 interface UserServiceType {
   // ---------------------------------------------------------
@@ -106,6 +107,16 @@ interface UserServiceType {
 }
 
 export class UserService implements UserServiceType {
+  private static instance: UserService;
+
+  static create() {
+    if (this.instance) {
+      return this.instance;
+    }
+
+    this.instance = new UserService();
+    return this.instance;
+  }
   // ---------------------------------------------------------
   // Create
   // ---------------------------------------------------------
@@ -392,5 +403,3 @@ export class UserService implements UserServiceType {
     return deletedUser.id;
   }
 }
-
-export const userService = new UserService();

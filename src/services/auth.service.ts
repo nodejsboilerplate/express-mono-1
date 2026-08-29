@@ -18,11 +18,21 @@ interface AuthServiceType {
   renewRefreshToken(payload: RefreshTokenPayload): string;
   getDataFromAccessToken(token: string): AccessTokenPayload;
   getDataFromRefreshToken(token: string): RefreshTokenPayload;
-
   getCookies(req: Request): CookieNames;
 }
 
 export class AuthService implements AuthServiceType {
+  private static instance: AuthService
+
+  static create() {
+     if(this.instance) {
+            return this.instance
+        }
+
+        this.instance = new AuthService()
+        return this.instance 
+  }
+
   createTokens(payload: AccessTokenPayload): CookieNames {
     const accessToken = jwt.sign(payload, authConfig.JWT_ACCESS_TOKEN_SECRET, {
       expiresIn: ACCESS_TOKEN_EXPIRY_SEC,
@@ -75,5 +85,3 @@ export class AuthService implements AuthServiceType {
     };
   }
 }
-
-export const authService = new AuthService();

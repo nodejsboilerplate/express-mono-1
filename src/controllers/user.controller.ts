@@ -23,9 +23,10 @@ import type {
   UpdatePhoneInputType,
   UpdateProfileInputType,
 } from "@/zod";
-import { authService, CookieService } from "@/services";
+import {  AuthService, CookieService } from "@/services";
 import { userRedisManager } from "@/redis";
-import type { AccessTokenPayload } from "@/types";
+
+const authService = AuthService.create()
 
 interface UserControllerType {
   // ---------------------------------------------------------------
