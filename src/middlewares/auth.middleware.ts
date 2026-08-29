@@ -2,11 +2,13 @@ import { prepareGetUserLoginDataForCache } from "@/database/prepared-statements"
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
 import { userRedisManager } from "@/redis";
-import { authService } from "@/services";
+import { AuthService } from "@/services";
 import { CookieService } from "@/services/cookie.service";
 import type { AccessTokenPayload } from "@/types";
 import { executePreparedStatement } from "@/utils";
 import type { NextFunction, Response, Request } from "express";
+
+const authService = AuthService.create()
 
 /**
  * Middleware to enforce authentication and manage token rotation.
