@@ -23,9 +23,7 @@ import type {
   UpdateProfileInputType,
   UpdateUserInputType,
 } from "@/zod";
-
 import { and, eq } from "drizzle-orm";
-import { ResendService } from "./resend.service";
 
 interface UserServiceType {
   // ---------------------------------------------------------
