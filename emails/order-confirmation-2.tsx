@@ -16,12 +16,18 @@ import {
 } from "@react-email/components";
 import * as React from "react";
 
+interface OrderProduct {
+  name: string;
+  imageUrl: string;
+  priceFrom: string;
+  color: string;
+  colorLabel?: string;
+}
+
 interface OrderConfirmationEmailProps {
   customerName?: string;
   orderNumber?: string;
-  productName?: string;
-  productImageUrl?: string;
-  productPriceFrom?: string;
+  products?: OrderProduct[];
   subtotal?: string;
   vat?: string;
   vatPercent?: string;
@@ -41,9 +47,16 @@ interface OrderConfirmationEmailProps {
 export const OrderConfirmationEmail = ({
   customerName = "[Customer Name]",
   orderNumber = "34341",
-  productName = "Apple Watch Ultra 2",
-  productImageUrl = "https://resend-attachments.s3.amazonaws.com/aa044177-eeba-4f8b-939a-ed824bb9a5ee",
-  productPriceFrom = "$450",
+  products = [
+    {
+      name: "Apple Watch Ultra 2",
+      imageUrl:
+        "https://resend-attachments.s3.amazonaws.com/aa044177-eeba-4f8b-939a-ed824bb9a5ee",
+      priceFrom: "$450",
+      color: "#ff6f08",
+      colorLabel: "Orange",
+    },
+  ],
   subtotal = "$450.00",
   vat = "$90.00",
   vatPercent = "20.0",
@@ -94,24 +107,50 @@ export const OrderConfirmationEmail = ({
           <Section style={orderCard}>
             <Text style={orderCardTitle}>Order Summary</Text>
 
-            <Row>
-              <Column style={{ width: "166px" }}>
-                <Img
-                  src={productImageUrl}
-                  width="166"
-                  height="166"
-                  alt="A silver smartwatch with an orange band displays a compass and weather information on its screen."
-                  style={productImage}
-                />
-              </Column>
-              <Column style={{ verticalAlign: "top", paddingLeft: "12px" }}>
-                <Text style={productNameText}>{productName}</Text>
-                <Text style={productPriceText}>From {productPriceFrom}</Text>
-                <div style={{width: "24px", height: "24px", background: "#ff6f08", borderRadius: "50%", marginTop: "10px"}}></div>
-              </Column>
-            </Row>
-
-            <Hr style={cardDivider} />
+            {products.map((product, index) => (
+              <React.Fragment key={`${product.name}-${index}`}>
+                <Row>
+                  <Column style={{ width: "166px" }}>
+                    <Img
+                      src={product.imageUrl}
+                      width="166"
+                      height="166"
+                      alt={product.name}
+                      style={productImage}
+                    />
+                  </Column>
+                  <Column
+                    style={{ verticalAlign: "top", paddingLeft: "12px" }}
+                  >
+                    <Text style={productNameText}>{product.name}</Text>
+                    <Text style={productPriceText}>
+                      From {product.priceFrom}
+                    </Text>
+                    <table
+                      cellPadding="0"
+                      cellSpacing="0"
+                      role="presentation"
+                      style={{ marginTop: "10px" }}
+                    >
+                      <tbody>
+                        <tr>
+                          <td
+                            style={{
+                              width: "24px",
+                              height: "24px",
+                              background: product.color,
+                              borderRadius: "50%",
+                            }}
+                            title={product.colorLabel ?? product.color}
+                          />
+                        </tr>
+                      </tbody>
+                    </table>
+                  </Column>
+                </Row>
+                <Hr style={cardDivider} />
+              </React.Fragment>
+            ))}
 
             <Row>
               <Column>
@@ -147,7 +186,7 @@ export const OrderConfirmationEmail = ({
 
           {/* Billing address + Payment method */}
           <Row>
-            <Column style={{   verticalAlign: "top"}}>
+            <Column style={{ verticalAlign: "top"}}>
               <Text style={sectionHeading}>Billing Address</Text>
               <Text style={addressText}>
                 {billingAddress.company}
@@ -159,7 +198,7 @@ export const OrderConfirmationEmail = ({
                 {billingAddress.country}
               </Text>
             </Column>
-            <Column style={{  verticalAlign: "top"}}>
+            <Column style={{ verticalAlign: "top"}}>
               <Text style={sectionHeading}>Payment Method</Text>
               <Row>
                 <Column style={{ width: "68px" }}>
@@ -179,7 +218,7 @@ export const OrderConfirmationEmail = ({
           </Row>
 
           {/* Download receipt button */}
-          <Row style={{marginTop: "15px"}}>
+          <Row style={{ marginTop: "15px"}}>
             <Column align="left">
               <Button href={receiptUrl} style={button}>
                 Download Receipt
@@ -354,7 +393,6 @@ const sectionHeading: React.CSSProperties = {
   fontWeight: "bold",
   paddingTop: "0.5em",
   paddingBottom: "0.5em",
-
 };
 
 const addressText: React.CSSProperties = {
