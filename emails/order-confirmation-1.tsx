@@ -1,12 +1,12 @@
+// Copyright (c) 2026 Nimul Islam Mahin and contributors
+// SPDX-License-Identifier: MIT
+// See the LICENSE file for details.
+
 /**
  * Designed By:
  * Name: Sherif
  * Dribble Profile: https://dribbble.com/sans-sherif
  */
-
-// Copyright (c) 2026 Nimul Islam Mahin and contributors
-// SPDX-License-Identifier: MIT
-// See the LICENSE file for details.
 
 import {
   Body,

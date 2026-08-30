@@ -1,3 +1,13 @@
+// Copyright (c) 2026 Nimul Islam Mahin and contributors
+// SPDX-License-Identifier: MIT
+// See the LICENSE file for details.
+
+/**
+ * Designed By:
+ * Name: Chimela (Brain) Enyinnaya
+ * Linkedin Profile: https://www.linkedin.com/in/chimela-enyinnaya-6165431b3/
+ */
+
 import {
   Body,
   Container,

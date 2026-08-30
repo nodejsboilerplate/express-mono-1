@@ -1,3 +1,8 @@
+
+// Copyright (c) 2026 Nimul Islam Mahin and contributors
+// SPDX-License-Identifier: MIT
+// See the LICENSE file for details.
+
 /**
  * Designed By:
  * Name: Imalsha Kandamby
