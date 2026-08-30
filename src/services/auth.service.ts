@@ -12,16 +12,7 @@ import type {
   RefreshTokenPayload,
 } from "@/types";
 
-interface AuthServiceType {
-  createTokens(payload: AccessTokenPayload): CookieNames;
-  renewAccessToken(payload: AccessTokenPayload, refreshToken: string): string;
-  renewRefreshToken(payload: RefreshTokenPayload): string;
-  getDataFromAccessToken(token: string): AccessTokenPayload;
-  getDataFromRefreshToken(token: string): RefreshTokenPayload;
-  getCookies(req: Request): CookieNames;
-}
-
-export class AuthService implements AuthServiceType {
+export class AuthService {
   private static instance: AuthService;
 
   static create() {

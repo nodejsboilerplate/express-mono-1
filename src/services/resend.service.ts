@@ -1,6 +1,8 @@
 import { resendConfig } from "@/config";
 import { Resend, type WebhookEventPayload } from "resend";
 import type { Request } from "express";
+import { ApiError } from "@/libs";
+import { getSystemCustomErrorMsgByKey } from "@/events";
 
 export type WebhookHeadersType = {
   svixId: string;
@@ -8,15 +10,7 @@ export type WebhookHeadersType = {
   svixSignature: string;
 };
 
-interface ResendServiceType {
-  getWebhookHeaders(req: Request): WebhookHeadersType | null;
-  verifyWebhookPayload(
-    req: Request,
-    headers: WebhookHeadersType
-  ): Promise<WebhookEventPayload | null>;
-}
-
-export class ResendService implements ResendServiceType {
+export class ResendService {
   private resend: Resend | null = null;
   private static instance: ResendService;
 
@@ -37,13 +31,16 @@ export class ResendService implements ResendServiceType {
     return this.resend;
   }
 
-  getWebhookHeaders(req: Request): WebhookHeadersType | null {
+  getWebhookHeaders(req: Request): WebhookHeadersType {
     const svixId = req.headers["svix-id"] as string;
     const svixTimestamp = req.headers["svix-timestamp"] as string;
     const svixSignature = req.headers["svix-signature"] as string;
 
     if (!svixId || !svixTimestamp || !svixSignature) {
-      return null;
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("WEBHOOK_HEADERS_MISSING")
+      );
     }
 
     return {
@@ -56,9 +53,16 @@ export class ResendService implements ResendServiceType {
   async verifyWebhookPayload(
     req: Request,
     headers: WebhookHeadersType
-  ): Promise<WebhookEventPayload | null> {
+  ): Promise<WebhookEventPayload> {
     const payload = req.body;
     const { svixId, svixSignature, svixTimestamp } = headers;
+
+    if (!resendConfig.RESEND_WEBHOOK_SECRET) {
+      throw new ApiError(
+        500,
+        getSystemCustomErrorMsgByKey("WEBHOOK_SECRET_NOT_CONFIGURED")
+      );
+    }
 
     const result = this.resend?.webhooks.verify({
       headers: {
@@ -70,7 +74,12 @@ export class ResendService implements ResendServiceType {
       webhookSecret: resendConfig.RESEND_WEBHOOK_SECRET,
     });
 
-    if (!result) return null;
+    if (!result)
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("WEBHOOK_SIGNATURE_INVALID")
+      );
+
     return result;
   }
 }

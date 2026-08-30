@@ -32,7 +32,7 @@ interface SignupVerificationEmailProps {
   teamName?: string;
 }
 
-export const SignupVerificationEmail = ({
+export const SignupVerificationEmail2 = ({
   otp = "748291",
   appLogoUrl = "https://resend-attachments.s3.amazonaws.com/65e9e264-3469-4cd6-b2a7-488b0571b4a8",
   deviceInfo = "Chrome on macOS",
@@ -182,7 +182,6 @@ export const SignupVerificationEmail = ({
   );
 };
 
-export default SignupVerificationEmail;
 
 // ---------------------------------------------------------------
 // Styles

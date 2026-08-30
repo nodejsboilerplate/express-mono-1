@@ -54,7 +54,7 @@ interface OrderConfirmationEmailProps {
   unsubscribeUrl?: string;
 }
 
-export const OrderConfirmationEmail = ({
+export const OrderConfirmationEmail2 = ({
   customerName = "[Customer Name]",
   orderNumber = "34341",
   products = [
@@ -248,7 +248,7 @@ export const OrderConfirmationEmail = ({
   );
 };
 
-export default OrderConfirmationEmail;
+
 
 // ---------------------------------------------------------------
 // Styles
