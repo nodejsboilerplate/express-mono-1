@@ -36,7 +36,7 @@ export class ResendService implements ResendServiceType {
     return this.instance;
   }
 
-  get() {
+  getResend() {
     return this.resend
   }
 

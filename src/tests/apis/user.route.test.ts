@@ -63,10 +63,6 @@ function validEmailPayload(overrides: Partial<any> = {}) {
   };
 }
 
-function randomCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
 // ---------------------------------------------------------------
 // Fixture helpers
 // ---------------------------------------------------------------
@@ -103,35 +99,37 @@ async function createTestContact(userId: string, overrides: Partial<any> = {}) {
   return res.body.data.id as string;
 }
 
-// Since createPhoneHandler/createEmailHandler don't currently set
-// verify_code/verify_expiry on insert, seed them directly for tests
-// that need to exercise the actual verify-success path.
-async function seedPhoneVerifyCode(
-  phoneId: string,
-  code: string,
-  expiresInMs = 10 * 60 * 1000
-) {
-  await pgDb
-    .update(userPhonesTable)
-    .set({
-      verify_code: code,
-      verify_expiry: new Date(Date.now() + expiresInMs),
-    })
-    .where(eq(userPhonesTable.id, phoneId));
+// Seed verification codes via the real send-verification-code endpoints
+// instead of writing to the DB directly.
+async function sendAndGetUserCode(userId: string) {
+  await request(app).post(`${BASE}/${userId}/send-verification-code`);
+  const [row] = await pgDb
+    .select({ verify_code: usersTable.verify_code })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId));
+  return row!.verify_code as string;
 }
 
-async function seedEmailVerifyCode(
-  emailId: string,
-  code: string,
-  expiresInMs = 10 * 60 * 1000
-) {
-  await pgDb
-    .update(userEmailsTable)
-    .set({
-      verify_code: code,
-      verify_expiry: new Date(Date.now() + expiresInMs),
-    })
+async function sendAndGetPhoneCode(userId: string, phoneId: string) {
+  await request(app).post(
+    `${BASE}/${userId}/phone/${phoneId}/send-verification-code`
+  );
+  const [row] = await pgDb
+    .select({ verify_code: userPhonesTable.verify_code })
+    .from(userPhonesTable)
+    .where(eq(userPhonesTable.id, phoneId));
+  return row!.verify_code as string;
+}
+
+async function sendAndGetEmailCode(userId: string, emailId: string) {
+  await request(app).post(
+    `${BASE}/${userId}/email/${emailId}/send-verification-code`
+  );
+  const [row] = await pgDb
+    .select({ verify_code: userEmailsTable.verify_code })
+    .from(userEmailsTable)
     .where(eq(userEmailsTable.id, emailId));
+  return row!.verify_code as string;
 }
 
 // ---------------------------------------------------------------
@@ -153,7 +151,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
         .where(eq(usersTable.id, res.body.data.id));
       expect(row?.role).toBe("USER");
       expect(row?.is_verified).toBe(false);
-      expect(row?.verify_code).toBeTruthy();
+      expect(row?.verify_code).toBeNull();
     });
 
     test("returns 400 for invalid email", async () => {
@@ -268,7 +266,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     });
   });
 
-  describe(`POST ${BASE}/:user_id/contact/:contactId/phone`, () => {
+  describe(`POST ${BASE}/:user_id/contact/:contact_id/phone`, () => {
     test("creates a phone tied to a contact", async () => {
       const userId = await createTestUser();
       const contactId = await createTestContact(userId);
@@ -298,7 +296,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     });
   });
 
-  describe(`POST ${BASE}/:user_id/contact/:contactId/email`, () => {
+  describe(`POST ${BASE}/:user_id/contact/:contact_id/email`, () => {
     test("creates an email tied to a contact", async () => {
       const userId = await createTestUser();
       const contactId = await createTestContact(userId);
@@ -321,20 +319,160 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
   });
 
   // ---------------------------------------------------------------
+  // Send Verification Code
+  // ---------------------------------------------------------------
+
+  describe(`POST ${BASE}/:id/send-verification-code (user)`, () => {
+    test("sends a verification code for the user", async () => {
+      const userId = await createTestUser();
+
+      const res = await request(app).post(
+        `${BASE}/${userId}/send-verification-code`
+      );
+      expect(res.status).toBe(200);
+
+      const [row] = await pgDb
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, userId));
+      expect(row?.verify_code).toBeTruthy();
+      expect(row?.verify_expiry).toBeTruthy();
+    });
+
+    test("returns 404 for a nonexistent user", async () => {
+      const res = await request(app).post(
+        `${BASE}/${crypto.randomUUID()}/send-verification-code`
+      );
+      expect(res.status).toBe(404);
+    });
+
+    test("returns 400 for a malformed user id", async () => {
+      const res = await request(app).post(
+        `${BASE}/not-a-uuid/send-verification-code`
+      );
+      expect(res.status).toBe(400);
+    });
+
+    test("returns 404 when the user is already verified", async () => {
+      const userId = await createTestUser();
+      const code = await sendAndGetUserCode(userId);
+      await request(app)
+        .post(`${BASE}/${userId}/verify`)
+        .send({ verify_code: code });
+
+      const res = await request(app).post(
+        `${BASE}/${userId}/send-verification-code`
+      );
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe(`POST ${BASE}/:user_id/phone/:id/send-verification-code`, () => {
+    test("sends a verification code for the phone", async () => {
+      const userId = await createTestUser();
+      const contactId = await createTestContact(userId);
+      const phoneRes = await request(app)
+        .post(`${BASE}/${userId}/contact/${contactId}/phone`)
+        .send(validPhonePayload());
+      const phoneId = phoneRes.body.data.id as string;
+
+      const res = await request(app).post(
+        `${BASE}/${userId}/phone/${phoneId}/send-verification-code`
+      );
+      expect(res.status).toBe(200);
+
+      const [row] = await pgDb
+        .select()
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, phoneId));
+      expect(row?.verify_code).toBeTruthy();
+      expect(row?.verify_expiry).toBeTruthy();
+      expect(row?.is_verified).toBe(false);
+    });
+
+    test("returns 404 for a nonexistent phone", async () => {
+      const userId = await createTestUser();
+      const res = await request(app).post(
+        `${BASE}/${userId}/phone/${crypto.randomUUID()}/send-verification-code`
+      );
+      expect(res.status).toBe(404);
+    });
+
+    test("returns 404 when the phone belongs to a different user", async () => {
+      const userId = await createTestUser();
+      const otherUserId = await createTestUser();
+      const contactId = await createTestContact(userId);
+      const phoneRes = await request(app)
+        .post(`${BASE}/${userId}/contact/${contactId}/phone`)
+        .send(validPhonePayload());
+      const phoneId = phoneRes.body.data.id as string;
+
+      const res = await request(app).post(
+        `${BASE}/${otherUserId}/phone/${phoneId}/send-verification-code`
+      );
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe(`POST ${BASE}/:user_id/email/:id/send-verification-code`, () => {
+    test("sends a verification code for the email", async () => {
+      const userId = await createTestUser();
+      const contactId = await createTestContact(userId);
+      const emailRes = await request(app)
+        .post(`${BASE}/${userId}/contact/${contactId}/email`)
+        .send(validEmailPayload());
+      const emailId = emailRes.body.data.id as string;
+
+      const res = await request(app).post(
+        `${BASE}/${userId}/email/${emailId}/send-verification-code`
+      );
+      expect(res.status).toBe(200);
+
+      const [row] = await pgDb
+        .select()
+        .from(userEmailsTable)
+        .where(eq(userEmailsTable.id, emailId));
+      expect(row?.verify_code).toBeTruthy();
+      expect(row?.verify_expiry).toBeTruthy();
+      expect(row?.is_verified).toBe(false);
+    });
+
+    test("returns 404 for a nonexistent email", async () => {
+      const userId = await createTestUser();
+      const res = await request(app).post(
+        `${BASE}/${userId}/email/${crypto.randomUUID()}/send-verification-code`
+      );
+      expect(res.status).toBe(404);
+    });
+
+    test("returns 404 when the email belongs to a different user", async () => {
+      const userId = await createTestUser();
+      const otherUserId = await createTestUser();
+      const contactId = await createTestContact(userId);
+      const emailRes = await request(app)
+        .post(`${BASE}/${userId}/contact/${contactId}/email`)
+        .send(validEmailPayload());
+      const emailId = emailRes.body.data.id as string;
+
+      const res = await request(app).post(
+        `${BASE}/${otherUserId}/email/${emailId}/send-verification-code`
+      );
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ---------------------------------------------------------------
   // Verify
   // ---------------------------------------------------------------
 
   describe(`POST ${BASE}/:id/verify (user)`, () => {
     test("verifies a user with the correct code", async () => {
       const userId = await createTestUser();
-      const [row] = await pgDb
-        .select({ verify_code: usersTable.verify_code })
-        .from(usersTable)
-        .where(eq(usersTable.id, userId));
+      const code = await sendAndGetUserCode(userId);
 
       const res = await request(app)
         .post(`${BASE}/${userId}/verify`)
-        .send({ code: row!.verify_code });
+        .send({ verify_code: code });
       expect(res.status).toBe(200);
 
       const [updated] = await pgDb
@@ -347,57 +485,53 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
     test("returns 400 for the wrong code", async () => {
       const userId = await createTestUser();
+      await sendAndGetUserCode(userId);
+
       const res = await request(app)
         .post(`${BASE}/${userId}/verify`)
-        .send({ code: "000000" });
+        .send({ verify_code: "000000" });
       expect(res.status).toBe(400);
     });
 
     test("returns 400 for a malformed code (not 6 digits)", async () => {
       const userId = await createTestUser();
+      await sendAndGetUserCode(userId);
+
       const res = await request(app)
         .post(`${BASE}/${userId}/verify`)
-        .send({ code: "abc" });
+        .send({ verify_code: "abc" });
       expect(res.status).toBe(400);
     });
 
     test("returns 404 for a well-formed but nonexistent user id", async () => {
       const res = await request(app)
         .post(`${BASE}/${crypto.randomUUID()}/verify`)
-        .send({ code: "123456" });
+        .send({ verify_code: "123456" });
       expect(res.status).toBe(404);
     });
 
     test("returns 400 for a malformed user id in the path", async () => {
       const res = await request(app)
         .post(`${BASE}/not-a-uuid/verify`)
-        .send({ code: "123456" });
+        .send({ verify_code: "123456" });
       expect(res.status).toBe(400);
     });
 
     test("returns 400 for an already-verified user", async () => {
       const userId = await createTestUser();
-      const [row] = await pgDb
-        .select({ verify_code: usersTable.verify_code })
-        .from(usersTable)
-        .where(eq(usersTable.id, userId));
+      const code = await sendAndGetUserCode(userId);
 
       await request(app)
         .post(`${BASE}/${userId}/verify`)
-        .send({ code: row!.verify_code });
+        .send({ verify_code: code });
       const res = await request(app)
         .post(`${BASE}/${userId}/verify`)
-        .send({ code: row!.verify_code });
+        .send({ verify_code: code });
 
       expect(res.status).toBe(400);
     });
   });
 
-  // TODO: createPhoneHandler currently never sets verify_code/verify_expiry
-  // on the phone row at creation time, so there's no way to reach a real
-  // 200 through the API alone yet - these tests seed the code directly via
-  // pgDb to exercise the verify logic itself. Flag: creation should
-  // probably generate + store a code the same way createUserHandler does.
   describe(`POST ${BASE}/:user_id/phone/:id/verify`, () => {
     test("verifies a phone with the correct code", async () => {
       const userId = await createTestUser();
@@ -407,12 +541,11 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
 
-      const code = randomCode();
-      await seedPhoneVerifyCode(phoneId, code);
+      const code = await sendAndGetPhoneCode(userId, phoneId);
 
       const res = await request(app)
         .post(`${BASE}/${userId}/phone/${phoneId}/verify`)
-        .send({ code });
+        .send({ verify_code: code });
       expect(res.status).toBe(200);
 
       const [row] = await pgDb
@@ -430,11 +563,11 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
 
-      await seedPhoneVerifyCode(phoneId, randomCode());
+      await sendAndGetPhoneCode(userId, phoneId);
 
       const res = await request(app)
         .post(`${BASE}/${userId}/phone/${phoneId}/verify`)
-        .send({ code: "000000" });
+        .send({ verify_code: "000000" });
       expect(res.status).toBe(400);
     });
 
@@ -446,12 +579,16 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
 
-      const code = randomCode();
-      await seedPhoneVerifyCode(phoneId, code, -60 * 1000); // already expired
+      const code = await sendAndGetPhoneCode(userId, phoneId);
+      // force-expire since the endpoint always issues a fresh future expiry
+      await pgDb
+        .update(userPhonesTable)
+        .set({ verify_expiry: new Date(Date.now() - 60 * 1000) })
+        .where(eq(userPhonesTable.id, phoneId));
 
       const res = await request(app)
         .post(`${BASE}/${userId}/phone/${phoneId}/verify`)
-        .send({ code });
+        .send({ verify_code: code });
       expect(res.status).toBe(400);
     });
 
@@ -459,7 +596,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const userId = await createTestUser();
       const res = await request(app)
         .post(`${BASE}/${userId}/phone/${crypto.randomUUID()}/verify`)
-        .send({ code: "123456" });
+        .send({ verify_code: "123456" });
       expect(res.status).toBe(404);
     });
 
@@ -471,9 +608,11 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
 
+      await sendAndGetPhoneCode(userId, phoneId);
+
       const res = await request(app)
         .post(`${BASE}/${userId}/phone/${phoneId}/verify`)
-        .send({ code: "12" });
+        .send({ verify_code: "12" });
       expect(res.status).toBe(400);
     });
 
@@ -485,21 +624,18 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
 
-      const code = randomCode();
-      await seedPhoneVerifyCode(phoneId, code);
+      const code = await sendAndGetPhoneCode(userId, phoneId);
       await request(app)
         .post(`${BASE}/${userId}/phone/${phoneId}/verify`)
-        .send({ code });
+        .send({ verify_code: code });
 
-      await seedPhoneVerifyCode(phoneId, code); // re-seed so it's not the expired/missing-code branch
       const res = await request(app)
         .post(`${BASE}/${userId}/phone/${phoneId}/verify`)
-        .send({ code });
+        .send({ verify_code: code });
       expect(res.status).toBe(409);
     });
   });
 
-  // Same seeding caveat as phone verify above - see TODO there.
   describe(`POST ${BASE}/:user_id/email/:id/verify`, () => {
     test("verifies an email with the correct code", async () => {
       const userId = await createTestUser();
@@ -509,12 +645,11 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
         .send(validEmailPayload());
       const emailId = emailRes.body.data.id as string;
 
-      const code = randomCode();
-      await seedEmailVerifyCode(emailId, code);
+      const code = await sendAndGetEmailCode(userId, emailId);
 
       const res = await request(app)
         .post(`${BASE}/${userId}/email/${emailId}/verify`)
-        .send({ code });
+        .send({ verify_code: code });
       expect(res.status).toBe(200);
 
       const [row] = await pgDb
@@ -532,11 +667,11 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
         .send(validEmailPayload());
       const emailId = emailRes.body.data.id as string;
 
-      await seedEmailVerifyCode(emailId, randomCode());
+      await sendAndGetEmailCode(userId, emailId);
 
       const res = await request(app)
         .post(`${BASE}/${userId}/email/${emailId}/verify`)
-        .send({ code: "000000" });
+        .send({ verify_code: "000000" });
       expect(res.status).toBe(400);
     });
 
@@ -548,12 +683,15 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
         .send(validEmailPayload());
       const emailId = emailRes.body.data.id as string;
 
-      const code = randomCode();
-      await seedEmailVerifyCode(emailId, code, -60 * 1000);
+      const code = await sendAndGetEmailCode(userId, emailId);
+      await pgDb
+        .update(userEmailsTable)
+        .set({ verify_expiry: new Date(Date.now() - 60 * 1000) })
+        .where(eq(userEmailsTable.id, emailId));
 
       const res = await request(app)
         .post(`${BASE}/${userId}/email/${emailId}/verify`)
-        .send({ code });
+        .send({ verify_code: code });
       expect(res.status).toBe(400);
     });
 
@@ -561,7 +699,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const userId = await createTestUser();
       const res = await request(app)
         .post(`${BASE}/${userId}/email/${crypto.randomUUID()}/verify`)
-        .send({ code: "123456" });
+        .send({ verify_code: "123456" });
       expect(res.status).toBe(404);
     });
 
@@ -573,16 +711,14 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
         .send(validEmailPayload());
       const emailId = emailRes.body.data.id as string;
 
-      const code = randomCode();
-      await seedEmailVerifyCode(emailId, code);
+      const code = await sendAndGetEmailCode(userId, emailId);
       await request(app)
         .post(`${BASE}/${userId}/email/${emailId}/verify`)
-        .send({ code });
+        .send({ verify_code: code });
 
-      await seedEmailVerifyCode(emailId, code);
       const res = await request(app)
         .post(`${BASE}/${userId}/email/${emailId}/verify`)
-        .send({ code });
+        .send({ verify_code: code });
       expect(res.status).toBe(409);
     });
   });
@@ -594,9 +730,14 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
   describe(`PATCH ${BASE}/:user_id/profile`, () => {
     test("updates the profile", async () => {
       const userId = await createTestUser();
+      const [existing] = await pgDb
+        .select()
+        .from(userProfilesTable)
+        .where(eq(userProfilesTable.user_id, userId));
+
       const res = await request(app)
         .patch(`${BASE}/${userId}/profile`)
-        .send({ id: crypto.randomUUID(), first_name: "Updated" });
+        .send({ id: existing!.id, first_name: "Updated" });
       expect(res.status).toBe(200);
 
       const [row] = await pgDb
