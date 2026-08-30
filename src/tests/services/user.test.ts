@@ -14,7 +14,9 @@ import { Socials } from "@/constants";
 
 const userService = UserService.create();
 
-function validUserWithProfilePayload(overrides: { user?: Partial<any>; profile?: Partial<any> } = {}) {
+function validUserWithProfilePayload(
+  overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
+) {
   return {
     user: {
       email: `test-${crypto.randomUUID()}@example.com`,
@@ -30,7 +32,9 @@ function validUserWithProfilePayload(overrides: { user?: Partial<any>; profile?:
   };
 }
 
-async function createUser(overrides: { user?: Partial<any>; profile?: Partial<any> } = {}) {
+async function createUser(
+  overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
+) {
   const { userId, profileId } = await userService.createUserWithProfile(
     validUserWithProfilePayload(overrides)
   );
@@ -470,7 +474,9 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
     });
 
     test("throws when deleting a non-existent user", async () => {
-      await expect(userService.deleteUser(crypto.randomUUID())).rejects.toThrow();
+      await expect(
+        userService.deleteUser(crypto.randomUUID())
+      ).rejects.toThrow();
     });
 
     test("cascades and deletes the user's contact", async () => {

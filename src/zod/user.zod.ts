@@ -35,7 +35,7 @@ export class UserZSchema {
       .max(10, { error: "Invalid verification code" })
       .trim()
       .nullish(),
-      verify_expiry: z4.coerce.date().nullish(),
+    verify_expiry: z4.coerce.date().nullish(),
   });
 
   // ---------------------------------------------------------
@@ -50,7 +50,7 @@ export class UserZSchema {
         .string({ error: "Password is required" })
         .min(8, { error: "Password must be at least 8 characters" })
         .max(30, { error: "Password must be at most 30 characters" }),
-      role: z4.enum(USER_ROLES, { error: "Invalid role" }).optional()
+      role: z4.enum(USER_ROLES, { error: "Invalid role" }).optional(),
     })
     .extend(this.timestamps.shape)
     .extend(this.verification.shape);
@@ -220,7 +220,7 @@ export class UserZSchema {
     id: true,
     is_verified: true,
     verify_code: true,
-     verify_expiry: true,
+    verify_expiry: true,
     created_at: true,
     updated_at: true,
   });
@@ -229,7 +229,7 @@ export class UserZSchema {
     id: true,
     is_verified: true,
     verify_code: true,
-     verify_expiry: true,
+    verify_expiry: true,
     created_at: true,
     updated_at: true,
   });
@@ -315,7 +315,7 @@ export class UserZSchema {
     user_id: this.id,
   });
 
-    // ---------------------------------------------------------
+  // ---------------------------------------------------------
   // Verification
   // ---------------------------------------------------------
   static verifyCode = z4
@@ -333,7 +333,6 @@ export class UserZSchema {
     identifier: z4.string({ error: "Invalid email or username!" }),
     password: z4.string({ error: "Password is required" }),
   });
-
 }
 
 // ---------------------------------------------------------
@@ -354,7 +353,6 @@ export type UserContactZType = z4.infer<typeof UserZSchema.userContact>;
 export type UserPhoneZType = z4.infer<typeof UserZSchema.userPhone>;
 export type UserEmailZType = z4.infer<typeof UserZSchema.userEmail>;
 export type UserAddressZType = z4.infer<typeof UserZSchema.userAddress>;
-
 
 // ---------------------------------------------------------
 // Globals
@@ -389,8 +387,6 @@ export type UpdatePhoneInputType = z4.infer<typeof UserZSchema.updatePhone>;
 export type UpdateEmailInputType = z4.infer<typeof UserZSchema.updateEmail>;
 export type UpdateAddressInputType = z4.infer<typeof UserZSchema.updateAddress>;
 
-
-
 // ---------------------------------------------------------
 // Verification types
 // ---------------------------------------------------------
@@ -403,4 +399,3 @@ export type VerifyCodeWithUserIdInput = z4.infer<
 // Auth
 // ---------------------------------------------------------
 export type LoginUserInputType = z4.infer<typeof UserZSchema.loginUser>;
-

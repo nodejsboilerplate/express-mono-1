@@ -46,7 +46,7 @@ router
     asyncHandler(userController.getUserCoreHandler.bind(userController))
   );
 
-  // ---------------------------------------------------------
+// ---------------------------------------------------------
 // Send Verification Code
 // ---------------------------------------------------------
 router
@@ -126,9 +126,7 @@ router
 // ---------------------------------------------------------
 router
   .route("/:user_id")
-  .delete(
-    asyncHandler(userController.deleteUserHandler.bind(userController))
-  );
+  .delete(asyncHandler(userController.deleteUserHandler.bind(userController)));
 
 router
   .route("/:user_id/address/:id")

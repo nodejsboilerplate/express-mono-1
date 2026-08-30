@@ -22,15 +22,15 @@ interface AuthServiceType {
 }
 
 export class AuthService implements AuthServiceType {
-  private static instance: AuthService
+  private static instance: AuthService;
 
   static create() {
-     if(this.instance) {
-            return this.instance
-        }
+    if (this.instance) {
+      return this.instance;
+    }
 
-        this.instance = new AuthService()
-        return this.instance 
+    this.instance = new AuthService();
+    return this.instance;
   }
 
   createTokens(payload: AccessTokenPayload): CookieNames {

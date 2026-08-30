@@ -1,8 +1,5 @@
 import { resendConfig } from "@/config";
-import {
-  Resend,
-  type WebhookEventPayload,
-} from "resend";
+import { Resend, type WebhookEventPayload } from "resend";
 import type { Request } from "express";
 
 export type WebhookHeadersType = {
@@ -37,7 +34,7 @@ export class ResendService implements ResendServiceType {
   }
 
   getResend() {
-    return this.resend
+    return this.resend;
   }
 
   getWebhookHeaders(req: Request): WebhookHeadersType | null {

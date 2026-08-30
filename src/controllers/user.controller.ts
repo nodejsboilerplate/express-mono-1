@@ -259,9 +259,9 @@ export class UserController extends UserService {
     return res.status(200).json(new ApiResponse(200, "Login Successful."));
   }
 
-   // ---------------------------------------------------------
-// Send Verification Code
-// ---------------------------------------------------------
+  // ---------------------------------------------------------
+  // Send Verification Code
+  // ---------------------------------------------------------
 
   async sendVerificationCodeForUserHandler(
     req: Request,
@@ -270,13 +270,11 @@ export class UserController extends UserService {
     const { id } = req.params as { id: IdZType };
     const result = await this.sendVerificationCodeForUser(id);
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, "Verification code sent successfully.", {
-          id: result,
-        })
-      );
+    return res.status(200).json(
+      new ApiResponse(200, "Verification code sent successfully.", {
+        id: result,
+      })
+    );
   }
 
   async sendVerificationCodeForPhoneHandler(
@@ -286,13 +284,11 @@ export class UserController extends UserService {
     const { id, user_id } = req.params as UserIdWithContextIdInputType;
     const result = await this.sendVerificationCodeForPhone({ id, user_id });
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, "Verification code sent successfully.", {
-          id: result,
-        })
-      );
+    return res.status(200).json(
+      new ApiResponse(200, "Verification code sent successfully.", {
+        id: result,
+      })
+    );
   }
 
   async sendVerificationCodeForEmailHandler(
@@ -302,15 +298,12 @@ export class UserController extends UserService {
     const { id, user_id } = req.params as UserIdWithContextIdInputType;
     const result = await this.sendVerificationCodeForEmail({ id, user_id });
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, "Verification code sent successfully.", {
-          id: result,
-        })
-      );
+    return res.status(200).json(
+      new ApiResponse(200, "Verification code sent successfully.", {
+        id: result,
+      })
+    );
   }
-
 
   // ---------------------------------------------------------
   // Verify

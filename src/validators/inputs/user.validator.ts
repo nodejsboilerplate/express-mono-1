@@ -22,7 +22,6 @@ import {
 import type z from "zod";
 
 export class UserInputValidators {
-
   private static instance: UserInputValidators;
 
   static create() {
@@ -33,7 +32,6 @@ export class UserInputValidators {
     this.instance = new UserInputValidators();
     return this.instance;
   }
-
 
   idInput(payload: IdZType): IdZType | z.ZodError {
     const { data, success, error } = validateWithZod(payload, UserZSchema.id);

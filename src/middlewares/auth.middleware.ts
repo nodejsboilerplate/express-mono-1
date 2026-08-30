@@ -8,7 +8,7 @@ import type { AccessTokenPayload } from "@/types";
 import { executePreparedStatement } from "@/utils";
 import type { NextFunction, Response, Request } from "express";
 
-const authService = AuthService.create()
+const authService = AuthService.create();
 
 /**
  * Middleware to enforce authentication and manage token rotation.
