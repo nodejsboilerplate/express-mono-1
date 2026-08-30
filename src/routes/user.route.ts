@@ -22,11 +22,11 @@ router
   .post(asyncHandler(userController.createContactHandler.bind(userController)));
 
 router
-  .route("/:user_id/contact/:contactId/phone")
+  .route("/:user_id/contact/:contact_id/phone")
   .post(asyncHandler(userController.createPhoneHandler.bind(userController)));
 
 router
-  .route("/:user_id/contact/:contactId/email")
+  .route("/:user_id/contact/:contact_id/email")
   .post(asyncHandler(userController.createEmailHandler.bind(userController)));
 
 // ---------------------------------------------------------
@@ -44,6 +44,33 @@ router
   .get(
     authMiddlware,
     asyncHandler(userController.getUserCoreHandler.bind(userController))
+  );
+
+  // ---------------------------------------------------------
+// Send Verification Code
+// ---------------------------------------------------------
+router
+  .route("/:id/send-verification-code")
+  .post(
+    asyncHandler(
+      userController.sendVerificationCodeForUserHandler.bind(userController)
+    )
+  );
+
+router
+  .route("/:user_id/phone/:id/send-verification-code")
+  .post(
+    asyncHandler(
+      userController.sendVerificationCodeForPhoneHandler.bind(userController)
+    )
+  );
+
+router
+  .route("/:user_id/email/:id/send-verification-code")
+  .post(
+    asyncHandler(
+      userController.sendVerificationCodeForEmailHandler.bind(userController)
+    )
   );
 
 // ---------------------------------------------------------
@@ -100,7 +127,7 @@ router
 router
   .route("/:user_id")
   .delete(
-    asyncHandler(userController.deleteProfileHandler.bind(userController))
+    asyncHandler(userController.deleteUserHandler.bind(userController))
   );
 
 router

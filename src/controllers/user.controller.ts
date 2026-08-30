@@ -16,137 +16,64 @@ import { UserInputValidators } from "@/validators/inputs/user.validator";
 import type {
   CreateUserAddressInputType,
   CreateUserContactInputType,
+  CreateUserEmailInputType,
+  CreateUserPhoneInputType,
+  CreateUserWithProfileInputType,
+  IdZType,
   LoginUserInputType,
   UpdateAddressInputType,
   UpdateContactInputType,
   UpdateEmailInputType,
   UpdatePhoneInputType,
   UpdateProfileInputType,
+  UserIdWithContextIdInputType,
+  VerifyCodeInputType,
+  VerifyCodeWithUserIdInput,
 } from "@/zod";
-import {  AuthService, CookieService } from "@/services";
+import { AuthService, CookieService } from "@/services";
 import { userRedisManager } from "@/redis";
 
-const authService = AuthService.create()
-
-interface UserControllerType {
-  // ---------------------------------------------------------------
-  // Create
-  // ---------------------------------------------------------------
-  createUserHandler(req: Request, res: Response): Promise<Response>;
-  createAddressHandler(req: Request, res: Response): Promise<Response>;
-  createContactHandler(req: Request, res: Response): Promise<Response>;
-  createPhoneHandler(req: Request, res: Response): Promise<Response>;
-  createEmailHandler(req: Request, res: Response): Promise<Response>;
-
-  // ---------------------------------------------------------------
-  // Read
-  // ---------------------------------------------------------------
-  getUserCoreHandler(req: Request, res: Response): Promise<Response>;
-
-  // ---------------------------------------------------------------
-  // Auth
-  // ---------------------------------------------------------------
-  loginUserHandler(req: Request, res: Response): Promise<Response>;
-
-  // ---------------------------------------------------------------
-  // Verify
-  // ---------------------------------------------------------------
-  verifyUserHandler(req: Request, res: Response): Promise<Response>;
-  verifyContactPhoneHandler(req: Request, res: Response): Promise<Response>;
-  verifyContactEmailHandler(req: Request, res: Response): Promise<Response>;
-
-  // ---------------------------------------------------------------
-  // Update
-  // ---------------------------------------------------------------
-  updateProfileHandler(req: Request, res: Response): Promise<Response>;
-  updateAddressHandler(req: Request, res: Response): Promise<Response>;
-  updateContactHandler(req: Request, res: Response): Promise<Response>;
-  updatePhoneHandler(req: Request, res: Response): Promise<Response>;
-  updateEmailHandler(req: Request, res: Response): Promise<Response>;
-
-  // ---------------------------------------------------------------
-  // Delete
-  // ---------------------------------------------------------------
-  deleteProfileHandler(req: Request, res: Response): Promise<Response>;
-  deleteAddressHandler(req: Request, res: Response): Promise<Response>;
-  deleteContactHandler(req: Request, res: Response): Promise<Response>;
-  deletePhoneHandler(req: Request, res: Response): Promise<Response>;
-  deleteEmailHandler(req: Request, res: Response): Promise<Response>;
-}
+const authService = AuthService.create();
 
 const userValidators = new UserInputValidators();
-export class UserController extends UserService implements UserControllerType {
+export class UserController extends UserService {
   // ---------------------------------------------------------
   // Create
   // ---------------------------------------------------------
   async createUserHandler(req: Request, res: Response): Promise<Response> {
+    const payload = req.body as CreateUserWithProfileInputType["user"] &
+      CreateUserWithProfileInputType["profile"];
+
     const {
       email,
-      username,
       password,
+      username,
       role,
       first_name,
-      last_name,
       avatar,
       cover_img,
-      nickname,
       date_of_birth,
       gender,
-    } = req.body;
+      last_name,
+      nickname,
+    } = payload;
 
-    const verify_code = generateVerificationCode();
-    const verify_expiry = getVerifyExpiry();
-
-    const parse_core_user = userValidators.createUserCoreInput({
-      email,
-      password,
-      username,
-      role,
-    });
-
-    if (isZodError(parse_core_user)) throw validationError(parse_core_user);
-
-    const result = await pgDb.transaction(async (tx) => {
-      const userId = await this.createUserCore(parse_core_user, tx);
-
-      if (!userId) {
-        throw new ApiError(
-          500,
-          getSystemCustomErrorMsgByKey("USER_CREATION_FAILED")
-        );
-      }
-
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      await this.updateUserCore(
-        { password: hashedPassword, verify_code, verify_expiry, id: userId },
-        tx
-      );
-
-      const parse_user_profile = userValidators.createUserProfileInput({
-        user_id: userId,
+    const result = await this.createUserWithProfile({
+      user: {
+        email,
+        password,
+        username,
+        role,
+      },
+      profile: {
         first_name,
-        last_name,
         avatar,
         cover_img,
-        nickname,
         date_of_birth,
         gender,
-      });
-
-      if (isZodError(parse_user_profile))
-        throw validationError(parse_user_profile);
-
-      const profileId = await this.createUserProfile(parse_user_profile, tx);
-
-      if (!profileId) {
-        throw new ApiError(
-          500,
-          getSystemCustomErrorMsgByKey("PROFILE_CREATION_FAILED")
-        );
-      }
-
-      return { userId, profileId };
+        last_name,
+        nickname,
+      },
     });
 
     return res
@@ -161,24 +88,13 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async createAddressHandler(req: Request, res: Response): Promise<Response> {
-    const { user_id } = req.params as { user_id: string };
+    const { user_id } = req.params as Pick<
+      CreateUserAddressInputType,
+      "user_id"
+    >;
     const payload = req.body as Omit<CreateUserAddressInputType, "user_id">;
 
-    const parse_payload = userValidators.createUserAddressInput({
-      ...payload,
-      user_id,
-    });
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.createUserAddress(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(
-        500,
-        getSystemCustomErrorMsgByKey("ADDRESS_CREATION_FAILED")
-      );
-    }
+    const result = await this.createUserAddress({ ...payload, user_id });
 
     return res
       .status(201)
@@ -188,25 +104,14 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async createContactHandler(req: Request, res: Response): Promise<Response> {
-    const { user_id } = req.params as { user_id: string };
+    const { user_id } = req.params as Pick<
+      CreateUserContactInputType,
+      "user_id"
+    >;
 
     const payload = req.body as Omit<CreateUserContactInputType, "user_id">;
 
-    const parse_payload = userValidators.createUserContactInput({
-      ...payload,
-      user_id,
-    });
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.createUserContact(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(
-        500,
-        getSystemCustomErrorMsgByKey("CONTACT_CREATION_FAILED")
-      );
-    }
+    const result = await this.createUserContact({ ...payload, user_id });
 
     return res
       .status(201)
@@ -216,29 +121,21 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async createPhoneHandler(req: Request, res: Response): Promise<Response> {
-    const { contactId, user_id } = req.params as {
-      contactId: string;
-      user_id: string;
-    };
+    const { contact_id, user_id } = req.params as Pick<
+      CreateUserPhoneInputType,
+      "user_id" | "contact_id"
+    >;
 
-    const payload = req.body;
+    const payload = req.body as Omit<
+      CreateUserPhoneInputType,
+      "user_id" | "contact_id"
+    >;
 
-    const parse_payload = userValidators.createUserPhoneInput({
+    const result = await this.createUserPhone({
       ...payload,
       user_id,
-      contact_id: contactId,
+      contact_id,
     });
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.createUserPhone(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(
-        500,
-        getSystemCustomErrorMsgByKey("PHONE_CREATION_FAILED")
-      );
-    }
 
     return res
       .status(201)
@@ -248,28 +145,21 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async createEmailHandler(req: Request, res: Response): Promise<Response> {
-    const { contactId, user_id } = req.params as {
-      contactId: string;
-      user_id: string;
-    };
-    const payload = req.body;
+    const { contact_id, user_id } = req.params as Pick<
+      CreateUserEmailInputType,
+      "user_id" | "contact_id"
+    >;
 
-    const parse_payload = userValidators.createUserEmailInput({
+    const payload = req.body as Omit<
+      CreateUserEmailInputType,
+      "user_id" | "contact_id"
+    >;
+
+    const result = await this.createUserEmail({
       ...payload,
+      contact_id,
       user_id,
-      contact_id: contactId,
     });
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.createUserEmail(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(
-        500,
-        getSystemCustomErrorMsgByKey("EMAIL_CREATION_FAILED")
-      );
-    }
 
     return res
       .status(201)
@@ -369,72 +259,74 @@ export class UserController extends UserService implements UserControllerType {
     return res.status(200).json(new ApiResponse(200, "Login Successful."));
   }
 
+   // ---------------------------------------------------------
+// Send Verification Code
+// ---------------------------------------------------------
+
+  async sendVerificationCodeForUserHandler(
+    req: Request,
+    res: Response
+  ): Promise<Response> {
+    const { id } = req.params as { id: IdZType };
+    const result = await this.sendVerificationCodeForUser(id);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, "Verification code sent successfully.", {
+          id: result,
+        })
+      );
+  }
+
+  async sendVerificationCodeForPhoneHandler(
+    req: Request,
+    res: Response
+  ): Promise<Response> {
+    const { id, user_id } = req.params as UserIdWithContextIdInputType;
+    const result = await this.sendVerificationCodeForPhone({ id, user_id });
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, "Verification code sent successfully.", {
+          id: result,
+        })
+      );
+  }
+
+  async sendVerificationCodeForEmailHandler(
+    req: Request,
+    res: Response
+  ): Promise<Response> {
+    const { id, user_id } = req.params as UserIdWithContextIdInputType;
+    const result = await this.sendVerificationCodeForEmail({ id, user_id });
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, "Verification code sent successfully.", {
+          id: result,
+        })
+      );
+  }
+
+
   // ---------------------------------------------------------
   // Verify
   // ---------------------------------------------------------
-
   async verifyUserHandler(req: Request, res: Response): Promise<Response> {
-    const { id } = req.params as { id: string };
-    const { code } = req.body;
+    const { id } = req.params as Pick<VerifyCodeInputType, "id">;
+    const { verify_code } = req.body as Pick<
+      VerifyCodeInputType,
+      "verify_code"
+    >;
 
-    const parse_payload = userValidators.verifyCodeInput({ id, code });
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const [user] = await pgDb
-      .select({
-        id: usersTable.id,
-        is_verified: usersTable.is_verified,
-        verify_code: usersTable.verify_code,
-        verify_expiry: usersTable.verify_expiry,
-      })
-      .from(usersTable)
-      .where(eq(usersTable.id, parse_payload.id));
-
-    if (!user) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
-    }
-
-    if (user.is_verified) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("USER_ALREADY_VERIFIED")
-      );
-    }
-
-    if (!user.verify_code || user.verify_code !== parse_payload.code) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("INVALID_VERIFICATION_CODE")
-      );
-    }
-
-    if (!user.verify_expiry || user.verify_expiry.getTime() < Date.now()) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("VERIFICATION_CODE_EXPIRED")
-      );
-    }
-
-    const verifiedUserId = await this.updateUserCore(
-      {
-        id: parse_payload.id,
-        is_verified: true,
-        verify_code: null,
-        verify_expiry: null,
-      },
-      pgDb
-    );
-
-    if (!verifiedUserId) {
-      throw new ApiError(
-        500,
-        getSystemCustomErrorMsgByKey("USER_UPDATE_FAILED")
-      );
-    }
+    const result = await this.verifyUser({ verify_code, id });
 
     return res.status(200).json(
       new ApiResponse(200, "Account verified successfully.", {
-        id: verifiedUserId,
+        id: result,
       })
     );
   }
@@ -443,66 +335,16 @@ export class UserController extends UserService implements UserControllerType {
     req: Request,
     res: Response
   ): Promise<Response> {
-    const { id, user_id } = req.params as { id: string; user_id: string };
-    const { code } = req.body;
+    const { id, user_id } = req.params as Pick<
+      VerifyCodeWithUserIdInput,
+      "id" | "user_id"
+    >;
+    const { verify_code } = req.body as Pick<
+      VerifyCodeWithUserIdInput,
+      "verify_code"
+    >;
 
-    const parse_payload = userValidators.verifyCodeWithUserId({
-      code,
-      id,
-      user_id,
-    });
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const [user_phone] = await pgDb
-      .select({
-        id: userPhonesTable.id,
-        is_verified: userPhonesTable.is_verified,
-        verify_code: userPhonesTable.verify_code,
-        verify_expiry: userPhonesTable.verify_expiry,
-      })
-      .from(userPhonesTable)
-      .where(eq(userPhonesTable.id, parse_payload.id));
-
-    if (!user_phone) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
-    }
-
-    if (user_phone.is_verified) {
-      throw new ApiError(
-        409,
-        getSystemCustomErrorMsgByKey("PHONE_ALREADY_VERIFIED")
-      );
-    }
-
-    if (
-      !user_phone.verify_code ||
-      user_phone.verify_code !== parse_payload.code
-    ) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("INVALID_VERIFICATION_CODE")
-      );
-    }
-
-    if (
-      !user_phone.verify_expiry ||
-      user_phone.verify_expiry.getTime() < Date.now()
-    ) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("VERIFICATION_CODE_EXPIRED")
-      );
-    }
-
-    const result = await this.updateUserPhone(
-      { ...parse_payload, is_verified: true },
-      pgDb
-    );
-
-    if (!result) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
-    }
+    const result = await this.verifyContactPhone({ id, user_id, verify_code });
 
     return res.status(200).json(
       new ApiResponse(200, "Phone number verified successfully.", {
@@ -515,67 +357,16 @@ export class UserController extends UserService implements UserControllerType {
     req: Request,
     res: Response
   ): Promise<Response> {
-    const { id, user_id } = req.params as { id: string; user_id: string };
-    const { code } = req.body ?? {};
+    const { id, user_id } = req.params as Pick<
+      VerifyCodeWithUserIdInput,
+      "id" | "user_id"
+    >;
+    const { verify_code } = req.body as Pick<
+      VerifyCodeWithUserIdInput,
+      "verify_code"
+    >;
 
-    const parse_payload = userValidators.verifyCodeWithUserId({
-      code,
-      id,
-      user_id,
-    });
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const [user_email] = await pgDb
-      .select({
-        id: userEmailsTable.id,
-        is_verified: userEmailsTable.is_verified,
-        verify_code: userEmailsTable.verify_code,
-        verify_expiry: userEmailsTable.verify_expiry,
-      })
-      .from(userEmailsTable)
-      .where(eq(userEmailsTable.id, parse_payload.id));
-
-    if (!user_email) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
-    }
-
-    if (user_email.is_verified) {
-      throw new ApiError(
-        409,
-        getSystemCustomErrorMsgByKey("EMAIL_ALREADY_VERIFIED")
-      );
-    }
-
-    if (
-      !user_email.verify_code ||
-      user_email.verify_code !== parse_payload.code
-    ) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("INVALID_VERIFICATION_CODE")
-      );
-    }
-
-    if (
-      !user_email.verify_expiry ||
-      user_email.verify_expiry.getTime() < Date.now()
-    ) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("VERIFICATION_CODE_EXPIRED")
-      );
-    }
-
-    const result = await this.updateUserEmail(
-      { ...parse_payload, is_verified: true },
-      pgDb
-    );
-
-    if (!result) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
-    }
-
+    const result = await this.verifyContactEmail({ id, user_id, verify_code });
     return res
       .status(200)
       .json(
@@ -588,21 +379,10 @@ export class UserController extends UserService implements UserControllerType {
   // ---------------------------------------------------------
 
   async updateProfileHandler(req: Request, res: Response): Promise<Response> {
-    const { user_id } = req.params as { user_id: string };
+    const { user_id } = req.params as Pick<UpdateProfileInputType, "user_id">;
     const payload = req.body as Omit<UpdateProfileInputType, "user_id">;
 
-    const parse_payload = userValidators.updateUserProfileInput({
-      ...payload,
-      user_id,
-    });
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.updateUserProfile(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
-    }
+    const result = await this.updateUserProfile({ ...payload, user_id });
 
     return res
       .status(200)
@@ -611,52 +391,12 @@ export class UserController extends UserService implements UserControllerType {
       );
   }
 
-  async updateAddressHandler(req: Request, res: Response): Promise<Response> {
-    const { id, user_id } = req.params as { id: string; user_id: string };
-    const payload = req.body as Omit<UpdateAddressInputType, "user_id" | "id">;
-    const parse_payload = userValidators.updateUserAddressInput({
-      ...payload,
-      user_id,
-      id,
-    });
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.updateUserAddress(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(
-        404,
-        getSystemCustomErrorMsgByKey("ADDRESS_NOT_FOUND")
-      );
-    }
-
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, "Address updated successfully.", { id: result })
-      );
-  }
-
   async updateContactHandler(req: Request, res: Response): Promise<Response> {
-    const { user_id } = req.params as { user_id: string };
+    const { user_id } = req.params as Pick<UpdateContactInputType, "user_id">;
 
     const payload = req.body as Omit<UpdateContactInputType, "user_id">;
-    const parse_payload = userValidators.updateUserContactInput({
-      ...payload,
-      user_id,
-    });
 
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.updateUserContact(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(
-        404,
-        getSystemCustomErrorMsgByKey("CONTACT_NOT_FOUND")
-      );
-    }
+    const result = await this.updateUserContact({ ...payload, user_id });
 
     return res
       .status(200)
@@ -666,22 +406,14 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async updatePhoneHandler(req: Request, res: Response): Promise<Response> {
-    const { id, user_id } = req.params as { id: string; user_id: string };
+    const { id, user_id } = req.params as Pick<
+      UpdatePhoneInputType,
+      "user_id" | "id"
+    >;
 
     const payload = req.body as Omit<UpdatePhoneInputType, "user_id" | "id">;
-    const parse_payload = userValidators.updateUserPhoneInput({
-      ...payload,
-      user_id,
-      id,
-    });
 
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.updateUserPhone(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
-    }
+    const result = await this.updateUserPhone({ ...payload, id, user_id });
 
     return res.status(200).json(
       new ApiResponse(200, "Phone number updated successfully.", {
@@ -691,22 +423,14 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async updateEmailHandler(req: Request, res: Response): Promise<Response> {
-    const { id, user_id } = req.params as { id: string; user_id: string };
+    const { id, user_id } = req.params as Pick<
+      UpdateEmailInputType,
+      "user_id" | "id"
+    >;
 
     const payload = req.body as Omit<UpdateEmailInputType, "user_id" | "id">;
-    const parse_payload = userValidators.updateUserEmailInput({
-      ...payload,
-      user_id,
-      id,
-    });
 
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.updateUserEmail(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
-    }
+    const result = await this.updateUserEmail({ ...payload, id, user_id });
 
     return res
       .status(200)
@@ -715,26 +439,27 @@ export class UserController extends UserService implements UserControllerType {
       );
   }
 
+  async updateAddressHandler(req: Request, res: Response): Promise<Response> {
+    const { id, user_id } = req.params as { id: string; user_id: string };
+    const payload = req.body as Omit<UpdateAddressInputType, "user_id" | "id">;
+
+    const result = await this.updateUserAddress({ ...payload, id, user_id });
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, "Address updated successfully.", { id: result })
+      );
+  }
+
   // ---------------------------------------------------------
   // Delete
   // ---------------------------------------------------------
 
-  async deleteProfileHandler(req: Request, res: Response): Promise<Response> {
-    const { user_id } = req.params as { user_id: string };
+  async deleteUserHandler(req: Request, res: Response): Promise<Response> {
+    const { user_id } = req.params as { user_id: IdZType };
 
-    const parse_id = userValidators.idInput(user_id);
-
-    if (isZodError(parse_id)) throw validationError(parse_id);
-
-    // `user_profiles` is 1:1 with `users` and cascade-deletes via the FK
-    // (onDelete: "cascade"), so there's no standalone "delete profile"
-    // operation on the service layer — deleting the user is what removes
-    // the profile row. `id` here is the user id.
-    const result = await this.deleteUser(parse_id, pgDb);
-
-    if (!result) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
-    }
+    const result = await this.deleteUser(user_id);
 
     return res
       .status(200)
@@ -744,23 +469,9 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async deleteAddressHandler(req: Request, res: Response): Promise<Response> {
-    const { id, user_id } = req.params as { id: string; user_id: string };
+    const { id, user_id } = req.params as UserIdWithContextIdInputType;
 
-    const parse_payload = userValidators.deleteByUserIdWithContextIdInput({
-      id,
-      user_id,
-    });
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.deleteUserAddress(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(
-        404,
-        getSystemCustomErrorMsgByKey("ADDRESS_NOT_FOUND")
-      );
-    }
+    const result = await this.deleteUserAddress({ id, user_id });
 
     return res
       .status(200)
@@ -770,23 +481,9 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async deleteContactHandler(req: Request, res: Response): Promise<Response> {
-    const { id, user_id } = req.params as { id: string; user_id: string };
+    const { id, user_id } = req.params as UserIdWithContextIdInputType;
 
-    const parse_payload = userValidators.deleteByUserIdWithContextIdInput({
-      id,
-      user_id,
-    });
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.deleteUserContact(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(
-        404,
-        getSystemCustomErrorMsgByKey("CONTACT_NOT_FOUND")
-      );
-    }
+    const result = await this.deleteUserContact({ id, user_id });
 
     return res
       .status(200)
@@ -796,19 +493,9 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async deletePhoneHandler(req: Request, res: Response): Promise<Response> {
-    const { id, user_id } = req.params as { id: string; user_id: string };
+    const { id, user_id } = req.params as UserIdWithContextIdInputType;
 
-    const parse_payload = userValidators.deleteByUserIdWithContextIdInput({
-      id,
-      user_id,
-    });
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.deleteUserPhone(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
-    }
+    const result = await this.deleteUserPhone({ id, user_id });
 
     return res.status(200).json(
       new ApiResponse(200, "Phone number deleted successfully.", {
@@ -818,19 +505,9 @@ export class UserController extends UserService implements UserControllerType {
   }
 
   async deleteEmailHandler(req: Request, res: Response): Promise<Response> {
-    const { id, user_id } = req.params as { id: string; user_id: string };
+    const { id, user_id } = req.params as UserIdWithContextIdInputType;
 
-    const parse_payload = userValidators.deleteByUserIdWithContextIdInput({
-      id,
-      user_id,
-    });
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await this.deleteUserEmail(parse_payload, pgDb);
-
-    if (!result) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
-    }
+    const result = await this.deleteUserEmail({ id, user_id });
 
     return res
       .status(200)
