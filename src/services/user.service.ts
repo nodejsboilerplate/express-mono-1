@@ -50,7 +50,7 @@ class UserService {
     const { user: user_payload, profile: profile_payload } = parse_payload;
 
     const result = await pgDb.transaction(async (tx) => {
-      const [user] = await pgDb
+      const [user] = await tx
         .insert(usersTable)
         .values(user_payload)
         .returning({ id: usersTable.id });
@@ -64,12 +64,12 @@ class UserService {
 
       const hashedPassword = await bcrypt.hash(user_payload.password, 10);
 
-      await pgDb
+      await tx
         .update(usersTable)
         .set({ password: hashedPassword })
         .where(eq(usersTable.id, user.id));
 
-      const [createdUserProfie] = await pgDb
+      const [createdUserProfie] = await tx
         .insert(userProfilesTable)
         .values({
           ...profile_payload,
