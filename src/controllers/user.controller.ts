@@ -1,18 +1,4 @@
-import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
 import type { Request, Response } from "express";
-import { userEmailsTable, userPhonesTable, usersTable } from "@/database";
-import { getSystemCustomErrorMsgByKey } from "@/events";
-import { ApiError, ApiResponse } from "@/libs";
-import { pgDb } from "@/libs/db.connect";
-import { UserService } from "@/services/user.service";
-import {
-  generateVerificationCode,
-  getVerifyExpiry,
-  isZodError,
-  validationError,
-} from "@/utils";
-import { UserInputValidators } from "@/validators/inputs/user.validator";
 import type {
   CreateUserAddressInputType,
   CreateUserContactInputType,
@@ -20,23 +6,20 @@ import type {
   CreateUserPhoneInputType,
   CreateUserWithProfileInputType,
   IdZType,
-  LoginUserInputType,
   UpdateAddressInputType,
   UpdateContactInputType,
   UpdateEmailInputType,
   UpdatePhoneInputType,
   UpdateProfileInputType,
   UserIdWithContextIdInputType,
-  VerifyCodeInputType,
   VerifyCodeWithUserIdInput,
 } from "@/zod";
-import { AuthService, CookieService } from "@/services";
-import { userRedisManager } from "@/redis";
+import { userService } from "@/services";
+import { ApiResponse } from "@/libs";
 
-const authService = AuthService.create();
 
-const userValidators = new UserInputValidators();
-export class UserController extends UserService {
+export class UserController  {
+ 
   // ---------------------------------------------------------
   // Create
   // ---------------------------------------------------------
@@ -58,7 +41,7 @@ export class UserController extends UserService {
       nickname,
     } = payload;
 
-    const result = await this.createUserWithProfile({
+    const result = await userService.createUserWithProfile({
       user: {
         email,
         password,
@@ -94,7 +77,7 @@ export class UserController extends UserService {
     >;
     const payload = req.body as Omit<CreateUserAddressInputType, "user_id">;
 
-    const result = await this.createUserAddress({ ...payload, user_id });
+    const result = await userService.createUserAddress({ ...payload, user_id });
 
     return res
       .status(201)
@@ -111,7 +94,7 @@ export class UserController extends UserService {
 
     const payload = req.body as Omit<CreateUserContactInputType, "user_id">;
 
-    const result = await this.createUserContact({ ...payload, user_id });
+    const result = await userService.createUserContact({ ...payload, user_id });
 
     return res
       .status(201)
@@ -131,7 +114,7 @@ export class UserController extends UserService {
       "user_id" | "contact_id"
     >;
 
-    const result = await this.createUserPhone({
+    const result = await userService.createUserPhone({
       ...payload,
       user_id,
       contact_id,
@@ -155,7 +138,7 @@ export class UserController extends UserService {
       "user_id" | "contact_id"
     >;
 
-    const result = await this.createUserEmail({
+    const result = await userService.createUserEmail({
       ...payload,
       contact_id,
       user_id,
@@ -171,110 +154,10 @@ export class UserController extends UserService {
   // ---------------------------------------------------------
   async getUserCoreHandler(req: Request, res: Response): Promise<Response> {
     const { email } = req.params as { email: string };
-    const parse_payload = userValidators.emailInput(email);
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await pgDb.query.usersTable.findFirst({
-      columns: {
-        id: true,
-        email: true,
-        username: true,
-        role: true,
-        created_at: true,
-        updated_at: true,
-      },
-      where: {
-        email: { eq: parse_payload },
-      },
-    });
-
-    if (!result) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
-    }
+ 
+    const result = await userService.getUser(email)
 
     return res.status(200).json(new ApiResponse(200, "Ok", result));
-  }
-
-  // ---------------------------------------------------------
-  // Auth
-  // ---------------------------------------------------------
-  async loginUserHandler(req: Request, res: Response): Promise<Response> {
-    const payload = req.body as LoginUserInputType;
-    const parse_payload = userValidators.loginUserInput(payload);
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const result = await pgDb.query.usersTable.findFirst({
-      columns: {
-        id: true,
-        email: true,
-        password: true,
-        username: true,
-        role: true,
-        is_verified: true,
-      },
-      where: {
-        OR: [
-          {
-            email: { eq: parse_payload.identifier },
-          },
-          {
-            username: { eq: parse_payload.identifier },
-          },
-        ],
-      },
-    });
-
-    if (!result?.id) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
-    }
-
-    const isPassMatched = await bcrypt.compare(
-      parse_payload.password,
-      result.password
-    );
-    if (!isPassMatched) {
-      throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
-    }
-
-    const { accessToken, refreshToken } = authService.createTokens(result);
-
-    res.cookie(
-      CookieService.ACCESS_TOKEN.name,
-      accessToken,
-      CookieService.ACCESS_TOKEN.cookie
-    );
-
-    res.cookie(
-      CookieService.REFRESH_TOKEN.name,
-      refreshToken,
-      CookieService.REFRESH_TOKEN.cookie
-    );
-
-    const { password, ...rest } = result;
-
-    await userRedisManager.cacheUserLoginData(result?.id as string, rest);
-
-    return res.status(200).json(new ApiResponse(200, "Login Successful."));
-  }
-
-  // ---------------------------------------------------------
-  // Send Verification Code
-  // ---------------------------------------------------------
-
-  async sendVerificationCodeForUserHandler(
-    req: Request,
-    res: Response
-  ): Promise<Response> {
-    const { id } = req.params as { id: IdZType };
-    const result = await this.sendVerificationCodeForUser(id);
-
-    return res.status(200).json(
-      new ApiResponse(200, "Verification code sent successfully.", {
-        id: result,
-      })
-    );
   }
 
   async sendVerificationCodeForPhoneHandler(
@@ -282,7 +165,7 @@ export class UserController extends UserService {
     res: Response
   ): Promise<Response> {
     const { id, user_id } = req.params as UserIdWithContextIdInputType;
-    const result = await this.sendVerificationCodeForPhone({ id, user_id });
+    const result = await userService.sendVerificationCodeForPhone({ id, user_id });
 
     return res.status(200).json(
       new ApiResponse(200, "Verification code sent successfully.", {
@@ -296,7 +179,7 @@ export class UserController extends UserService {
     res: Response
   ): Promise<Response> {
     const { id, user_id } = req.params as UserIdWithContextIdInputType;
-    const result = await this.sendVerificationCodeForEmail({ id, user_id });
+    const result = await userService.sendVerificationCodeForEmail({ id, user_id });
 
     return res.status(200).json(
       new ApiResponse(200, "Verification code sent successfully.", {
@@ -308,21 +191,7 @@ export class UserController extends UserService {
   // ---------------------------------------------------------
   // Verify
   // ---------------------------------------------------------
-  async verifyUserHandler(req: Request, res: Response): Promise<Response> {
-    const { id } = req.params as Pick<VerifyCodeInputType, "id">;
-    const { verify_code } = req.body as Pick<
-      VerifyCodeInputType,
-      "verify_code"
-    >;
 
-    const result = await this.verifyUser({ verify_code, id });
-
-    return res.status(200).json(
-      new ApiResponse(200, "Account verified successfully.", {
-        id: result,
-      })
-    );
-  }
 
   async verifyContactPhoneHandler(
     req: Request,
@@ -337,7 +206,7 @@ export class UserController extends UserService {
       "verify_code"
     >;
 
-    const result = await this.verifyContactPhone({ id, user_id, verify_code });
+    const result = await userService.verifyContactPhone({ id, user_id, verify_code });
 
     return res.status(200).json(
       new ApiResponse(200, "Phone number verified successfully.", {
@@ -359,7 +228,7 @@ export class UserController extends UserService {
       "verify_code"
     >;
 
-    const result = await this.verifyContactEmail({ id, user_id, verify_code });
+    const result = await userService.verifyContactEmail({ id, user_id, verify_code });
     return res
       .status(200)
       .json(
@@ -375,7 +244,7 @@ export class UserController extends UserService {
     const { user_id } = req.params as Pick<UpdateProfileInputType, "user_id">;
     const payload = req.body as Omit<UpdateProfileInputType, "user_id">;
 
-    const result = await this.updateUserProfile({ ...payload, user_id });
+    const result = await userService.updateUserProfile({ ...payload, user_id });
 
     return res
       .status(200)
@@ -389,7 +258,7 @@ export class UserController extends UserService {
 
     const payload = req.body as Omit<UpdateContactInputType, "user_id">;
 
-    const result = await this.updateUserContact({ ...payload, user_id });
+    const result = await userService.updateUserContact({ ...payload, user_id });
 
     return res
       .status(200)
@@ -406,7 +275,7 @@ export class UserController extends UserService {
 
     const payload = req.body as Omit<UpdatePhoneInputType, "user_id" | "id">;
 
-    const result = await this.updateUserPhone({ ...payload, id, user_id });
+    const result = await userService.updateUserPhone({ ...payload, id, user_id });
 
     return res.status(200).json(
       new ApiResponse(200, "Phone number updated successfully.", {
@@ -423,7 +292,7 @@ export class UserController extends UserService {
 
     const payload = req.body as Omit<UpdateEmailInputType, "user_id" | "id">;
 
-    const result = await this.updateUserEmail({ ...payload, id, user_id });
+    const result = await userService.updateUserEmail({ ...payload, id, user_id });
 
     return res
       .status(200)
@@ -436,7 +305,7 @@ export class UserController extends UserService {
     const { id, user_id } = req.params as { id: string; user_id: string };
     const payload = req.body as Omit<UpdateAddressInputType, "user_id" | "id">;
 
-    const result = await this.updateUserAddress({ ...payload, id, user_id });
+    const result = await userService.updateUserAddress({ ...payload, id, user_id });
 
     return res
       .status(200)
@@ -452,7 +321,7 @@ export class UserController extends UserService {
   async deleteUserHandler(req: Request, res: Response): Promise<Response> {
     const { user_id } = req.params as { user_id: IdZType };
 
-    const result = await this.deleteUser(user_id);
+    const result = await userService.deleteUser(user_id);
 
     return res
       .status(200)
@@ -464,7 +333,7 @@ export class UserController extends UserService {
   async deleteAddressHandler(req: Request, res: Response): Promise<Response> {
     const { id, user_id } = req.params as UserIdWithContextIdInputType;
 
-    const result = await this.deleteUserAddress({ id, user_id });
+    const result = await userService.deleteUserAddress({ id, user_id });
 
     return res
       .status(200)
@@ -476,7 +345,7 @@ export class UserController extends UserService {
   async deleteContactHandler(req: Request, res: Response): Promise<Response> {
     const { id, user_id } = req.params as UserIdWithContextIdInputType;
 
-    const result = await this.deleteUserContact({ id, user_id });
+    const result = await userService.deleteUserContact({ id, user_id });
 
     return res
       .status(200)
@@ -488,7 +357,7 @@ export class UserController extends UserService {
   async deletePhoneHandler(req: Request, res: Response): Promise<Response> {
     const { id, user_id } = req.params as UserIdWithContextIdInputType;
 
-    const result = await this.deleteUserPhone({ id, user_id });
+    const result = await userService.deleteUserPhone({ id, user_id });
 
     return res.status(200).json(
       new ApiResponse(200, "Phone number deleted successfully.", {
@@ -500,7 +369,7 @@ export class UserController extends UserService {
   async deleteEmailHandler(req: Request, res: Response): Promise<Response> {
     const { id, user_id } = req.params as UserIdWithContextIdInputType;
 
-    const result = await this.deleteUserEmail({ id, user_id });
+    const result = await userService.deleteUserEmail({ id, user_id });
 
     return res
       .status(200)

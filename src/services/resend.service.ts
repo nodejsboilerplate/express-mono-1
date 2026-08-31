@@ -3,28 +3,13 @@ import { Resend, type WebhookEventPayload } from "resend";
 import type { Request } from "express";
 import { ApiError } from "@/libs";
 import { getSystemCustomErrorMsgByKey } from "@/events";
+import type { WebhookHeadersType } from "@/types";
 
-export type WebhookHeadersType = {
-  svixId: string;
-  svixTimestamp: string;
-  svixSignature: string;
-};
-
-export class ResendService {
+class ResendService {
   private resend: Resend | null = null;
-  private static instance: ResendService;
 
   constructor() {
     this.resend = new Resend(resendConfig.RESEND_API_KEY);
-  }
-
-  static create() {
-    if (this.instance) {
-      return this.instance;
-    }
-
-    this.instance = new ResendService();
-    return this.instance;
   }
 
   getResend() {
@@ -83,3 +68,6 @@ export class ResendService {
     return result;
   }
 }
+
+
+export const resendService = new ResendService

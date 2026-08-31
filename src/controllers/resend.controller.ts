@@ -1,14 +1,15 @@
 import { ApiResponse } from "@/libs";
-import { ResendService } from "@/services";
+import { resendService } from "@/services";
 import type { Request, Response } from "express";
 
 const sanitize = (value: unknown): string =>
   String(value ?? "").replace(/[\r\n]/g, "");
 
-export class ResendController extends ResendService {
+export class ResendController {
+
   async webhook(req: Request, res: Response) {
-    const headers = this.getWebhookHeaders(req);
-    const event = await this.verifyWebhookPayload(req, headers);
+    const headers = resendService.getWebhookHeaders(req);
+    const event = await resendService.verifyWebhookPayload(req, headers);
 
     // Handle each event according to your business logic.
     switch (event.type) {

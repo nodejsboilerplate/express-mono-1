@@ -4,7 +4,7 @@ import { asyncHandler } from "@/utils";
 import { authMiddlware } from "@/middlewares/auth.middleware";
 
 const router: Router = Router();
-const userController = new UserController();
+const userController = new UserController;
 
 // ---------------------------------------------------------
 // Create
@@ -29,12 +29,6 @@ router
   .route("/:user_id/contact/:contact_id/email")
   .post(asyncHandler(userController.createEmailHandler.bind(userController)));
 
-// ---------------------------------------------------------
-// Auth
-// ---------------------------------------------------------
-router
-  .route("/login")
-  .post(asyncHandler(userController.loginUserHandler.bind(userController)));
 
 // ---------------------------------------------------------
 // Read
@@ -44,17 +38,6 @@ router
   .get(
     authMiddlware,
     asyncHandler(userController.getUserCoreHandler.bind(userController))
-  );
-
-// ---------------------------------------------------------
-// Send Verification Code
-// ---------------------------------------------------------
-router
-  .route("/:id/send-verification-code")
-  .post(
-    asyncHandler(
-      userController.sendVerificationCodeForUserHandler.bind(userController)
-    )
   );
 
 router
@@ -76,9 +59,6 @@ router
 // ---------------------------------------------------------
 // Verify
 // ---------------------------------------------------------
-router
-  .route("/:id/verify")
-  .post(asyncHandler(userController.verifyUserHandler.bind(userController)));
 
 router
   .route("/:user_id/phone/:id/verify")

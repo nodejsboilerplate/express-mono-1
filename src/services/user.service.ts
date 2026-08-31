@@ -8,20 +8,21 @@ import {
 } from "@/database";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
-import { pgDb, type PgDbClientType } from "@/libs/db.connect";
+import { pgDb } from "@/libs/db.connect";
 import {
   generateVerificationCode,
   getVerifyExpiry,
   isZodError,
   validationError,
 } from "@/utils";
-import { UserInputValidators } from "@/validators/inputs/user.validator";
+import { userInputValidators } from "@/validators/inputs";
 import type {
   CreateUserAddressInputType,
   CreateUserContactInputType,
   CreateUserEmailInputType,
   CreateUserPhoneInputType,
   CreateUserWithProfileInputType,
+  EmailZType,
   IdZType,
   UpdateAddressInputType,
   UpdateContactInputType,
@@ -29,32 +30,20 @@ import type {
   UpdatePhoneInputType,
   UpdateProfileInputType,
   UserIdWithContextIdInputType,
-  VerifyCodeInputType,
   VerifyCodeWithUserIdInput,
 } from "@/zod";
 import bcrypt from "bcryptjs";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
-const userValidators = UserInputValidators.create();
-
-export class UserService {
-  private static instance: UserService;
-
-  static create() {
-    if (this.instance) {
-      return this.instance;
-    }
-
-    this.instance = new UserService();
-    return this.instance;
-  }
+class UserService {
   // ---------------------------------------------------------
   // Create
   // ---------------------------------------------------------
   async createUserWithProfile(
     payload: CreateUserWithProfileInputType
   ): Promise<{ userId: string; profileId: string }> {
-    const parse_payload = userValidators.createUserWithProfileInput(payload);
+    const parse_payload =
+      userInputValidators.createUserWithProfileInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
@@ -107,7 +96,7 @@ export class UserService {
   async createUserAddress(
     payload: CreateUserAddressInputType
   ): Promise<string> {
-    const parse_payload = userValidators.createUserAddressInput(payload);
+    const parse_payload = userInputValidators.createUserAddressInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
@@ -129,7 +118,7 @@ export class UserService {
   async createUserContact(
     payload: CreateUserContactInputType
   ): Promise<string> {
-    const parse_payload = userValidators.createUserContactInput(payload);
+    const parse_payload = userInputValidators.createUserContactInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
@@ -149,7 +138,7 @@ export class UserService {
   }
 
   async createUserPhone(payload: CreateUserPhoneInputType): Promise<string> {
-    const parse_payload = userValidators.createUserPhoneInput(payload);
+    const parse_payload = userInputValidators.createUserPhoneInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
@@ -169,7 +158,7 @@ export class UserService {
   }
 
   async createUserEmail(payload: CreateUserEmailInputType): Promise<string> {
-    const parse_payload = userValidators.createUserEmailInput(payload);
+    const parse_payload = userInputValidators.createUserEmailInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
@@ -192,37 +181,10 @@ export class UserService {
   // Send Verification Code
   // ---------------------------------------------------------
 
-  async sendVerificationCodeForUser(payload: IdZType): Promise<string> {
-    const parse_id = userValidators.idInput(payload);
-    if (isZodError(parse_id)) throw validationError(parse_id);
-
-    const verify_code = generateVerificationCode();
-    const verify_expiry = getVerifyExpiry();
-
-    const [user] = await pgDb
-      .update(usersTable)
-      .set({
-        verify_code: verify_code,
-        verify_expiry: verify_expiry,
-      })
-      .where(
-        and(eq(usersTable.id, parse_id), eq(usersTable.is_verified, false))
-      )
-      .returning({
-        id: usersTable.id,
-      });
-
-    if (!user) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
-    }
-
-    return user.id;
-  }
-
   async sendVerificationCodeForPhone(
     payload: UserIdWithContextIdInputType
   ): Promise<string> {
-    const parse_payload = userValidators.userIdWithContextIdInput(payload);
+    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
     const verify_code = generateVerificationCode();
@@ -253,7 +215,7 @@ export class UserService {
   async sendVerificationCodeForEmail(
     payload: UserIdWithContextIdInputType
   ): Promise<string> {
-    const parse_payload = userValidators.userIdWithContextIdInput(payload);
+    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
     const verify_code = generateVerificationCode();
@@ -285,71 +247,10 @@ export class UserService {
   // Verifications
   // ---------------------------------------------------------
 
-  async verifyUser(payload: VerifyCodeInputType): Promise<string> {
-    const parse_payload = userValidators.verifyCodeInput(payload);
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const [user] = await pgDb
-      .select({
-        id: usersTable.id,
-        is_verified: usersTable.is_verified,
-        verify_code: usersTable.verify_code,
-        verify_expiry: usersTable.verify_expiry,
-      })
-      .from(usersTable)
-      .where(eq(usersTable.id, parse_payload.id));
-
-    if (!user) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
-    }
-
-    if (user.is_verified) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("USER_ALREADY_VERIFIED")
-      );
-    }
-
-    if (!user.verify_code || user.verify_code !== parse_payload.verify_code) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("INVALID_VERIFICATION_CODE")
-      );
-    }
-
-    if (!user.verify_expiry || user.verify_expiry.getTime() < Date.now()) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("VERIFICATION_CODE_EXPIRED")
-      );
-    }
-
-    const [verifiedUser] = await pgDb
-      .update(usersTable)
-      .set({
-        is_verified: true,
-        verify_code: null,
-        verify_expiry: null,
-      })
-      .where(eq(usersTable.id, user.id))
-      .returning({
-        id: usersTable.id,
-      });
-
-    if (!verifiedUser?.id) {
-      throw new ApiError(
-        500,
-        getSystemCustomErrorMsgByKey("USER_UPDATE_FAILED")
-      );
-    }
-
-    return verifiedUser.id;
-  }
-
   async verifyContactPhone(
     payload: VerifyCodeWithUserIdInput
   ): Promise<string> {
-    const parse_payload = userValidators.verifyCodeWithUserId(payload);
+    const parse_payload = userInputValidators.verifyCodeWithUserId(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
@@ -411,7 +312,7 @@ export class UserService {
   async verifyContactEmail(
     payload: VerifyCodeWithUserIdInput
   ): Promise<string> {
-    const parse_payload = userValidators.verifyCodeWithUserId(payload);
+    const parse_payload = userInputValidators.verifyCodeWithUserId(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
@@ -469,12 +370,38 @@ export class UserService {
 
     return result;
   }
+
+  async getUser(payload: EmailZType) {
+    const parse_payload = userInputValidators.emailInput(payload);
+
+    if (isZodError(parse_payload)) throw validationError(parse_payload);
+
+    const result = await pgDb.query.usersTable.findFirst({
+      columns: {
+        id: true,
+        email: true,
+        username: true,
+        role: true,
+        created_at: true,
+        updated_at: true,
+      },
+      where: {
+        email: { eq: parse_payload },
+      },
+    });
+
+    if (!result) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
+    }
+
+    return result;
+  }
   // ---------------------------------------------------------
   // Update
   // ---------------------------------------------------------
 
   async updateUserProfile(payload: UpdateProfileInputType): Promise<string> {
-    const parse_payload = userValidators.updateUserProfileInput(payload);
+    const parse_payload = userInputValidators.updateUserProfileInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
@@ -504,7 +431,7 @@ export class UserService {
   }
 
   async updateUserContact(payload: UpdateContactInputType): Promise<string> {
-    const parse_payload = userValidators.updateUserContactInput(payload);
+    const parse_payload = userInputValidators.updateUserContactInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
@@ -527,7 +454,7 @@ export class UserService {
   }
 
   async updateUserPhone(payload: UpdatePhoneInputType): Promise<string> {
-    const parse_payload = userValidators.updateUserPhoneInput(payload);
+    const parse_payload = userInputValidators.updateUserPhoneInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
     const { user_id, id, ...updateData } = parse_payload;
@@ -548,7 +475,7 @@ export class UserService {
   }
 
   async updateUserEmail(payload: UpdateEmailInputType): Promise<string> {
-    const parse_payload = userValidators.updateUserEmailInput(payload);
+    const parse_payload = userInputValidators.updateUserEmailInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
     const { user_id, id, ...updateData } = parse_payload;
@@ -569,7 +496,7 @@ export class UserService {
   }
 
   async updateUserAddress(payload: UpdateAddressInputType): Promise<string> {
-    const parse_payload = userValidators.updateUserAddressInput(payload);
+    const parse_payload = userInputValidators.updateUserAddressInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
     const { user_id, id, ...updateData } = parse_payload;
@@ -600,7 +527,7 @@ export class UserService {
   // ---------------------------------------------------------
 
   async deleteUser(payload: IdZType): Promise<string> {
-    const parse_id = userValidators.idInput(payload);
+    const parse_id = userInputValidators.idInput(payload);
 
     if (isZodError(parse_id)) throw validationError(parse_id);
 
@@ -619,7 +546,7 @@ export class UserService {
   async deleteUserContact(
     payload: UserIdWithContextIdInputType
   ): Promise<string> {
-    const parse_payload = userValidators.userIdWithContextIdInput(payload);
+    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
@@ -646,7 +573,7 @@ export class UserService {
   async deleteUserPhone(
     payload: UserIdWithContextIdInputType
   ): Promise<string> {
-    const parse_payload = userValidators.userIdWithContextIdInput(payload);
+    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
@@ -670,7 +597,7 @@ export class UserService {
   async deleteUserEmail(
     payload: UserIdWithContextIdInputType
   ): Promise<string> {
-    const parse_payload = userValidators.userIdWithContextIdInput(payload);
+    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
     const [deletedEmail] = await pgDb
@@ -693,7 +620,7 @@ export class UserService {
   async deleteUserAddress(
     payload: UserIdWithContextIdInputType
   ): Promise<string> {
-    const parse_payload = userValidators.userIdWithContextIdInput(payload);
+    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
@@ -717,3 +644,5 @@ export class UserService {
     return deletedAddress.id;
   }
 }
+
+export const userService = new UserService();

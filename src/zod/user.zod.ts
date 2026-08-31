@@ -1,11 +1,8 @@
 import z4 from "zod";
 import { Socials, USER_GENDERS, USER_ROLES } from "@/constants";
+import { ZodBase } from "./base.zod";
 
-export class UserZSchema {
-  // ---------------------------------------------------------
-  // Base
-  // ---------------------------------------------------------
-  static id = z4.uuidv4({ error: "Invalid id" });
+export abstract class UserZSchema extends ZodBase {
 
   static email = z4
     .email({ error: "Invalid email" })
@@ -20,23 +17,6 @@ export class UserZSchema {
       error:
         "Username can only contain letters, numbers, underscores, and dots",
     });
-
-  static timestamps = z4.object({
-    created_at: z4.coerce.date().optional(),
-    updated_at: z4.coerce.date().optional(),
-  });
-
-  static verification = z4.object({
-    is_verified: z4
-      .boolean({ error: "is_verified must be a boolean" })
-      .optional(),
-    verify_code: z4
-      .string()
-      .max(10, { error: "Invalid verification code" })
-      .trim()
-      .nullish(),
-    verify_expiry: z4.coerce.date().nullish(),
-  });
 
   // ---------------------------------------------------------
   // User
@@ -335,14 +315,8 @@ export class UserZSchema {
   });
 }
 
-// ---------------------------------------------------------
-// Base types
-// ---------------------------------------------------------
-export type IdZType = z4.infer<typeof UserZSchema.id>;
 export type EmailZType = z4.infer<typeof UserZSchema.email>;
 export type UsernameZType = z4.infer<typeof UserZSchema.username>;
-export type TimestampsZtype = z4.infer<typeof UserZSchema.timestamps>;
-export type VerificationZtype = z4.infer<typeof UserZSchema.verification>;
 
 // ---------------------------------------------------------
 // Zod types
