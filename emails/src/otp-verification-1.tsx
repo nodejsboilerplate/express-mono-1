@@ -42,7 +42,7 @@ interface OtpVerificationEmailProps {
   youtubeUrl?: string;
 }
 
-export const OtpVerificationEmail1 = ({
+ const OtpVerificationEmail1 = ({
   recipientName = "Hansi",
   otp = "748291",
   otpValiditySeconds = 120,
@@ -220,7 +220,7 @@ export const OtpVerificationEmail1 = ({
   );
 };
 
-
+export default OtpVerificationEmail1
 
 // ---------------------------------------------------------------
 // Styles

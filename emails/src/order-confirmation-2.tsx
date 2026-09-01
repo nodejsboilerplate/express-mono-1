@@ -32,7 +32,7 @@ interface OrderProduct {
   priceFrom: string;
   color: string;
   colorLabel?: string;
-}
+} 
 
 interface OrderConfirmationEmailProps {
   customerName?: string;
@@ -54,7 +54,7 @@ interface OrderConfirmationEmailProps {
   unsubscribeUrl?: string;
 }
 
-export const OrderConfirmationEmail2 = ({
+ const OrderConfirmationEmail2 = ({
   customerName = "[Customer Name]",
   orderNumber = "34341",
   products = [
@@ -248,6 +248,8 @@ export const OrderConfirmationEmail2 = ({
   );
 };
 
+
+export default OrderConfirmationEmail2
 
 
 // ---------------------------------------------------------------
