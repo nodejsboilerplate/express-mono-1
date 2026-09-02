@@ -1,6 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
+    "rootDir": ".",
         "jsx": "react-jsx",
     "lib": ["ES2024", "dom", "DOM.Iterable"],
     "noUncheckedIndexedAccess": true,
@@ -10,6 +11,7 @@
     "forceConsistentCasingInFileNames": true,
     "composite": true,
     "incremental": true,
+    "types": ["node"],
     "isolatedModules": true,
     "declarationMap": true,
     "module": "preserve",
