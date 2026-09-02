@@ -5,10 +5,9 @@ import type { Request, Response } from "express";
 const sanitize = (value: unknown): string =>
   String(value ?? "").replace(/[\r\n]/g, "");
 
-const resendService = new ResendService()
+const resendService = new ResendService();
 
 export class ResendController {
-
   async webhook(req: Request, res: Response) {
     const headers = resendService.getWebhookHeaders(req);
     const event = await resendService.verifyWebhookPayload(req, headers);

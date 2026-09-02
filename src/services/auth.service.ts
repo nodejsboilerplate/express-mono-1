@@ -19,19 +19,17 @@ import {
   isZodError,
   validationError,
 } from "@/utils";
-import { pgDb } from "@/libs/db.connect";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
 import bcrypt from "bcryptjs";
-import { usersTable } from "@/database";
-import { and, eq } from "drizzle-orm";
 import { AuthRedis } from "@/redis";
+import { UserRepository } from "@/database/repositories";
 
-const authRedis = new AuthRedis()
+const userRepository = new UserRepository();
+const authRedis = new AuthRedis();
 
 export class AuthService {
-
-   createTokens(payload: AccessTokenPayload): CookieNames {
+  createTokens(payload: AccessTokenPayload): CookieNames {
     const accessToken = jwt.sign(payload, authConfig.JWT_ACCESS_TOKEN_SECRET, {
       expiresIn: ACCESS_TOKEN_EXPIRY_SEC,
     });
@@ -47,26 +45,26 @@ export class AuthService {
 
     return { accessToken, refreshToken };
   }
-   renewAccessToken(payload: AccessTokenPayload): string {
+  renewAccessToken(payload: AccessTokenPayload): string {
     return jwt.sign(payload, authConfig.JWT_ACCESS_TOKEN_SECRET, {
       expiresIn: ACCESS_TOKEN_EXPIRY_SEC,
     });
   }
 
-   renewRefreshToken(payload: RefreshTokenPayload): string {
+  renewRefreshToken(payload: RefreshTokenPayload): string {
     return jwt.sign({ id: payload.id }, authConfig.JWT_REFRESH_TOKEN_SECRET, {
       expiresIn: REFRESH_TOKEN_EXPIRY_SEC,
     });
   }
 
-   getDataFromAccessToken(token: string): AccessTokenPayload {
+  getDataFromAccessToken(token: string): AccessTokenPayload {
     const decoded = jwt.verify(
       token,
       authConfig.JWT_ACCESS_TOKEN_SECRET
     ) as AccessTokenPayload;
     return decoded;
   }
-   getDataFromRefreshToken(token: string): RefreshTokenPayload {
+  getDataFromRefreshToken(token: string): RefreshTokenPayload {
     const decoded = jwt.verify(
       token,
       authConfig.JWT_REFRESH_TOKEN_SECRET
@@ -74,7 +72,7 @@ export class AuthService {
     return decoded;
   }
 
-   getCookies(req: Request): CookieNames {
+  getCookies(req: Request): CookieNames {
     const refresh_token = req.cookies?.[CookieService.REFRESH_TOKEN.name];
     const access_token = req.cookies?.[CookieService.ACCESS_TOKEN.name];
     return {
@@ -83,33 +81,16 @@ export class AuthService {
     };
   }
 
-   async loginUser(
+  async loginUser(
     payload: LoginUserInputType
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const parse_payload = userInputValidators.loginUserInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
-    const result = await pgDb.query.usersTable.findFirst({
-      columns: {
-        id: true,
-        email: true,
-        password: true,
-        username: true,
-        role: true,
-        is_verified: true,
-      },
-      where: {
-        OR: [
-          {
-            email: { eq: parse_payload.identifier },
-          },
-          {
-            username: { eq: parse_payload.identifier },
-          },
-        ],
-      },
-    });
+    const result = await userRepository.GetUserDataForLoginByEmailOrUsername(
+      parse_payload.identifier
+    );
 
     if (!result?.id) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
@@ -135,25 +116,18 @@ export class AuthService {
     };
   }
 
-   async sendSignupCode(payload: IdZType): Promise<string> {
+  async sendSignupCode(payload: IdZType): Promise<string> {
     const parse_id = userInputValidators.idInput(payload);
     if (isZodError(parse_id)) throw validationError(parse_id);
 
     const verify_code = generateVerificationCode();
     const verify_expiry = getVerifyExpiry();
 
-    const [user] = await pgDb
-      .update(usersTable)
-      .set({
-        verify_code: verify_code,
-        verify_expiry: verify_expiry,
-      })
-      .where(
-        and(eq(usersTable.id, parse_id), eq(usersTable.is_verified, false))
-      )
-      .returning({
-        id: usersTable.id,
-      });
+    const user = await userRepository.SetVerifyCodeForLogin(
+      verify_code,
+      verify_expiry,
+      parse_id
+    );
 
     if (!user) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
@@ -162,21 +136,11 @@ export class AuthService {
     return user.id;
   }
 
-   async verifySignupCode(
-    payload: VerifyCodeInputType
-  ): Promise<string> {
+  async verifySignupCode(payload: VerifyCodeInputType): Promise<string> {
     const parse_payload = userInputValidators.verifyCodeInput(payload);
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
-    const [user] = await pgDb
-      .select({
-        id: usersTable.id,
-        is_verified: usersTable.is_verified,
-        verify_code: usersTable.verify_code,
-        verify_expiry: usersTable.verify_expiry,
-      })
-      .from(usersTable)
-      .where(eq(usersTable.id, parse_payload.id));
+    const user = await userRepository.GetUserVerifyDetails(parse_payload.id);
 
     if (!user) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
@@ -203,17 +167,9 @@ export class AuthService {
       );
     }
 
-    const [verifiedUser] = await pgDb
-      .update(usersTable)
-      .set({
-        is_verified: true,
-        verify_code: null,
-        verify_expiry: null,
-      })
-      .where(eq(usersTable.id, user.id))
-      .returning({
-        id: usersTable.id,
-      });
+    const verifiedUser = await userRepository.UpdateUserVerifyDetails(
+      user.id
+    );
 
     if (!verifiedUser?.id) {
       throw new ApiError(

@@ -12,7 +12,7 @@ import { eq } from "drizzle-orm";
 import { Socials } from "@/constants";
 import { UserService } from "@/services";
 
-const userService = new UserService()
+const userService = new UserService();
 
 function validUserWithProfilePayload(
   overrides: { user?: Partial<any>; profile?: Partial<any> } = {}

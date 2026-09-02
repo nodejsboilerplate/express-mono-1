@@ -4,7 +4,7 @@ import { asyncHandler } from "@/utils";
 import { authMiddlware } from "@/middlewares/auth.middleware";
 
 const router: Router = Router();
-const userController = new UserController;
+const userController = new UserController();
 
 // ---------------------------------------------------------
 // Create
@@ -28,7 +28,6 @@ router
 router
   .route("/:user_id/contact/:contact_id/email")
   .post(asyncHandler(userController.createEmailHandler.bind(userController)));
-
 
 // ---------------------------------------------------------
 // Read

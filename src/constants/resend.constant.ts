@@ -9,4 +9,3 @@ export enum RESEND_EMAIL_ADDRESS {
   SECURITY = "security",
   NO_REPLY = "noreply",
 }
-
