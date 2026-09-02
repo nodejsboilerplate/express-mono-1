@@ -1,8 +1,9 @@
 import { ApiResponse } from "@/libs";
-import {  authService, CookieService } from "@/services";
+import {  AuthService, CookieService } from "@/services";
 import type { IdZType, LoginUserInputType, VerifyCodeInputType } from "@/zod";
 import type { Request, Response } from "express";
 
+const authService = new AuthService()
 export class AuthController {
  
   async loginUserHandler(req: Request, res: Response): Promise<Response> {

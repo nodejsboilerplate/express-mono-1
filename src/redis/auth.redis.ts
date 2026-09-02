@@ -3,7 +3,7 @@ import { redisClient } from "@/libs";
 import {  ACCESS_TOKEN_EXPIRY_SEC } from "@/services";
 import type { AccessTokenPayload } from "@/types";
 
-class AuthRedis {
+export class AuthRedis {
   async cacheUserLoginData(
     key: string,
     payload: AccessTokenPayload
@@ -37,5 +37,3 @@ class AuthRedis {
     return result === RedisResponse.SUCCESS;
   }
 }
-
-export const authRedis = new AuthRedis

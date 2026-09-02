@@ -1,12 +1,15 @@
 import { prepareGetUserLoginDataForCache } from "@/database/prepared-statements";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
-import { authRedis } from "@/redis";
-import { authService } from "@/services";
+import { AuthRedis } from "@/redis";
+import { AuthService } from "@/services";
 import { CookieService } from "@/services/cookie.service";
 import type { AccessTokenPayload } from "@/types";
 import { executePreparedStatement } from "@/utils";
 import type { NextFunction, Response, Request } from "express";
+
+const authService = new AuthService();
+const authRedis = new AuthRedis();
 
 /**
  * Middleware to enforce authentication and manage token rotation.
@@ -70,9 +73,7 @@ export const authMiddlware = async (
     let temp_user: AccessTokenPayload;
 
     // Redis Lookup
-    const get_cached_data = await authRedis.getCachedLoginData(
-      decoded.id
-    );
+    const get_cached_data = await authRedis.getCachedLoginData(decoded.id);
 
     if (!get_cached_data) {
       const [result] = await executePreparedStatement(

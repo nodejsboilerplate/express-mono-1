@@ -5,15 +5,13 @@ import { ApiError } from "@/libs";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import type { WebhookHeadersType } from "@/types";
 
-class ResendService {
-  private resend: Resend | null = null;
+export class ResendService {
+  static resend: Resend | null = null;
 
   constructor() {
-    this.resend = new Resend(resendConfig.RESEND_API_KEY);
-  }
-
-  getResend() {
-    return this.resend;
+    if (!ResendService.resend) {
+      ResendService.resend = new Resend(resendConfig.RESEND_API_KEY);
+    }
   }
 
   getWebhookHeaders(req: Request): WebhookHeadersType {
@@ -49,7 +47,7 @@ class ResendService {
       );
     }
 
-    const result = this.resend?.webhooks.verify({
+    const result = ResendService.resend?.webhooks.verify({
       headers: {
         id: svixId,
         signature: svixSignature,
@@ -68,6 +66,3 @@ class ResendService {
     return result;
   }
 }
-
-
-export const resendService = new ResendService

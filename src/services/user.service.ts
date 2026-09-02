@@ -35,7 +35,7 @@ import type {
 import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 
-class UserService {
+export class UserService {
   // ---------------------------------------------------------
   // Create
   // ---------------------------------------------------------
@@ -644,5 +644,3 @@ class UserService {
     return deletedAddress.id;
   }
 }
-
-export const userService = new UserService();

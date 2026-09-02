@@ -1,27 +1,26 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import jwt from "jsonwebtoken";
 import { pgDb } from "@/libs/db.connect";
-import { authService } from "@/services/auth.service";
-import { authRedis } from "@/redis";
 import { CookieService } from "@/services/cookie.service";
-import { userService } from "@/services/user.service";
 import { usersTable } from "@/database";
 import { eq } from "drizzle-orm";
 import { authConfig } from "@/config";
+import { AuthService, UserService } from "@/services";
+import { AuthRedis } from "@/redis";
 
-// `AuthService` now imports the shared `authRedis` singleton directly
-// instead of taking it via a constructor, so there's nothing left to
-// inject a test double into. Mock the whole `@/redis` module instead —
-// `authService`'s internal `import { authRedis } from "@/redis"` will
-// resolve to this mock, and the `authRedis` imported below in this file
-// points at the same mocked object, so assertions on it are accurate.
+const userService = new UserService()
+const authService = new AuthService()
+const authRedis = new AuthRedis()
+
+const { cacheUserLoginDataMock } = vi.hoisted(() => ({
+  cacheUserLoginDataMock: vi.fn().mockResolvedValue(true),
+}));
 vi.mock("@/redis", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/redis")>();
   return {
     ...actual,
-    authRedis: {
-      ...actual.authRedis,
-      cacheUserLoginData: vi.fn().mockResolvedValue(undefined),
+    AuthRedis: class {
+      cacheUserLoginData = cacheUserLoginDataMock;
     },
   };
 });

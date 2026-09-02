@@ -14,10 +14,11 @@ import type {
   UserIdWithContextIdInputType,
   VerifyCodeWithUserIdInput,
 } from "@/zod";
-import { userService } from "@/services";
+
 import { ApiResponse } from "@/libs";
+import { UserService } from "@/services";
 
-
+const userService = new UserService()
 export class UserController  {
  
   // ---------------------------------------------------------

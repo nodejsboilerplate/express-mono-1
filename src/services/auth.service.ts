@@ -23,12 +23,13 @@ import { pgDb } from "@/libs/db.connect";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
 import bcrypt from "bcryptjs";
-import { authRedis } from "@/redis";
 import { usersTable } from "@/database";
 import { and, eq } from "drizzle-orm";
+import { AuthRedis } from "@/redis";
 
+const authRedis = new AuthRedis()
 
-class AuthService {
+export class AuthService {
 
    createTokens(payload: AccessTokenPayload): CookieNames {
     const accessToken = jwt.sign(payload, authConfig.JWT_ACCESS_TOKEN_SECRET, {
@@ -224,6 +225,3 @@ class AuthService {
     return verifiedUser.id;
   }
 }
-
-
-export const authService = new AuthService

@@ -1,9 +1,11 @@
 import { ApiResponse } from "@/libs";
-import { resendService } from "@/services";
+import { ResendService } from "@/services";
 import type { Request, Response } from "express";
 
 const sanitize = (value: unknown): string =>
   String(value ?? "").replace(/[\r\n]/g, "");
+
+const resendService = new ResendService()
 
 export class ResendController {
 
