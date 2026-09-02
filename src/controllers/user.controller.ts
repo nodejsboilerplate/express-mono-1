@@ -18,9 +18,8 @@ import type {
 import { ApiResponse } from "@/libs";
 import { UserService } from "@/services";
 
-const userService = new UserService()
-export class UserController  {
- 
+const userService = new UserService();
+export class UserController {
   // ---------------------------------------------------------
   // Create
   // ---------------------------------------------------------
@@ -155,8 +154,8 @@ export class UserController  {
   // ---------------------------------------------------------
   async getUserCoreHandler(req: Request, res: Response): Promise<Response> {
     const { email } = req.params as { email: string };
- 
-    const result = await userService.getUser(email)
+
+    const result = await userService.getUser(email);
 
     return res.status(200).json(new ApiResponse(200, "Ok", result));
   }
@@ -166,7 +165,10 @@ export class UserController  {
     res: Response
   ): Promise<Response> {
     const { id, user_id } = req.params as UserIdWithContextIdInputType;
-    const result = await userService.sendVerificationCodeForPhone({ id, user_id });
+    const result = await userService.sendVerificationCodeForPhone({
+      id,
+      user_id,
+    });
 
     return res.status(200).json(
       new ApiResponse(200, "Verification code sent successfully.", {
@@ -180,7 +182,10 @@ export class UserController  {
     res: Response
   ): Promise<Response> {
     const { id, user_id } = req.params as UserIdWithContextIdInputType;
-    const result = await userService.sendVerificationCodeForEmail({ id, user_id });
+    const result = await userService.sendVerificationCodeForEmail({
+      id,
+      user_id,
+    });
 
     return res.status(200).json(
       new ApiResponse(200, "Verification code sent successfully.", {
@@ -192,7 +197,6 @@ export class UserController  {
   // ---------------------------------------------------------
   // Verify
   // ---------------------------------------------------------
-
 
   async verifyContactPhoneHandler(
     req: Request,
@@ -207,7 +211,11 @@ export class UserController  {
       "verify_code"
     >;
 
-    const result = await userService.verifyContactPhone({ id, user_id, verify_code });
+    const result = await userService.verifyContactPhone({
+      id,
+      user_id,
+      verify_code,
+    });
 
     return res.status(200).json(
       new ApiResponse(200, "Phone number verified successfully.", {
@@ -229,7 +237,11 @@ export class UserController  {
       "verify_code"
     >;
 
-    const result = await userService.verifyContactEmail({ id, user_id, verify_code });
+    const result = await userService.verifyContactEmail({
+      id,
+      user_id,
+      verify_code,
+    });
     return res
       .status(200)
       .json(
@@ -276,7 +288,11 @@ export class UserController  {
 
     const payload = req.body as Omit<UpdatePhoneInputType, "user_id" | "id">;
 
-    const result = await userService.updateUserPhone({ ...payload, id, user_id });
+    const result = await userService.updateUserPhone({
+      ...payload,
+      id,
+      user_id,
+    });
 
     return res.status(200).json(
       new ApiResponse(200, "Phone number updated successfully.", {
@@ -293,7 +309,11 @@ export class UserController  {
 
     const payload = req.body as Omit<UpdateEmailInputType, "user_id" | "id">;
 
-    const result = await userService.updateUserEmail({ ...payload, id, user_id });
+    const result = await userService.updateUserEmail({
+      ...payload,
+      id,
+      user_id,
+    });
 
     return res
       .status(200)
@@ -306,7 +326,11 @@ export class UserController  {
     const { id, user_id } = req.params as { id: string; user_id: string };
     const payload = req.body as Omit<UpdateAddressInputType, "user_id" | "id">;
 
-    const result = await userService.updateUserAddress({ ...payload, id, user_id });
+    const result = await userService.updateUserAddress({
+      ...payload,
+      id,
+      user_id,
+    });
 
     return res
       .status(200)

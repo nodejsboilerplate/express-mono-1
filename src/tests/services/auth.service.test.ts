@@ -8,9 +8,9 @@ import { authConfig } from "@/config";
 import { AuthService, UserService } from "@/services";
 import { AuthRedis } from "@/redis";
 
-const userService = new UserService()
-const authService = new AuthService()
-const authRedis = new AuthRedis()
+const userService = new UserService();
+const authService = new AuthService();
+const authRedis = new AuthRedis();
 
 const { cacheUserLoginDataMock } = vi.hoisted(() => ({
   cacheUserLoginDataMock: vi.fn().mockResolvedValue(true),
@@ -51,9 +51,8 @@ async function createUser(
   overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
 ) {
   const payload = validUserWithProfilePayload(overrides);
-  const { userId, profileId } = await userService.createUserWithProfile(
-    payload
-  );
+  const { userId, profileId } =
+    await userService.createUserWithProfile(payload);
   if (!userId) throw new Error("Fixture setup failed: no userId returned");
   return {
     userId,
@@ -73,9 +72,7 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
     test("signs an access + refresh token pair carrying the payload", () => {
       const payload = { id: crypto.randomUUID(), role: "USER" } as any;
 
-      const { accessToken, refreshToken } = authService.createTokens(
-        payload
-      );
+      const { accessToken, refreshToken } = authService.createTokens(payload);
 
       expect(typeof accessToken).toBe("string");
       expect(typeof refreshToken).toBe("string");
@@ -217,8 +214,8 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
       await authService.loginUser({ identifier: email, password } as any);
 
       expect(authRedis.cacheUserLoginData).toHaveBeenCalledTimes(1);
-      const [cachedId, cachedData] = (authRedis.cacheUserLoginData as any)
-        .mock.calls[0];
+      const [cachedId, cachedData] = (authRedis.cacheUserLoginData as any).mock
+        .calls[0];
       expect(cachedId).toBe(userId);
       expect(cachedData).not.toHaveProperty("password");
     });
@@ -275,9 +272,7 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
         .set({ is_verified: true })
         .where(eq(usersTable.id, userId));
 
-      await expect(
-        authService.sendSignupCode(userId as any)
-      ).rejects.toThrow();
+      await expect(authService.sendSignupCode(userId as any)).rejects.toThrow();
     });
 
     test("throws when the user does not exist", async () => {

@@ -27,11 +27,10 @@ import { usersTable } from "@/database";
 import { and, eq } from "drizzle-orm";
 import { AuthRedis } from "@/redis";
 
-const authRedis = new AuthRedis()
+const authRedis = new AuthRedis();
 
 export class AuthService {
-
-   createTokens(payload: AccessTokenPayload): CookieNames {
+  createTokens(payload: AccessTokenPayload): CookieNames {
     const accessToken = jwt.sign(payload, authConfig.JWT_ACCESS_TOKEN_SECRET, {
       expiresIn: ACCESS_TOKEN_EXPIRY_SEC,
     });
@@ -47,26 +46,26 @@ export class AuthService {
 
     return { accessToken, refreshToken };
   }
-   renewAccessToken(payload: AccessTokenPayload): string {
+  renewAccessToken(payload: AccessTokenPayload): string {
     return jwt.sign(payload, authConfig.JWT_ACCESS_TOKEN_SECRET, {
       expiresIn: ACCESS_TOKEN_EXPIRY_SEC,
     });
   }
 
-   renewRefreshToken(payload: RefreshTokenPayload): string {
+  renewRefreshToken(payload: RefreshTokenPayload): string {
     return jwt.sign({ id: payload.id }, authConfig.JWT_REFRESH_TOKEN_SECRET, {
       expiresIn: REFRESH_TOKEN_EXPIRY_SEC,
     });
   }
 
-   getDataFromAccessToken(token: string): AccessTokenPayload {
+  getDataFromAccessToken(token: string): AccessTokenPayload {
     const decoded = jwt.verify(
       token,
       authConfig.JWT_ACCESS_TOKEN_SECRET
     ) as AccessTokenPayload;
     return decoded;
   }
-   getDataFromRefreshToken(token: string): RefreshTokenPayload {
+  getDataFromRefreshToken(token: string): RefreshTokenPayload {
     const decoded = jwt.verify(
       token,
       authConfig.JWT_REFRESH_TOKEN_SECRET
@@ -74,7 +73,7 @@ export class AuthService {
     return decoded;
   }
 
-   getCookies(req: Request): CookieNames {
+  getCookies(req: Request): CookieNames {
     const refresh_token = req.cookies?.[CookieService.REFRESH_TOKEN.name];
     const access_token = req.cookies?.[CookieService.ACCESS_TOKEN.name];
     return {
@@ -83,7 +82,7 @@ export class AuthService {
     };
   }
 
-   async loginUser(
+  async loginUser(
     payload: LoginUserInputType
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const parse_payload = userInputValidators.loginUserInput(payload);
@@ -135,7 +134,7 @@ export class AuthService {
     };
   }
 
-   async sendSignupCode(payload: IdZType): Promise<string> {
+  async sendSignupCode(payload: IdZType): Promise<string> {
     const parse_id = userInputValidators.idInput(payload);
     if (isZodError(parse_id)) throw validationError(parse_id);
 
@@ -162,9 +161,7 @@ export class AuthService {
     return user.id;
   }
 
-   async verifySignupCode(
-    payload: VerifyCodeInputType
-  ): Promise<string> {
+  async verifySignupCode(payload: VerifyCodeInputType): Promise<string> {
     const parse_payload = userInputValidators.verifyCodeInput(payload);
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 

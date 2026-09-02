@@ -1,6 +1,6 @@
 import { RedisResponse } from "@/constants";
 import { redisClient } from "@/libs";
-import {  ACCESS_TOKEN_EXPIRY_SEC } from "@/services";
+import { ACCESS_TOKEN_EXPIRY_SEC } from "@/services";
 import type { AccessTokenPayload } from "@/types";
 
 export class AuthRedis {

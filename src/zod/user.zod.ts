@@ -3,7 +3,6 @@ import { Socials, USER_GENDERS, USER_ROLES } from "@/constants";
 import { ZodBase } from "./base.zod";
 
 export abstract class UserZSchema extends ZodBase {
-
   static email = z4
     .email({ error: "Invalid email" })
     .max(255, { error: "Email must be at most 255 characters" });

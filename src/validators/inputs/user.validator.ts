@@ -21,12 +21,8 @@ import type z from "zod";
 import { Validator } from "../validator";
 
 class UserInputValidators extends Validator {
-
   emailInput(payload: EmailZType): EmailZType | z.ZodError {
-    const { data, success, error } = this.validate(
-      payload,
-      UserZSchema.email
-    );
+    const { data, success, error } = this.validate(payload, UserZSchema.email);
 
     if (!success) {
       return error;
@@ -211,4 +207,4 @@ class UserInputValidators extends Validator {
   }
 }
 
-export const userInputValidators = new UserInputValidators
+export const userInputValidators = new UserInputValidators();
