@@ -1,1 +1,1 @@
-export * from "./user.redis";
+export * from "./auth.redis";

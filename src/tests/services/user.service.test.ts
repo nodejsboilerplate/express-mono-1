@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 import { pgDb } from "@/libs/db.connect";
-import { UserService } from "@/services/user.service";
 import {
   usersTable,
   userContactsTable,
@@ -11,10 +10,13 @@ import {
 } from "@/database";
 import { eq } from "drizzle-orm";
 import { Socials } from "@/constants";
+import { UserService } from "@/services";
 
-const userService = UserService.create();
+const userService = new UserService()
 
-function validUserWithProfilePayload(overrides: { user?: Partial<any>; profile?: Partial<any> } = {}) {
+function validUserWithProfilePayload(
+  overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
+) {
   return {
     user: {
       email: `test-${crypto.randomUUID()}@example.com`,
@@ -30,7 +32,9 @@ function validUserWithProfilePayload(overrides: { user?: Partial<any>; profile?:
   };
 }
 
-async function createUser(overrides: { user?: Partial<any>; profile?: Partial<any> } = {}) {
+async function createUser(
+  overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
+) {
   const { userId, profileId } = await userService.createUserWithProfile(
     validUserWithProfilePayload(overrides)
   );
@@ -45,6 +49,37 @@ async function createContact(userId: string, overrides: Partial<any> = {}) {
     ...overrides,
   });
   if (!id) throw new Error("Fixture setup failed: no contactId returned");
+  return id;
+}
+
+async function createPhone(
+  userId: string,
+  contactId: string,
+  overrides: Partial<any> = {}
+) {
+  const id = await userService.createUserPhone({
+    user_id: userId,
+    contact_id: contactId,
+    phone_code: "+1",
+    phone: `555${Math.floor(1000000 + Math.random() * 8999999)}`,
+    ...overrides,
+  });
+  if (!id) throw new Error("Fixture setup failed: no phoneId returned");
+  return id;
+}
+
+async function createEmail(
+  userId: string,
+  contactId: string,
+  overrides: Partial<any> = {}
+) {
+  const id = await userService.createUserEmail({
+    user_id: userId,
+    contact_id: contactId,
+    email: `contact-${crypto.randomUUID()}@example.com`,
+    ...overrides,
+  });
+  if (!id) throw new Error("Fixture setup failed: no emailId returned");
   return id;
 }
 
@@ -215,6 +250,138 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
   });
 
   // ---------------------------------------------------------------
+  // Send Verification Code
+  // ---------------------------------------------------------------
+
+  describe("UserService.sendVerificationCodeForPhone", () => {
+    test("sets a verification code on an unverified phone and returns its id", async () => {
+      const { userId } = await createUser();
+      const contactId = await createContact(userId);
+      const phoneId = await createPhone(userId, contactId);
+
+      const result = await userService.sendVerificationCodeForPhone({
+        id: phoneId,
+        user_id: userId,
+      });
+      expect(result).toBe(phoneId);
+
+      const [row] = await pgDb
+        .select()
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, phoneId));
+      expect(row?.verify_code).toBeTruthy();
+      expect(row?.verify_expiry).toBeTruthy();
+    });
+
+    test("throws when the phone is already verified", async () => {
+      const { userId } = await createUser();
+      const contactId = await createContact(userId);
+      const phoneId = await createPhone(userId, contactId);
+
+      await pgDb
+        .update(userPhonesTable)
+        .set({ is_verified: true })
+        .where(eq(userPhonesTable.id, phoneId));
+
+      await expect(
+        userService.sendVerificationCodeForPhone({
+          id: phoneId,
+          user_id: userId,
+        })
+      ).rejects.toThrow();
+    });
+
+    test("throws when the phone belongs to a different user", async () => {
+      const { userId } = await createUser();
+      const { userId: otherUserId } = await createUser();
+      const contactId = await createContact(userId);
+      const phoneId = await createPhone(userId, contactId);
+
+      await expect(
+        userService.sendVerificationCodeForPhone({
+          id: phoneId,
+          user_id: otherUserId,
+        })
+      ).rejects.toThrow();
+    });
+
+    test("throws when the phone does not exist", async () => {
+      const { userId } = await createUser();
+
+      await expect(
+        userService.sendVerificationCodeForPhone({
+          id: crypto.randomUUID(),
+          user_id: userId,
+        })
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("UserService.sendVerificationCodeForEmail", () => {
+    test("sets a verification code on an unverified email and returns its id", async () => {
+      const { userId } = await createUser();
+      const contactId = await createContact(userId);
+      const emailId = await createEmail(userId, contactId);
+
+      const result = await userService.sendVerificationCodeForEmail({
+        id: emailId,
+        user_id: userId,
+      });
+      expect(result).toBe(emailId);
+
+      const [row] = await pgDb
+        .select()
+        .from(userEmailsTable)
+        .where(eq(userEmailsTable.id, emailId));
+      expect(row?.verify_code).toBeTruthy();
+      expect(row?.verify_expiry).toBeTruthy();
+    });
+
+    test("throws when the email is already verified", async () => {
+      const { userId } = await createUser();
+      const contactId = await createContact(userId);
+      const emailId = await createEmail(userId, contactId);
+
+      await pgDb
+        .update(userEmailsTable)
+        .set({ is_verified: true })
+        .where(eq(userEmailsTable.id, emailId));
+
+      await expect(
+        userService.sendVerificationCodeForEmail({
+          id: emailId,
+          user_id: userId,
+        })
+      ).rejects.toThrow();
+    });
+
+    test("throws when the email belongs to a different user", async () => {
+      const { userId } = await createUser();
+      const { userId: otherUserId } = await createUser();
+      const contactId = await createContact(userId);
+      const emailId = await createEmail(userId, contactId);
+
+      await expect(
+        userService.sendVerificationCodeForEmail({
+          id: emailId,
+          user_id: otherUserId,
+        })
+      ).rejects.toThrow();
+    });
+
+    test("throws when the email does not exist", async () => {
+      const { userId } = await createUser();
+
+      await expect(
+        userService.sendVerificationCodeForEmail({
+          id: crypto.randomUUID(),
+          user_id: userId,
+        })
+      ).rejects.toThrow();
+    });
+  });
+
+  // ---------------------------------------------------------------
   // Update
   // ---------------------------------------------------------------
 
@@ -371,6 +538,244 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
   });
 
   // ---------------------------------------------------------------
+  // Verifications
+  // ---------------------------------------------------------------
+
+  describe("UserService.verifyContactPhone", () => {
+    test("verifies a phone with a correct, unexpired code", async () => {
+      const { userId } = await createUser();
+      const contactId = await createContact(userId);
+      const phoneId = await createPhone(userId, contactId);
+      await userService.sendVerificationCodeForPhone({
+        id: phoneId,
+        user_id: userId,
+      });
+
+      const [row] = await pgDb
+        .select()
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, phoneId));
+
+      const result = await userService.verifyContactPhone({
+        id: phoneId,
+        user_id: userId,
+        verify_code: row!.verify_code!,
+      });
+      expect(result).toBe(phoneId);
+
+      const [updated] = await pgDb
+        .select()
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, phoneId));
+      expect(updated?.is_verified).toBe(true);
+      expect(updated?.verify_code).toBeNull();
+      expect(updated?.verify_expiry).toBeNull();
+    });
+
+    test("throws when the phone is already verified", async () => {
+      const { userId } = await createUser();
+      const contactId = await createContact(userId);
+      const phoneId = await createPhone(userId, contactId);
+      await userService.sendVerificationCodeForPhone({
+        id: phoneId,
+        user_id: userId,
+      });
+      const [row] = await pgDb
+        .select()
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, phoneId));
+
+      await userService.verifyContactPhone({
+        id: phoneId,
+        user_id: userId,
+        verify_code: row!.verify_code!,
+      });
+
+      await expect(
+        userService.verifyContactPhone({
+          id: phoneId,
+          user_id: userId,
+          verify_code: row!.verify_code!,
+        })
+      ).rejects.toThrow();
+    });
+
+    test("throws when the code is incorrect", async () => {
+      const { userId } = await createUser();
+      const contactId = await createContact(userId);
+      const phoneId = await createPhone(userId, contactId);
+      await userService.sendVerificationCodeForPhone({
+        id: phoneId,
+        user_id: userId,
+      });
+
+      await expect(
+        userService.verifyContactPhone({
+          id: phoneId,
+          user_id: userId,
+          verify_code: "000000",
+        })
+      ).rejects.toThrow();
+    });
+
+    test("throws when the code has expired", async () => {
+      const { userId } = await createUser();
+      const contactId = await createContact(userId);
+      const phoneId = await createPhone(userId, contactId);
+      await userService.sendVerificationCodeForPhone({
+        id: phoneId,
+        user_id: userId,
+      });
+      const [row] = await pgDb
+        .select()
+        .from(userPhonesTable)
+        .where(eq(userPhonesTable.id, phoneId));
+
+      await pgDb
+        .update(userPhonesTable)
+        .set({ verify_expiry: new Date(Date.now() - 60_000) })
+        .where(eq(userPhonesTable.id, phoneId));
+
+      await expect(
+        userService.verifyContactPhone({
+          id: phoneId,
+          user_id: userId,
+          verify_code: row!.verify_code!,
+        })
+      ).rejects.toThrow();
+    });
+
+    test("throws when the phone does not exist", async () => {
+      const { userId } = await createUser();
+
+      await expect(
+        userService.verifyContactPhone({
+          id: crypto.randomUUID(),
+          user_id: userId,
+          verify_code: "123456",
+        })
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("UserService.verifyContactEmail", () => {
+    test("verifies an email with a correct, unexpired code", async () => {
+      const { userId } = await createUser();
+      const contactId = await createContact(userId);
+      const emailId = await createEmail(userId, contactId);
+      await userService.sendVerificationCodeForEmail({
+        id: emailId,
+        user_id: userId,
+      });
+
+      const [row] = await pgDb
+        .select()
+        .from(userEmailsTable)
+        .where(eq(userEmailsTable.id, emailId));
+
+      const result = await userService.verifyContactEmail({
+        id: emailId,
+        user_id: userId,
+        verify_code: row!.verify_code!,
+      });
+      expect(result).toBe(emailId);
+
+      const [updated] = await pgDb
+        .select()
+        .from(userEmailsTable)
+        .where(eq(userEmailsTable.id, emailId));
+      expect(updated?.is_verified).toBe(true);
+      expect(updated?.verify_code).toBeNull();
+      expect(updated?.verify_expiry).toBeNull();
+    });
+
+    test("throws when the email is already verified", async () => {
+      const { userId } = await createUser();
+      const contactId = await createContact(userId);
+      const emailId = await createEmail(userId, contactId);
+      await userService.sendVerificationCodeForEmail({
+        id: emailId,
+        user_id: userId,
+      });
+      const [row] = await pgDb
+        .select()
+        .from(userEmailsTable)
+        .where(eq(userEmailsTable.id, emailId));
+
+      await userService.verifyContactEmail({
+        id: emailId,
+        user_id: userId,
+        verify_code: row!.verify_code!,
+      });
+
+      await expect(
+        userService.verifyContactEmail({
+          id: emailId,
+          user_id: userId,
+          verify_code: row!.verify_code!,
+        })
+      ).rejects.toThrow();
+    });
+
+    test("throws when the code is incorrect", async () => {
+      const { userId } = await createUser();
+      const contactId = await createContact(userId);
+      const emailId = await createEmail(userId, contactId);
+      await userService.sendVerificationCodeForEmail({
+        id: emailId,
+        user_id: userId,
+      });
+
+      await expect(
+        userService.verifyContactEmail({
+          id: emailId,
+          user_id: userId,
+          verify_code: "000000",
+        })
+      ).rejects.toThrow();
+    });
+
+    test("throws when the code has expired", async () => {
+      const { userId } = await createUser();
+      const contactId = await createContact(userId);
+      const emailId = await createEmail(userId, contactId);
+      await userService.sendVerificationCodeForEmail({
+        id: emailId,
+        user_id: userId,
+      });
+      const [row] = await pgDb
+        .select()
+        .from(userEmailsTable)
+        .where(eq(userEmailsTable.id, emailId));
+
+      await pgDb
+        .update(userEmailsTable)
+        .set({ verify_expiry: new Date(Date.now() - 60_000) })
+        .where(eq(userEmailsTable.id, emailId));
+
+      await expect(
+        userService.verifyContactEmail({
+          id: emailId,
+          user_id: userId,
+          verify_code: row!.verify_code!,
+        })
+      ).rejects.toThrow();
+    });
+
+    test("throws when the email does not exist", async () => {
+      const { userId } = await createUser();
+
+      await expect(
+        userService.verifyContactEmail({
+          id: crypto.randomUUID(),
+          user_id: userId,
+          verify_code: "123456",
+        })
+      ).rejects.toThrow();
+    });
+  });
+
+  // ---------------------------------------------------------------
   // Delete
   // ---------------------------------------------------------------
 
@@ -470,7 +875,9 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
     });
 
     test("throws when deleting a non-existent user", async () => {
-      await expect(userService.deleteUser(crypto.randomUUID())).rejects.toThrow();
+      await expect(
+        userService.deleteUser(crypto.randomUUID())
+      ).rejects.toThrow();
     });
 
     test("cascades and deletes the user's contact", async () => {

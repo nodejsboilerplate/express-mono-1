@@ -5,6 +5,7 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
+    include: ["src/tests/**/*.test.ts"],
     environment: "node",
     globals: true,
     globalSetup: "./src/tests/setup.ts",
@@ -16,6 +17,10 @@ export default defineConfig({
       {
         name: "services/user",
         description: "Tests written for user services.",
+      },
+      {
+        name: "services/auth",
+        description: "Tests written for auth services.",
       },
     ],
   },

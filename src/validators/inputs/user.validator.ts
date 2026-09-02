@@ -1,4 +1,3 @@
-import { validateWithZod } from "@/utils";
 import {
   UserZSchema,
   type CreateUserAddressInputType,
@@ -8,7 +7,6 @@ import {
   type CreateUserWithProfileInputType,
   type UserIdWithContextIdInputType,
   type EmailZType,
-  type IdZType,
   type LoginUserInputType,
   type UpdateAddressInputType,
   type UpdateContactInputType,
@@ -20,32 +18,12 @@ import {
   type VerifyCodeWithUserIdInput,
 } from "@/zod";
 import type z from "zod";
+import { Validator } from "../validator";
 
-export class UserInputValidators {
-
-  private static instance: UserInputValidators;
-
-  static create() {
-    if (this.instance) {
-      return this.instance;
-    }
-
-    this.instance = new UserInputValidators();
-    return this.instance;
-  }
-
-
-  idInput(payload: IdZType): IdZType | z.ZodError {
-    const { data, success, error } = validateWithZod(payload, UserZSchema.id);
-
-    if (!success) {
-      return error;
-    }
-    return data;
-  }
+class UserInputValidators extends Validator {
 
   emailInput(payload: EmailZType): EmailZType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.email
     );
@@ -59,7 +37,7 @@ export class UserInputValidators {
   createUserWithProfileInput(
     payload: CreateUserWithProfileInputType
   ): CreateUserWithProfileInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.createUserWithProfile
     );
@@ -70,7 +48,7 @@ export class UserInputValidators {
   createUserAddressInput(
     payload: CreateUserAddressInputType
   ): CreateUserAddressInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.createAddress
     );
@@ -81,7 +59,7 @@ export class UserInputValidators {
   createUserContactInput(
     payload: CreateUserContactInputType
   ): CreateUserContactInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.createContact
     );
@@ -92,7 +70,7 @@ export class UserInputValidators {
   createUserEmailInput(
     payload: CreateUserEmailInputType
   ): CreateUserEmailInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.createEmail
     );
@@ -103,7 +81,7 @@ export class UserInputValidators {
   createUserPhoneInput(
     payload: CreateUserPhoneInputType
   ): CreateUserPhoneInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.createPhone
     );
@@ -114,7 +92,7 @@ export class UserInputValidators {
   verifyCodeInput(
     payload: VerifyCodeInputType
   ): VerifyCodeInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.verifyCode
     );
@@ -125,7 +103,7 @@ export class UserInputValidators {
   verifyCodeWithUserId(
     payload: VerifyCodeWithUserIdInput
   ): VerifyCodeWithUserIdInput | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.verifyCodeWithUserId
     );
@@ -134,7 +112,7 @@ export class UserInputValidators {
   }
 
   loginUserInput(payload: LoginUserInputType): LoginUserInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.loginUser
     );
@@ -145,7 +123,7 @@ export class UserInputValidators {
   updateUserCoreInput(
     payload: UpdateUserInputType
   ): UpdateUserInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.updateUser
     );
@@ -157,7 +135,7 @@ export class UserInputValidators {
   updateUserProfileInput(
     payload: UpdateProfileInputType
   ): UpdateProfileInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.updateProfile
     );
@@ -170,7 +148,7 @@ export class UserInputValidators {
   updateUserPhoneInput(
     payload: UpdatePhoneInputType
   ): UpdatePhoneInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.updatePhone
     );
@@ -183,7 +161,7 @@ export class UserInputValidators {
   updateUserEmailInput(
     payload: UpdateEmailInputType
   ): UpdateEmailInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.updateEmail
     );
@@ -196,7 +174,7 @@ export class UserInputValidators {
   updateUserAddressInput(
     payload: UpdateAddressInputType
   ): UpdateAddressInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.updateAddress
     );
@@ -209,7 +187,7 @@ export class UserInputValidators {
   updateUserContactInput(
     payload: UpdateContactInputType
   ): UpdateContactInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.updateContact
     );
@@ -222,7 +200,7 @@ export class UserInputValidators {
   userIdWithContextIdInput(
     payload: UserIdWithContextIdInputType
   ): UserIdWithContextIdInputType | z.ZodError {
-    const { data, success, error } = validateWithZod(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.userIdWithContextId
     );
@@ -232,3 +210,5 @@ export class UserInputValidators {
     return data;
   }
 }
+
+export const userInputValidators = new UserInputValidators

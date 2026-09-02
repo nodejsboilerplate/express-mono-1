@@ -7,6 +7,7 @@ enum SYSTEM_CUSTOM_ERROR_EVENTS {
   VALIDATION_ERROR = "VALIDATION_ERROR",
   INVALID_VERIFICATION_CODE = "INVALID_VERIFICATION_CODE",
   VERIFICATION_CODE_EXPIRED = "VERIFICATION_CODE_EXPIRED",
+  WEBHOOK_HEADERS_MISSING = "WEBHOOK_HEADERS_MISSING",
 
   // -- 404: not found, one per resource --
   USER_NOT_FOUND = "USER_NOT_FOUND",
@@ -44,6 +45,9 @@ enum SYSTEM_CUSTOM_ERROR_EVENTS {
   ADDRESS_CREATION_FAILED = "ADDRESS_CREATION_FAILED",
   ADDRESS_UPDATE_FAILED = "ADDRESS_UPDATE_FAILED",
   ADDRESS_DELETE_FAILED = "ADDRESS_DELETE_FAILED",
+
+  WEBHOOK_SECRET_NOT_CONFIGURED = "WEBHOOK_SECRET_NOT_CONFIGURED",
+  WEBHOOK_SIGNATURE_INVALID = "WEBHOOK_SIGNATURE_INVALID",
 }
 
 export const SystemCustomErrorCode: Record<SYSTEM_CUSTOM_ERROR_EVENTS, string> =
@@ -55,6 +59,8 @@ export const SystemCustomErrorCode: Record<SYSTEM_CUSTOM_ERROR_EVENTS, string> =
     VALIDATION_ERROR: "40001",
     INVALID_VERIFICATION_CODE: "40002",
     VERIFICATION_CODE_EXPIRED: "40003",
+    WEBHOOK_HEADERS_MISSING: "40004",
+    WEBHOOK_SIGNATURE_INVALID: "40005",
 
     USER_NOT_FOUND: "40401",
     PROFILE_NOT_FOUND: "40402",
@@ -89,6 +95,8 @@ export const SystemCustomErrorCode: Record<SYSTEM_CUSTOM_ERROR_EVENTS, string> =
     ADDRESS_CREATION_FAILED: "50060",
     ADDRESS_UPDATE_FAILED: "50061",
     ADDRESS_DELETE_FAILED: "50062",
+
+    WEBHOOK_SECRET_NOT_CONFIGURED: "50070",
   };
 
 export type SystemCustomErrorMessageDataType = {
@@ -145,6 +153,17 @@ export const SystemCustomErrorMsgByCode: SystemCustomErrorMessageType = {
     title: "Code Expired",
     message: "The verification code has expired. Please request a new one.",
     code: SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED,
+  },
+
+  [SystemCustomErrorCode.WEBHOOK_HEADERS_MISSING]: {
+    title: "Missing Webhook Headers",
+    message: "The request is missing required webhook headers.",
+    code: SystemCustomErrorCode.WEBHOOK_HEADERS_MISSING,
+  },
+  [SystemCustomErrorCode.WEBHOOK_SIGNATURE_INVALID]: {
+    title: "Invalid Webhook Signature",
+    message: "The webhook signature could not be verified.",
+    code: SystemCustomErrorCode.WEBHOOK_SIGNATURE_INVALID,
   },
 
   // -- 404 --
@@ -211,6 +230,12 @@ export const SystemCustomErrorMsgByCode: SystemCustomErrorMessageType = {
     title: "Deletion Failed",
     message: "Your account could not be deleted. Please try again.",
     code: SystemCustomErrorCode.USER_DELETE_FAILED,
+  },
+
+  [SystemCustomErrorCode.WEBHOOK_SECRET_NOT_CONFIGURED]: {
+    title: "Webhook Not Configured",
+    message: "The webhook secret has not been configured on the server.",
+    code: SystemCustomErrorCode.WEBHOOK_SECRET_NOT_CONFIGURED,
   },
 
   // -- 500: profile --

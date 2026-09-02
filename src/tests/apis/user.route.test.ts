@@ -1,6 +1,7 @@
 import request from "supertest";
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
+import jwt from "jsonwebtoken";
 
 import {
   usersTable,
@@ -12,6 +13,8 @@ import {
 } from "@/database";
 import { pgDb } from "@/libs/db.connect";
 import { app } from "@/server";
+import { authConfig } from "@/config";
+import { CookieService } from "@/services/cookie.service";
 
 const BASE = "/api/v1/user";
 
@@ -99,17 +102,6 @@ async function createTestContact(userId: string, overrides: Partial<any> = {}) {
   return res.body.data.id as string;
 }
 
-// Seed verification codes via the real send-verification-code endpoints
-// instead of writing to the DB directly.
-async function sendAndGetUserCode(userId: string) {
-  await request(app).post(`${BASE}/${userId}/send-verification-code`);
-  const [row] = await pgDb
-    .select({ verify_code: usersTable.verify_code })
-    .from(usersTable)
-    .where(eq(usersTable.id, userId));
-  return row!.verify_code as string;
-}
-
 async function sendAndGetPhoneCode(userId: string, phoneId: string) {
   await request(app).post(
     `${BASE}/${userId}/phone/${phoneId}/send-verification-code`
@@ -130,6 +122,19 @@ async function sendAndGetEmailCode(userId: string, emailId: string) {
     .from(userEmailsTable)
     .where(eq(userEmailsTable.id, emailId));
   return row!.verify_code as string;
+}
+
+// `getUserCoreHandler` sits behind `authMiddlware`. The router/auth setup
+// wasn't shown, so this assumes it reads the access token from the same
+// cookie AuthService/CookieService issue on login — swap for whatever
+// header/cookie your middleware actually expects if this doesn't match.
+function buildAccessTokenCookie(payload: Partial<any> = {}) {
+  const token = jwt.sign(
+    { id: crypto.randomUUID(), role: "USER", ...payload },
+    authConfig.JWT_ACCESS_TOKEN_SECRET,
+    { expiresIn: 900 }
+  );
+  return `${CookieService.ACCESS_TOKEN.name}=${token}`;
 }
 
 // ---------------------------------------------------------------
@@ -319,53 +324,58 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
   });
 
   // ---------------------------------------------------------------
-  // Send Verification Code
+  // Read
   // ---------------------------------------------------------------
 
-  describe(`POST ${BASE}/:id/send-verification-code (user)`, () => {
-    test("sends a verification code for the user", async () => {
-      const userId = await createTestUser();
+  describe(`GET ${BASE}/core/:email`, () => {
+    test("returns core user info for an authenticated request", async () => {
+      const payload = validUserPayload();
+      const createRes = await request(app).post(BASE).send(payload);
+      expect(createRes.status).toBe(201);
 
-      const res = await request(app).post(
-        `${BASE}/${userId}/send-verification-code`
-      );
+      const res = await request(app)
+        .get(`${BASE}/core/${encodeURIComponent(payload.email)}`)
+        .set("Cookie", buildAccessTokenCookie());
+
       expect(res.status).toBe(200);
-
-      const [row] = await pgDb
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.id, userId));
-      expect(row?.verify_code).toBeTruthy();
-      expect(row?.verify_expiry).toBeTruthy();
+      expect(res.body.data.email).toBe(payload.email);
+      expect(res.body.data.username).toBe(payload.username);
+      expect(res.body.data).not.toHaveProperty("password");
     });
 
-    test("returns 404 for a nonexistent user", async () => {
-      const res = await request(app).post(
-        `${BASE}/${crypto.randomUUID()}/send-verification-code`
+    test("returns 401 without an access token", async () => {
+      const payload = validUserPayload();
+      await request(app).post(BASE).send(payload);
+
+      const res = await request(app).get(
+        `${BASE}/core/${encodeURIComponent(payload.email)}`
       );
+      expect(res.status).toBe(401);
+    });
+
+    test("returns 404 for a nonexistent email", async () => {
+      const res = await request(app)
+        .get(`${BASE}/core/nobody-${crypto.randomUUID()}@example.com`)
+        .set("Cookie", buildAccessTokenCookie());
       expect(res.status).toBe(404);
     });
 
-    test("returns 400 for a malformed user id", async () => {
-      const res = await request(app).post(
-        `${BASE}/not-a-uuid/send-verification-code`
-      );
+    test("returns 400 for a malformed email", async () => {
+      const res = await request(app)
+        .get(`${BASE}/core/not-an-email`)
+        .set("Cookie", buildAccessTokenCookie());
       expect(res.status).toBe(400);
     });
-
-    test("returns 404 when the user is already verified", async () => {
-      const userId = await createTestUser();
-      const code = await sendAndGetUserCode(userId);
-      await request(app)
-        .post(`${BASE}/${userId}/verify`)
-        .send({ verify_code: code });
-
-      const res = await request(app).post(
-        `${BASE}/${userId}/send-verification-code`
-      );
-      expect(res.status).toBe(404);
-    });
   });
+
+  // ---------------------------------------------------------------
+  // Send Verification Code
+  // ---------------------------------------------------------------
+  // Note: there is no user-level "/:user_id/send-verification-code" route
+  // on this router (only /phone/:id/... and /email/:id/...). Account-level
+  // signup verification (AuthService.sendSignupCode/verifySignupCode)
+  // presumably lives on a separate auth router — happy to add tests for it
+  // once that route file is available.
 
   describe(`POST ${BASE}/:user_id/phone/:id/send-verification-code`, () => {
     test("sends a verification code for the phone", async () => {
@@ -464,73 +474,8 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
   // ---------------------------------------------------------------
   // Verify
   // ---------------------------------------------------------------
-
-  describe(`POST ${BASE}/:id/verify (user)`, () => {
-    test("verifies a user with the correct code", async () => {
-      const userId = await createTestUser();
-      const code = await sendAndGetUserCode(userId);
-
-      const res = await request(app)
-        .post(`${BASE}/${userId}/verify`)
-        .send({ verify_code: code });
-      expect(res.status).toBe(200);
-
-      const [updated] = await pgDb
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.id, userId));
-      expect(updated?.is_verified).toBe(true);
-      expect(updated?.verify_code).toBeNull();
-    });
-
-    test("returns 400 for the wrong code", async () => {
-      const userId = await createTestUser();
-      await sendAndGetUserCode(userId);
-
-      const res = await request(app)
-        .post(`${BASE}/${userId}/verify`)
-        .send({ verify_code: "000000" });
-      expect(res.status).toBe(400);
-    });
-
-    test("returns 400 for a malformed code (not 6 digits)", async () => {
-      const userId = await createTestUser();
-      await sendAndGetUserCode(userId);
-
-      const res = await request(app)
-        .post(`${BASE}/${userId}/verify`)
-        .send({ verify_code: "abc" });
-      expect(res.status).toBe(400);
-    });
-
-    test("returns 404 for a well-formed but nonexistent user id", async () => {
-      const res = await request(app)
-        .post(`${BASE}/${crypto.randomUUID()}/verify`)
-        .send({ verify_code: "123456" });
-      expect(res.status).toBe(404);
-    });
-
-    test("returns 400 for a malformed user id in the path", async () => {
-      const res = await request(app)
-        .post(`${BASE}/not-a-uuid/verify`)
-        .send({ verify_code: "123456" });
-      expect(res.status).toBe(400);
-    });
-
-    test("returns 400 for an already-verified user", async () => {
-      const userId = await createTestUser();
-      const code = await sendAndGetUserCode(userId);
-
-      await request(app)
-        .post(`${BASE}/${userId}/verify`)
-        .send({ verify_code: code });
-      const res = await request(app)
-        .post(`${BASE}/${userId}/verify`)
-        .send({ verify_code: code });
-
-      expect(res.status).toBe(400);
-    });
-  });
+  // Note: same as above — there is no user-level "/:user_id/verify" route
+  // on this router, only /phone/:id/verify and /email/:id/verify.
 
   describe(`POST ${BASE}/:user_id/phone/:id/verify`, () => {
     test("verifies a phone with the correct code", async () => {

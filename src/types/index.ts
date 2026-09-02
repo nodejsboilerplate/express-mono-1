@@ -4,3 +4,4 @@ export type * from "./user";
 export type * from "./global";
 export type * from "./auth";
 export type * from "./db";
+export type * from "./resend";

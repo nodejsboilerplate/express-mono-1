@@ -1,22 +1,9 @@
 import { RedisResponse } from "@/constants";
 import { redisClient } from "@/libs";
-import { ACCESS_TOKEN_EXPIRY_MIN, ACCESS_TOKEN_EXPIRY_SEC } from "@/services";
+import {  ACCESS_TOKEN_EXPIRY_SEC } from "@/services";
 import type { AccessTokenPayload } from "@/types";
 
-interface UserRedisManagerType {
-  cacheUserLoginData(
-    key: string,
-    payload: AccessTokenPayload
-  ): Promise<boolean>;
-  getCachedLoginData(key: string): Promise<AccessTokenPayload | null>;
-  deleteCachedLoginData(key: string): Promise<boolean>;
-  setCacheExpirationUserLoginData(
-    key: string,
-    seconds: number
-  ): Promise<boolean>;
-}
-
-export class UserRedisManager implements UserRedisManagerType {
+export class AuthRedis {
   async cacheUserLoginData(
     key: string,
     payload: AccessTokenPayload
@@ -50,5 +37,3 @@ export class UserRedisManager implements UserRedisManagerType {
     return result === RedisResponse.SUCCESS;
   }
 }
-
-export const userRedisManager = new UserRedisManager();

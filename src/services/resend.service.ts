@@ -1,52 +1,29 @@
 import { resendConfig } from "@/config";
-import {
-  Resend,
-  type WebhookEventPayload,
-} from "resend";
+import { Resend, type WebhookEventPayload } from "resend";
 import type { Request } from "express";
+import { ApiError } from "@/libs";
+import { getSystemCustomErrorMsgByKey } from "@/events";
+import type { WebhookHeadersType } from "@/types";
 
-export type WebhookHeadersType = {
-  svixId: string;
-  svixTimestamp: string;
-  svixSignature: string;
-};
-
-interface ResendServiceType {
-  getWebhookHeaders(req: Request): WebhookHeadersType | null;
-  verifyWebhookPayload(
-    req: Request,
-    headers: WebhookHeadersType
-  ): Promise<WebhookEventPayload | null>;
-}
-
-export class ResendService implements ResendServiceType {
-  private resend: Resend | null = null;
-  private static instance: ResendService;
+export class ResendService {
+  static resend: Resend | null = null;
 
   constructor() {
-    this.resend = new Resend(resendConfig.RESEND_API_KEY);
-  }
-
-  static create() {
-    if (this.instance) {
-      return this.instance;
+    if (!ResendService.resend) {
+      ResendService.resend = new Resend(resendConfig.RESEND_API_KEY);
     }
-
-    this.instance = new ResendService();
-    return this.instance;
   }
 
-  getResend() {
-    return this.resend
-  }
-
-  getWebhookHeaders(req: Request): WebhookHeadersType | null {
+  getWebhookHeaders(req: Request): WebhookHeadersType {
     const svixId = req.headers["svix-id"] as string;
     const svixTimestamp = req.headers["svix-timestamp"] as string;
     const svixSignature = req.headers["svix-signature"] as string;
 
     if (!svixId || !svixTimestamp || !svixSignature) {
-      return null;
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("WEBHOOK_HEADERS_MISSING")
+      );
     }
 
     return {
@@ -59,11 +36,18 @@ export class ResendService implements ResendServiceType {
   async verifyWebhookPayload(
     req: Request,
     headers: WebhookHeadersType
-  ): Promise<WebhookEventPayload | null> {
+  ): Promise<WebhookEventPayload> {
     const payload = req.body;
     const { svixId, svixSignature, svixTimestamp } = headers;
 
-    const result = this.resend?.webhooks.verify({
+    if (!resendConfig.RESEND_WEBHOOK_SECRET) {
+      throw new ApiError(
+        500,
+        getSystemCustomErrorMsgByKey("WEBHOOK_SECRET_NOT_CONFIGURED")
+      );
+    }
+
+    const result = ResendService.resend?.webhooks.verify({
       headers: {
         id: svixId,
         signature: svixSignature,
@@ -73,7 +57,12 @@ export class ResendService implements ResendServiceType {
       webhookSecret: resendConfig.RESEND_WEBHOOK_SECRET,
     });
 
-    if (!result) return null;
+    if (!result)
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("WEBHOOK_SIGNATURE_INVALID")
+      );
+
     return result;
   }
 }
