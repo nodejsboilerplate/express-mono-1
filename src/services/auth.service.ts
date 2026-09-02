@@ -19,14 +19,13 @@ import {
   isZodError,
   validationError,
 } from "@/utils";
-import { pgDb } from "@/libs/db.connect";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
 import bcrypt from "bcryptjs";
-import { usersTable } from "@/database";
-import { and, eq } from "drizzle-orm";
 import { AuthRedis } from "@/redis";
+import { UserRepository } from "@/database/repositories";
 
+const userRepository = new UserRepository();
 const authRedis = new AuthRedis();
 
 export class AuthService {
@@ -89,26 +88,9 @@ export class AuthService {
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
-    const result = await pgDb.query.usersTable.findFirst({
-      columns: {
-        id: true,
-        email: true,
-        password: true,
-        username: true,
-        role: true,
-        is_verified: true,
-      },
-      where: {
-        OR: [
-          {
-            email: { eq: parse_payload.identifier },
-          },
-          {
-            username: { eq: parse_payload.identifier },
-          },
-        ],
-      },
-    });
+    const result = await userRepository.GetUserDataForLoginByEmailOrUsername(
+      parse_payload.identifier
+    );
 
     if (!result?.id) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
@@ -141,18 +123,11 @@ export class AuthService {
     const verify_code = generateVerificationCode();
     const verify_expiry = getVerifyExpiry();
 
-    const [user] = await pgDb
-      .update(usersTable)
-      .set({
-        verify_code: verify_code,
-        verify_expiry: verify_expiry,
-      })
-      .where(
-        and(eq(usersTable.id, parse_id), eq(usersTable.is_verified, false))
-      )
-      .returning({
-        id: usersTable.id,
-      });
+    const user = await userRepository.SetVerifyCodeForLogin(
+      verify_code,
+      verify_expiry,
+      parse_id
+    );
 
     if (!user) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
@@ -165,15 +140,7 @@ export class AuthService {
     const parse_payload = userInputValidators.verifyCodeInput(payload);
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
-    const [user] = await pgDb
-      .select({
-        id: usersTable.id,
-        is_verified: usersTable.is_verified,
-        verify_code: usersTable.verify_code,
-        verify_expiry: usersTable.verify_expiry,
-      })
-      .from(usersTable)
-      .where(eq(usersTable.id, parse_payload.id));
+    const user = await userRepository.GetUserVerifyDetails(parse_payload.id);
 
     if (!user) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
@@ -200,17 +167,9 @@ export class AuthService {
       );
     }
 
-    const [verifiedUser] = await pgDb
-      .update(usersTable)
-      .set({
-        is_verified: true,
-        verify_code: null,
-        verify_expiry: null,
-      })
-      .where(eq(usersTable.id, user.id))
-      .returning({
-        id: usersTable.id,
-      });
+    const verifiedUser = await userRepository.UpdateUserVerifyDetails(
+      user.id
+    );
 
     if (!verifiedUser?.id) {
       throw new ApiError(
