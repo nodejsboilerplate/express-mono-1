@@ -167,9 +167,7 @@ export class AuthService {
       );
     }
 
-    const verifiedUser = await userRepository.UpdateUserVerifyDetails(
-      user.id
-    );
+    const verifiedUser = await userRepository.UpdateUserVerifyDetails(user.id);
 
     if (!verifiedUser?.id) {
       throw new ApiError(

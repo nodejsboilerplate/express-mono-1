@@ -416,6 +416,6 @@ export class UserRepository {
         id: usersTable.id,
       });
 
-      return verifiedUser
+    return verifiedUser;
   }
 }
