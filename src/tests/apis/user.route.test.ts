@@ -17,22 +17,33 @@ import { authConfig } from "@/config";
 import { CookieService } from "@/services/cookie.service";
 
 const BASE = "/api/v1/user";
+const AUTH_BASE = "/api/v1/auth";
 
 // ---------------------------------------------------------------
 // Payload builders
 // ---------------------------------------------------------------
 
-function validUserPayload(overrides: Partial<any> = {}) {
+
+function validSignupPayload(overrides: {
+  user?: Partial<any>;
+  profile?: Partial<any>;
+} = {}) {
   return {
-    email: `test-${crypto.randomUUID()}@example.com`,
-    username: `user_${crypto.randomUUID().slice(0, 8)}`,
-    password: "SuperSecret123!",
-    role: "USER",
-    first_name: "Mahin", // required by createProfile
-    last_name: "N",
-    ...overrides,
+    user: {
+      email: `test-${crypto.randomUUID()}@example.com`,
+      username: `user_${crypto.randomUUID().slice(0, 8)}`,
+      password: "SuperSecret123!",
+      role: "USER",
+      ...overrides.user,
+    },
+    profile: {
+      first_name: "Mahin",
+      last_name: "N",
+      ...overrides.profile,
+    },
   };
 }
+
 
 function validAddressPayload(overrides: Partial<any> = {}) {
   return {
@@ -70,8 +81,13 @@ function validEmailPayload(overrides: Partial<any> = {}) {
 // Fixture helpers
 // ---------------------------------------------------------------
 
-async function createTestUser(overrides: Partial<any> = {}) {
-  const res = await request(app).post(BASE).send(validUserPayload(overrides));
+async function createTestUser(overrides: {
+  user?: Partial<any>;
+  profile?: Partial<any>;
+} = {}) {
+  const res = await request(app)
+    .post(`${AUTH_BASE}/signup`)
+    .send(validSignupPayload(overrides));
 
   if (res.status !== 201) {
     console.log(
@@ -141,63 +157,6 @@ function buildAccessTokenCookie(payload: Partial<any> = {}) {
 // Create
 // ---------------------------------------------------------------
 describe("User API Test", { tags: ["apis/user"] }, () => {
-  describe(`POST ${BASE}`, () => {
-    test("creates a user and profile, returns 201", async () => {
-      const res = await request(app).post(BASE).send(validUserPayload());
-
-      expect(res.status).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.id).toBeTypeOf("string");
-      expect(res.body.data.profile_id).toBeTypeOf("string");
-
-      const [row] = await pgDb
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.id, res.body.data.id));
-      expect(row?.role).toBe("USER");
-      expect(row?.is_verified).toBe(false);
-      expect(row?.verify_code).toBeNull();
-    });
-
-    test("returns 400 for invalid email", async () => {
-      const res = await request(app)
-        .post(BASE)
-        .send(validUserPayload({ email: "not-an-email" }));
-      expect(res.status).toBe(400);
-    });
-
-    test("returns 400 when first_name is missing (required by createProfile)", async () => {
-      const { first_name, ...payload } = validUserPayload();
-      const res = await request(app).post(BASE).send(payload);
-      expect(res.status).toBe(400);
-    });
-
-    test("returns 400 for a username with disallowed characters", async () => {
-      const res = await request(app)
-        .post(BASE)
-        .send(validUserPayload({ username: "bad-username!" }));
-      expect(res.status).toBe(400);
-    });
-
-    test("returns 400 for a password under 8 characters", async () => {
-      const res = await request(app)
-        .post(BASE)
-        .send(validUserPayload({ password: "short" }));
-      expect(res.status).toBe(400);
-    });
-
-    test("returns 400/409/500 when email is already taken", async () => {
-      const payload = validUserPayload();
-      const first = await request(app).post(BASE).send(payload);
-      expect(first.status).toBe(201);
-
-      const second = await request(app)
-        .post(BASE)
-        .send(validUserPayload({ email: payload.email }));
-      expect([400, 409, 500]).toContain(second.status);
-    });
-  });
-
   describe(`POST ${BASE}/:user_id/address`, () => {
     test("creates an address and persists it", async () => {
       const userId = await createTestUser();
@@ -329,26 +288,28 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
   describe(`GET ${BASE}/core/:email`, () => {
     test("returns core user info for an authenticated request", async () => {
-      const payload = validUserPayload();
-      const createRes = await request(app).post(BASE).send(payload);
+      const payload = validSignupPayload();
+      const createRes = await request(app)
+        .post(`${AUTH_BASE}/signup`)
+        .send(payload);
       expect(createRes.status).toBe(201);
 
       const res = await request(app)
-        .get(`${BASE}/core/${encodeURIComponent(payload.email)}`)
+        .get(`${BASE}/core/${encodeURIComponent(payload.user.email)}`)
         .set("Cookie", buildAccessTokenCookie());
 
       expect(res.status).toBe(200);
-      expect(res.body.data.email).toBe(payload.email);
-      expect(res.body.data.username).toBe(payload.username);
+      expect(res.body.data.email).toBe(payload.user.email);
+      expect(res.body.data.username).toBe(payload.user.username);
       expect(res.body.data).not.toHaveProperty("password");
     });
 
     test("returns 401 without an access token", async () => {
-      const payload = validUserPayload();
-      await request(app).post(BASE).send(payload);
+      const payload = validSignupPayload();
+      await request(app).post(`${AUTH_BASE}/signup`).send(payload);
 
       const res = await request(app).get(
-        `${BASE}/core/${encodeURIComponent(payload.email)}`
+        `${BASE}/core/${encodeURIComponent(payload.user.email)}`
       );
       expect(res.status).toBe(401);
     });

@@ -9,9 +9,6 @@ const userController = new UserController();
 // ---------------------------------------------------------
 // Create
 // ---------------------------------------------------------
-router
-  .route("/")
-  .post(asyncHandler(userController.createUserHandler.bind(userController)));
 
 router
   .route("/:user_id/address")

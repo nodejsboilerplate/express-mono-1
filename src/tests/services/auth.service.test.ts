@@ -51,8 +51,8 @@ async function createUser(
   overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
 ) {
   const payload = validUserWithProfilePayload(overrides);
-  const { userId, profileId } =
-    await userService.createUserWithProfile(payload);
+  const { user, profileId } = await userService.createUserWithProfile(payload);
+  const userId = user.id;
   if (!userId) throw new Error("Fixture setup failed: no userId returned");
   return {
     userId,
@@ -127,8 +127,8 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
       const { accessToken } = authService.createTokens(payload);
 
       const decoded = authService.getDataFromAccessToken(accessToken);
-      expect(decoded.id).toBe(payload.id);
-      expect(decoded.role).toBe(payload.role);
+      expect(decoded?.id).toBe(payload.id);
+      expect(decoded?.role).toBe(payload.role);
     });
 
     test("decodes a valid refresh token back into its payload", () => {
@@ -140,15 +140,13 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
     });
 
     test("throws when the access token is malformed", () => {
-      expect(() =>
-        authService.getDataFromAccessToken("not-a-real-token")
-      ).toThrow();
+      expect(authService.getDataFromAccessToken("not-a-real-token")).toBeNull();
     });
 
     test("throws when the token was signed with the wrong secret", () => {
       const badToken = jwt.sign({ id: crypto.randomUUID() }, "wrong-secret");
 
-      expect(() => authService.getDataFromAccessToken(badToken)).toThrow();
+      expect(authService.getDataFromAccessToken(badToken)).toBeNull();
       expect(() => authService.getDataFromRefreshToken(badToken)).toThrow();
     });
   });
@@ -251,9 +249,9 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
 
   describe("AuthService.sendSignupCode", () => {
     test("sets a verification code for an unverified user and returns its id", async () => {
-      const { userId } = await createUser();
+      const { userId, email } = await createUser();
 
-      const result = await authService.sendSignupCode(userId as any);
+      const result = await authService.sendSignupCode( email);
       expect(result).toBe(userId);
 
       const [row] = await pgDb
@@ -265,27 +263,27 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
     });
 
     test("throws when the user is already verified", async () => {
-      const { userId } = await createUser();
+      const { userId, email } = await createUser();
 
       await pgDb
         .update(usersTable)
         .set({ is_verified: true })
         .where(eq(usersTable.id, userId));
 
-      await expect(authService.sendSignupCode(userId as any)).rejects.toThrow();
+      await expect(authService.sendSignupCode(email)).rejects.toThrow();
     });
 
     test("throws when the user does not exist", async () => {
       await expect(
-        authService.sendSignupCode(crypto.randomUUID() as any)
+        authService.sendSignupCode("nobody@example.com")
       ).rejects.toThrow();
     });
   });
 
   describe("AuthService.verifySignupCode", () => {
     test("verifies a user with a correct, unexpired code", async () => {
-      const { userId } = await createUser();
-      await authService.sendSignupCode(userId as any);
+      const { userId, email } = await createUser();
+      await authService.sendSignupCode( email);
 
       const [row] = await pgDb
         .select()
@@ -308,8 +306,8 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
     });
 
     test("throws when the user is already verified", async () => {
-      const { userId } = await createUser();
-      await authService.sendSignupCode(userId as any);
+      const { userId, email } = await createUser();
+      await authService.sendSignupCode( email);
       const [row] = await pgDb
         .select()
         .from(usersTable)
@@ -329,8 +327,8 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
     });
 
     test("throws when the code is incorrect", async () => {
-      const { userId } = await createUser();
-      await authService.sendSignupCode(userId as any);
+      const { userId, email } = await createUser();
+      await authService.sendSignupCode( email);
 
       await expect(
         authService.verifySignupCode({
@@ -341,8 +339,8 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
     });
 
     test("throws when the code has expired", async () => {
-      const { userId } = await createUser();
-      await authService.sendSignupCode(userId as any);
+      const { userId, email } = await createUser();
+      await authService.sendSignupCode( email);
       const [row] = await pgDb
         .select()
         .from(usersTable)

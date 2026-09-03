@@ -9,7 +9,7 @@ import {
   usersTable,
 } from "../schemas";
 import { pgDb } from "@/libs/db.connect";
-import { and, eq } from "drizzle-orm";
+import { and, eq, getColumns, getTableColumns } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import type {
   CreateUserAddressInputType,
@@ -23,16 +23,19 @@ import type {
   UpdateEmailInputType,
   UpdatePhoneInputType,
   UpdateProfileInputType,
+  UserCoreZType,
 } from "@/zod";
+import type { UserSelectType } from "../type";
 
 export class UserRepository {
   async CreateNewUserAndProfile(data: CreateUserWithProfileInputType) {
     const { user: user_payload, profile: profile_payload } = data;
     const result = await pgDb.transaction(async (tx) => {
+      const { password, ...userWithoutPass } = await getColumns(usersTable);
       const [user] = await tx
         .insert(usersTable)
         .values(user_payload)
-        .returning({ id: usersTable.id });
+        .returning(userWithoutPass);
 
       if (!user?.id) {
         throw new ApiError(
@@ -66,7 +69,7 @@ export class UserRepository {
         );
       }
 
-      return { userId: user.id, profileId: createdUserProfie.id };
+      return { user: user, profileId: createdUserProfie.id };
     });
 
     return result;
@@ -370,14 +373,14 @@ export class UserRepository {
     return result;
   }
 
-  async SetVerifyCodeForLogin(code: string, expiry: Date, user_id: string) {
+  async SetVerifyCodeForSignup(code: string, expiry: Date, email: string) {
     const [user] = await pgDb
       .update(usersTable)
       .set({
         verify_code: code,
         verify_expiry: expiry,
       })
-      .where(and(eq(usersTable.id, user_id), eq(usersTable.is_verified, false)))
+      .where(and(eq(usersTable.email, email), eq(usersTable.is_verified, false)))
       .returning({
         id: usersTable.id,
       });

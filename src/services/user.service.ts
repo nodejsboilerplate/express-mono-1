@@ -1,4 +1,5 @@
 import { UserRepository } from "@/database/repositories";
+import type { UserSelectType } from "@/database/type";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
 import {
@@ -21,7 +22,9 @@ import type {
   UpdateEmailInputType,
   UpdatePhoneInputType,
   UpdateProfileInputType,
+  UserCoreZType,
   UserIdWithContextIdInputType,
+  UserZSchema,
   VerifyCodeWithUserIdInput,
 } from "@/zod";
 
@@ -33,11 +36,21 @@ export class UserService {
   // ---------------------------------------------------------
   async createUserWithProfile(
     payload: CreateUserWithProfileInputType
-  ): Promise<{ userId: string; profileId: string }> {
+  ) {
     const parse_payload =
       userInputValidators.createUserWithProfileInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
+
+    const existedUser = await userRepository.GetUserCoreBasicDetailsByEmail(
+      parse_payload.user.email
+    );
+    if (existedUser?.id) {
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("USER_ALREADY_EXISTS")
+      );
+    }
 
     const result = await userRepository.CreateNewUserAndProfile(parse_payload);
     return result;

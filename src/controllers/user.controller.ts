@@ -23,53 +23,6 @@ export class UserController {
   // ---------------------------------------------------------
   // Create
   // ---------------------------------------------------------
-  async createUserHandler(req: Request, res: Response): Promise<Response> {
-    const payload = req.body as CreateUserWithProfileInputType["user"] &
-      CreateUserWithProfileInputType["profile"];
-
-    const {
-      email,
-      password,
-      username,
-      role,
-      first_name,
-      avatar,
-      cover_img,
-      date_of_birth,
-      gender,
-      last_name,
-      nickname,
-    } = payload;
-
-    const result = await userService.createUserWithProfile({
-      user: {
-        email,
-        password,
-        username,
-        role,
-      },
-      profile: {
-        first_name,
-        avatar,
-        cover_img,
-        date_of_birth,
-        gender,
-        last_name,
-        nickname,
-      },
-    });
-
-    return res
-      .status(201)
-      .json(
-        new ApiResponse(
-          201,
-          "Account created successfully. Please verify your account using the code sent to you.",
-          { id: result.userId, profile_id: result.profileId }
-        )
-      );
-  }
-
   async createAddressHandler(req: Request, res: Response): Promise<Response> {
     const { user_id } = req.params as Pick<
       CreateUserAddressInputType,

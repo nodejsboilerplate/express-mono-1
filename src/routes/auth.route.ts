@@ -6,11 +6,15 @@ const router: Router = Router();
 const authController = new AuthController();
 
 router
+.route("/signup")
+.post(asyncHandler(authController.signupUserHandler.bind(authController)))
+
+router
   .route("/login")
   .post(asyncHandler(authController.loginUserHandler.bind(authController)));
 
 router
-  .route("/:id/send-signup-code")
+  .route("/:id/send-signup-code/:email")
   .post(
     asyncHandler(authController.sendSignupCodeHandler.bind(authController))
   );

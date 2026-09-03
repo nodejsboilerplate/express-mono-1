@@ -11,7 +11,12 @@ import type {
   CookieNames,
   RefreshTokenPayload,
 } from "@/types";
-import type { IdZType, LoginUserInputType, VerifyCodeInputType } from "@/zod";
+import type {
+  CreateUserWithProfileInputType,
+  IdZType,
+  LoginUserInputType,
+  VerifyCodeInputType,
+} from "@/zod";
 import { userInputValidators } from "@/validators/inputs";
 import {
   generateVerificationCode,
@@ -24,8 +29,10 @@ import { ApiError } from "@/libs";
 import bcrypt from "bcryptjs";
 import { AuthRedis } from "@/redis";
 import { UserRepository } from "@/database/repositories";
+import { UserService } from "./user.service";
 
 const userRepository = new UserRepository();
+const userService = new UserService();
 const authRedis = new AuthRedis();
 
 export class AuthService {
@@ -57,19 +64,27 @@ export class AuthService {
     });
   }
 
-  getDataFromAccessToken(token: string): AccessTokenPayload {
-    const decoded = jwt.verify(
-      token,
-      authConfig.JWT_ACCESS_TOKEN_SECRET
-    ) as AccessTokenPayload;
-    return decoded;
+  getDataFromAccessToken(token: string): AccessTokenPayload | null {
+    try {
+      const decoded = jwt.verify(
+        token,
+        authConfig.JWT_ACCESS_TOKEN_SECRET
+      ) as AccessTokenPayload;
+      return decoded;
+    } catch (error) {
+      return null;
+    }
   }
   getDataFromRefreshToken(token: string): RefreshTokenPayload {
-    const decoded = jwt.verify(
-      token,
-      authConfig.JWT_REFRESH_TOKEN_SECRET
-    ) as RefreshTokenPayload;
-    return decoded;
+    try {
+      const decoded = jwt.verify(
+        token,
+        authConfig.JWT_REFRESH_TOKEN_SECRET
+      ) as RefreshTokenPayload;
+      return decoded;
+    } catch (error) {
+      throw new ApiError(400, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
+    }
   }
 
   getCookies(req: Request): CookieNames {
@@ -116,24 +131,57 @@ export class AuthService {
     };
   }
 
-  async sendSignupCode(payload: IdZType): Promise<string> {
-    const parse_id = userInputValidators.idInput(payload);
-    if (isZodError(parse_id)) throw validationError(parse_id);
+  async sendSignupCode( email: string): Promise<string> {
+  
+    const parse_email = userInputValidators.emailInput(email);
+
+    if (isZodError(parse_email)) throw validationError(parse_email);
 
     const verify_code = generateVerificationCode();
     const verify_expiry = getVerifyExpiry();
 
-    const user = await userRepository.SetVerifyCodeForLogin(
+    const user = await userRepository.SetVerifyCodeForSignup(
       verify_code,
       verify_expiry,
-      parse_id
+      email
     );
+
+    // Send email here
 
     if (!user) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
     }
 
     return user.id;
+  }
+
+  async signupUser(req: Request, payload: CreateUserWithProfileInputType) {
+    const { accessToken, refreshToken } = this.getCookies(req);
+    if (refreshToken || accessToken)
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("USER_ALREADY_EXISTS")
+      );
+    const result = await userService.createUserWithProfile(payload);
+    const { user } = result;
+
+    const data: AccessTokenPayload = {
+      email: user.email,
+      id: user.id,
+      is_verified: user.is_verified,
+      role: user.role,
+      username: user.username,
+    };
+
+    const tokens = this.createTokens(data);
+
+    await authRedis.cacheUserLoginData(user?.id as string, data);
+    await this.sendSignupCode(user.email);
+
+    return {
+      tokens,
+      user_id: user.id,
+    };
   }
 
   async verifySignupCode(payload: VerifyCodeInputType): Promise<string> {

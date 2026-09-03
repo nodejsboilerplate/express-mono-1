@@ -41,7 +41,7 @@ export const authMiddlware = async (
       try {
         const decode_data = authService.getDataFromAccessToken(accessToken);
 
-        if (decode_data.id) {
+        if (decode_data?.id) {
           req.auth_user = decode_data;
           return next();
         }
