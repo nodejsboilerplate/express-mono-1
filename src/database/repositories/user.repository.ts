@@ -26,7 +26,7 @@ import type {
 } from "@/zod";
 
 export class UserRepository {
-  async AddNewUserAndProfile(data: CreateUserWithProfileInputType) {
+  async CreateNewUserAndProfile(data: CreateUserWithProfileInputType) {
     const { user: user_payload, profile: profile_payload } = data;
     const result = await pgDb.transaction(async (tx) => {
       const [user] = await tx

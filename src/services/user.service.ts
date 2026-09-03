@@ -39,7 +39,7 @@ export class UserService {
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
-    const result = await userRepository.AddNewUserAndProfile(parse_payload);
+    const result = await userRepository.CreateNewUserAndProfile(parse_payload);
     return result;
   }
 
