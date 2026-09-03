@@ -34,9 +34,7 @@ export class UserService {
   // ---------------------------------------------------------
   // Create
   // ---------------------------------------------------------
-  async createUserWithProfile(
-    payload: CreateUserWithProfileInputType
-  ) {
+  async createUserWithProfile(payload: CreateUserWithProfileInputType) {
     const parse_payload =
       userInputValidators.createUserWithProfileInput(payload);
 

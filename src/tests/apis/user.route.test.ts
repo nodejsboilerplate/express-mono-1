@@ -23,11 +23,12 @@ const AUTH_BASE = "/api/v1/auth";
 // Payload builders
 // ---------------------------------------------------------------
 
-
-function validSignupPayload(overrides: {
-  user?: Partial<any>;
-  profile?: Partial<any>;
-} = {}) {
+function validSignupPayload(
+  overrides: {
+    user?: Partial<any>;
+    profile?: Partial<any>;
+  } = {}
+) {
   return {
     user: {
       email: `test-${crypto.randomUUID()}@example.com`,
@@ -43,7 +44,6 @@ function validSignupPayload(overrides: {
     },
   };
 }
-
 
 function validAddressPayload(overrides: Partial<any> = {}) {
   return {
@@ -81,10 +81,12 @@ function validEmailPayload(overrides: Partial<any> = {}) {
 // Fixture helpers
 // ---------------------------------------------------------------
 
-async function createTestUser(overrides: {
-  user?: Partial<any>;
-  profile?: Partial<any>;
-} = {}) {
+async function createTestUser(
+  overrides: {
+    user?: Partial<any>;
+    profile?: Partial<any>;
+  } = {}
+) {
   const res = await request(app)
     .post(`${AUTH_BASE}/signup`)
     .send(validSignupPayload(overrides));

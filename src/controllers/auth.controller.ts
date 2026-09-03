@@ -59,8 +59,8 @@ export class AuthController {
   }
 
   async sendSignupCodeHandler(req: Request, res: Response): Promise<Response> {
-    const { email } = req.params as { email: EmailZType};
-    const result = await authService.sendSignupCode( email);
+    const { email } = req.params as { email: EmailZType };
+    const result = await authService.sendSignupCode(email);
 
     return res.status(200).json(
       new ApiResponse(200, "Verification code sent successfully.", {

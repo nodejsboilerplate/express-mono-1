@@ -380,7 +380,9 @@ export class UserRepository {
         verify_code: code,
         verify_expiry: expiry,
       })
-      .where(and(eq(usersTable.email, email), eq(usersTable.is_verified, false)))
+      .where(
+        and(eq(usersTable.email, email), eq(usersTable.is_verified, false))
+      )
       .returning({
         id: usersTable.id,
       });

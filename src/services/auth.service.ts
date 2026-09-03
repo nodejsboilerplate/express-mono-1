@@ -131,8 +131,7 @@ export class AuthService {
     };
   }
 
-  async sendSignupCode( email: string): Promise<string> {
-  
+  async sendSignupCode(email: string): Promise<string> {
     const parse_email = userInputValidators.emailInput(email);
 
     if (isZodError(parse_email)) throw validationError(parse_email);

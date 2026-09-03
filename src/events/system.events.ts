@@ -17,12 +17,11 @@ enum SYSTEM_CUSTOM_ERROR_EVENTS {
   EMAIL_NOT_FOUND = "EMAIL_NOT_FOUND",
   ADDRESS_NOT_FOUND = "ADDRESS_NOT_FOUND",
 
-
   // -- 409: conflict --
   USER_ALREADY_VERIFIED = "USER_ALREADY_VERIFIED",
   PHONE_ALREADY_VERIFIED = "PHONE_ALREADY_VERIFIED",
   EMAIL_ALREADY_VERIFIED = "EMAIL_ALREADY_VERIFIED",
-    USER_ALREADY_EXISTS = "USER_ALREADY_EXISTS",
+  USER_ALREADY_EXISTS = "USER_ALREADY_EXISTS",
 
   // -- 500: operation failed, one per resource per action --
   USER_CREATION_FAILED = "USER_CREATION_FAILED",
@@ -218,10 +217,10 @@ export const SystemCustomErrorMsgByCode: SystemCustomErrorMessageType = {
     code: SystemCustomErrorCode.EMAIL_ALREADY_VERIFIED,
   },
   [SystemCustomErrorCode.USER_ALREADY_EXISTS]: {
-  title: "User Already Exists",
-  message: "An account with this email or username already exists.",
-  code: SystemCustomErrorCode.USER_ALREADY_EXISTS,
-},
+    title: "User Already Exists",
+    message: "An account with this email or username already exists.",
+    code: SystemCustomErrorCode.USER_ALREADY_EXISTS,
+  },
 
   // -- 500: user --
   [SystemCustomErrorCode.USER_CREATION_FAILED]: {

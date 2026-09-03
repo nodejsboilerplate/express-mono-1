@@ -251,7 +251,7 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
     test("sets a verification code for an unverified user and returns its id", async () => {
       const { userId, email } = await createUser();
 
-      const result = await authService.sendSignupCode( email);
+      const result = await authService.sendSignupCode(email);
       expect(result).toBe(userId);
 
       const [row] = await pgDb
@@ -283,7 +283,7 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
   describe("AuthService.verifySignupCode", () => {
     test("verifies a user with a correct, unexpired code", async () => {
       const { userId, email } = await createUser();
-      await authService.sendSignupCode( email);
+      await authService.sendSignupCode(email);
 
       const [row] = await pgDb
         .select()
@@ -307,7 +307,7 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
 
     test("throws when the user is already verified", async () => {
       const { userId, email } = await createUser();
-      await authService.sendSignupCode( email);
+      await authService.sendSignupCode(email);
       const [row] = await pgDb
         .select()
         .from(usersTable)
@@ -328,7 +328,7 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
 
     test("throws when the code is incorrect", async () => {
       const { userId, email } = await createUser();
-      await authService.sendSignupCode( email);
+      await authService.sendSignupCode(email);
 
       await expect(
         authService.verifySignupCode({
@@ -340,7 +340,7 @@ describe("Auth Service Test", { tags: ["services/auth"] }, () => {
 
     test("throws when the code has expired", async () => {
       const { userId, email } = await createUser();
-      await authService.sendSignupCode( email);
+      await authService.sendSignupCode(email);
       const [row] = await pgDb
         .select()
         .from(usersTable)

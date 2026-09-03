@@ -6,8 +6,8 @@ const router: Router = Router();
 const authController = new AuthController();
 
 router
-.route("/signup")
-.post(asyncHandler(authController.signupUserHandler.bind(authController)))
+  .route("/signup")
+  .post(asyncHandler(authController.signupUserHandler.bind(authController)));
 
 router
   .route("/login")
