@@ -1,5 +1,10 @@
 import z4 from "zod";
-import { Socials, USER_GENDERS, USER_ROLES } from "@/constants";
+import {
+  Socials,
+  USER_ACCOUNT_PROVIDERS,
+  USER_GENDERS,
+  USER_ROLES,
+} from "@/constants";
 import { ZodBase } from "./base.zod";
 
 export abstract class UserZSchema extends ZodBase {
@@ -30,6 +35,7 @@ export abstract class UserZSchema extends ZodBase {
         .min(8, { error: "Password must be at least 8 characters" })
         .max(30, { error: "Password must be at most 30 characters" }),
       role: z4.enum(USER_ROLES, { error: "Invalid role" }).optional(),
+      provider: z4.enum(USER_ACCOUNT_PROVIDERS, { error: "Invalid Provider" }),
     })
     .extend(this.timestamps.shape)
     .extend(this.verification.shape);
@@ -176,6 +182,25 @@ export abstract class UserZSchema extends ZodBase {
     user: this.coreUser.omit({
       id: true,
       is_verified: true,
+      verify_code: true,
+      provider: true,
+      verify_expiry: true,
+      created_at: true,
+      updated_at: true,
+    }),
+    profile: this.userProfile.omit({
+      user_id: true,
+      id: true,
+      created_at: true,
+      updated_at: true,
+    }),
+  });
+
+  static createUserWithProfileByProvider = z4.object({
+    user: this.coreUser.omit({
+      id: true,
+      password: true,
+      provider: true,
       verify_code: true,
       verify_expiry: true,
       created_at: true,
@@ -340,6 +365,9 @@ export type UserIdWithContextIdInputType = z4.infer<
 // ---------------------------------------------------------
 export type CreateUserWithProfileInputType = z4.infer<
   typeof UserZSchema.createUserWithProfile
+>;
+export type CreateUserWithProfileByProviderInputType = z4.infer<
+  typeof UserZSchema.createUserWithProfileByProvider
 >;
 export type CreateUserContactInputType = z4.infer<
   typeof UserZSchema.createContact

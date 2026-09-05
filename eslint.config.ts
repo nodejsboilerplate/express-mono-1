@@ -26,6 +26,7 @@ export default defineConfig([
       "@typescript-eslint/no-unused-vars": "warn",
       "@typescript-eslint/ban-ts-comment": "warn",
       "@typescript-eslint/no-empty-object-type": "warn",
+      "@no-empty": "warn",
     },
   },
 ]);

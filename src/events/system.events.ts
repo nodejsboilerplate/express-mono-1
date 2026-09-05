@@ -21,11 +21,13 @@ enum SYSTEM_CUSTOM_ERROR_EVENTS {
   USER_ALREADY_VERIFIED = "USER_ALREADY_VERIFIED",
   PHONE_ALREADY_VERIFIED = "PHONE_ALREADY_VERIFIED",
   EMAIL_ALREADY_VERIFIED = "EMAIL_ALREADY_VERIFIED",
+  USER_ALREADY_EXISTS = "USER_ALREADY_EXISTS",
 
   // -- 500: operation failed, one per resource per action --
   USER_CREATION_FAILED = "USER_CREATION_FAILED",
   USER_UPDATE_FAILED = "USER_UPDATE_FAILED",
   USER_DELETE_FAILED = "USER_DELETE_FAILED",
+  SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE",
 
   PROFILE_CREATION_FAILED = "PROFILE_CREATION_FAILED",
   PROFILE_UPDATE_FAILED = "PROFILE_UPDATE_FAILED",
@@ -72,10 +74,12 @@ export const SystemCustomErrorCode: Record<SYSTEM_CUSTOM_ERROR_EVENTS, string> =
     USER_ALREADY_VERIFIED: "40901",
     PHONE_ALREADY_VERIFIED: "40902",
     EMAIL_ALREADY_VERIFIED: "40903",
+    USER_ALREADY_EXISTS: "40904",
 
     USER_CREATION_FAILED: "50010",
     USER_UPDATE_FAILED: "50011",
     USER_DELETE_FAILED: "50012",
+    SERVICE_UNAVAILABLE: "50300",
 
     PROFILE_CREATION_FAILED: "50020",
     PROFILE_UPDATE_FAILED: "50021",
@@ -214,6 +218,11 @@ export const SystemCustomErrorMsgByCode: SystemCustomErrorMessageType = {
     message: "This email has already been verified.",
     code: SystemCustomErrorCode.EMAIL_ALREADY_VERIFIED,
   },
+  [SystemCustomErrorCode.USER_ALREADY_EXISTS]: {
+    title: "User Already Exists",
+    message: "An account with this email or username already exists.",
+    code: SystemCustomErrorCode.USER_ALREADY_EXISTS,
+  },
 
   // -- 500: user --
   [SystemCustomErrorCode.USER_CREATION_FAILED]: {
@@ -237,6 +246,11 @@ export const SystemCustomErrorMsgByCode: SystemCustomErrorMessageType = {
     message: "The webhook secret has not been configured on the server.",
     code: SystemCustomErrorCode.WEBHOOK_SECRET_NOT_CONFIGURED,
   },
+  [SystemCustomErrorCode.SERVICE_UNAVAILABLE]: {
+  title: "Service Unavailable",
+  message: "The service is temporarily unavailable. Please try again in a few moments.",
+  code: SystemCustomErrorCode.SERVICE_UNAVAILABLE,
+},
 
   // -- 500: profile --
   [SystemCustomErrorCode.PROFILE_CREATION_FAILED]: {

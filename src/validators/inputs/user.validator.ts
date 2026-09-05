@@ -16,11 +16,12 @@ import {
   type UpdateUserInputType,
   type VerifyCodeInputType,
   type VerifyCodeWithUserIdInput,
+  type CreateUserWithProfileByProviderInputType,
 } from "@/zod";
 import type z from "zod";
 import { Validator } from "../validator";
 
-class UserInputValidators extends Validator {
+export class UserInputValidators extends Validator {
   emailInput(payload: EmailZType): EmailZType | z.ZodError {
     const { data, success, error } = this.validate(payload, UserZSchema.email);
 
@@ -36,6 +37,17 @@ class UserInputValidators extends Validator {
     const { data, success, error } = this.validate(
       payload,
       UserZSchema.createUserWithProfile
+    );
+    if (!success) return error;
+    return data;
+  }
+
+  createUserWithProfileByProviderInput(
+    payload: CreateUserWithProfileByProviderInputType
+  ) {
+     const { data, success, error } = this.validate(
+      payload,
+      UserZSchema.createUserWithProfileByProvider
     );
     if (!success) return error;
     return data;
@@ -206,5 +218,3 @@ class UserInputValidators extends Validator {
     return data;
   }
 }
-
-export const userInputValidators = new UserInputValidators();

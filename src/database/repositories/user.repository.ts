@@ -9,13 +9,14 @@ import {
   usersTable,
 } from "../schemas";
 import { pgDb } from "@/libs/db.connect";
-import { and, eq } from "drizzle-orm";
+import { and, eq, getColumns, getTableColumns } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import type {
   CreateUserAddressInputType,
   CreateUserContactInputType,
   CreateUserEmailInputType,
   CreateUserPhoneInputType,
+  CreateUserWithProfileByProviderInputType,
   CreateUserWithProfileInputType,
   EmailZType,
   UpdateAddressInputType,
@@ -23,16 +24,19 @@ import type {
   UpdateEmailInputType,
   UpdatePhoneInputType,
   UpdateProfileInputType,
+  UserCoreZType,
 } from "@/zod";
+import type { UserProfileSelectType, UserSelectType } from "../type";
 
 export class UserRepository {
   async CreateNewUserAndProfile(data: CreateUserWithProfileInputType) {
     const { user: user_payload, profile: profile_payload } = data;
     const result = await pgDb.transaction(async (tx) => {
+      const { password, ...userWithoutPass } = await getColumns(usersTable);
       const [user] = await tx
         .insert(usersTable)
         .values(user_payload)
-        .returning({ id: usersTable.id });
+        .returning(userWithoutPass);
 
       if (!user?.id) {
         throw new ApiError(
@@ -66,7 +70,49 @@ export class UserRepository {
         );
       }
 
-      return { userId: user.id, profileId: createdUserProfie.id };
+      return { user: user, profileId: createdUserProfie.id };
+    });
+
+    return result;
+  }
+
+  async CreateNewUserAndProfileByProvider(
+    data: CreateUserWithProfileByProviderInputType
+  ) {
+    const { user: user_payload, profile: profile_payload } = data;
+    const result = await pgDb.transaction(async (tx) => {
+      const { password, ...userWithoutPass } = await getColumns(usersTable);
+      const [user] = await tx
+        .insert(usersTable)
+        .values(user_payload)
+        .returning(userWithoutPass);
+
+      if (!user?.id) {
+        throw new ApiError(
+          500,
+          getSystemCustomErrorMsgByKey("USER_CREATION_FAILED")
+        );
+      }
+
+      const [createdUserProfie] = await tx
+        .insert(userProfilesTable)
+        .values({
+          ...profile_payload,
+          user_id: user.id,
+          date_of_birth: profile_payload.date_of_birth
+            ? profile_payload.date_of_birth.toISOString().split("T")[0]
+            : undefined,
+        })
+        .returning({ id: userProfilesTable.id });
+
+      if (!createdUserProfie?.id) {
+        throw new ApiError(
+          500,
+          getSystemCustomErrorMsgByKey("PROFILE_CREATION_FAILED")
+        );
+      }
+
+      return { ...user, profileId: createdUserProfie.id };
     });
 
     return result;
@@ -187,7 +233,18 @@ export class UserRepository {
     return email;
   }
 
-  async GetUserCoreBasicDetailsByEmail(data: EmailZType) {
+  async GetUserIdByEmail(email: string) {
+    return await pgDb.query.usersTable.findFirst({
+      columns: {
+        id: true,
+      },
+      where: {
+        email: { eq: email },
+      },
+    });
+  }
+
+  async GetAuthUserProfileById(id: string) {
     return await pgDb.query.usersTable.findFirst({
       columns: {
         id: true,
@@ -196,9 +253,26 @@ export class UserRepository {
         role: true,
         created_at: true,
         updated_at: true,
+        is_verified: true,
+        provider: true,
       },
       where: {
-        email: { eq: data },
+        id: { eq: id },
+      },
+      with: {
+        profile: {
+          columns: {
+            first_name: true,
+            last_name: true,
+            avatar: true,
+            cover_img: true,
+            nickname: true,
+            created_at: true,
+            date_of_birth: true,
+            gender: true,
+            updated_at: true,
+          },
+        },
       },
     });
   }
@@ -370,14 +444,16 @@ export class UserRepository {
     return result;
   }
 
-  async SetVerifyCodeForLogin(code: string, expiry: Date, user_id: string) {
+  async SetVerifyCodeForSignup(code: string, expiry: Date, email: string) {
     const [user] = await pgDb
       .update(usersTable)
       .set({
         verify_code: code,
         verify_expiry: expiry,
       })
-      .where(and(eq(usersTable.id, user_id), eq(usersTable.is_verified, false)))
+      .where(
+        and(eq(usersTable.email, email), eq(usersTable.is_verified, false))
+      )
       .returning({
         id: usersTable.id,
       });

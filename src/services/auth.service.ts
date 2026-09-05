@@ -11,8 +11,14 @@ import type {
   CookieNames,
   RefreshTokenPayload,
 } from "@/types";
-import type { IdZType, LoginUserInputType, VerifyCodeInputType } from "@/zod";
-import { userInputValidators } from "@/validators/inputs";
+import type {
+  CreateUserWithProfileByProviderInputType,
+  CreateUserWithProfileInputType,
+  IdZType,
+  LoginUserInputType,
+  VerifyCodeInputType,
+} from "@/zod";
+import { UserInputValidators } from "@/validators/inputs";
 import {
   generateVerificationCode,
   getVerifyExpiry,
@@ -24,9 +30,15 @@ import { ApiError } from "@/libs";
 import bcrypt from "bcryptjs";
 import { AuthRedis } from "@/redis";
 import { UserRepository } from "@/database/repositories";
+import { UserService } from "./user.service";
+import { EmailService } from "./email.service";
+
 
 const userRepository = new UserRepository();
+const userService = new UserService();
 const authRedis = new AuthRedis();
+const emailService = new EmailService()
+const userInputValidators = new UserInputValidators()
 
 export class AuthService {
   createTokens(payload: AccessTokenPayload): CookieNames {
@@ -57,19 +69,27 @@ export class AuthService {
     });
   }
 
-  getDataFromAccessToken(token: string): AccessTokenPayload {
-    const decoded = jwt.verify(
-      token,
-      authConfig.JWT_ACCESS_TOKEN_SECRET
-    ) as AccessTokenPayload;
-    return decoded;
+  getDataFromAccessToken(token: string): AccessTokenPayload | null {
+    try {
+      const decoded = jwt.verify(
+        token,
+        authConfig.JWT_ACCESS_TOKEN_SECRET
+      ) as AccessTokenPayload;
+      return decoded;
+    } catch (error) {
+      return null;
+    }
   }
   getDataFromRefreshToken(token: string): RefreshTokenPayload {
-    const decoded = jwt.verify(
-      token,
-      authConfig.JWT_REFRESH_TOKEN_SECRET
-    ) as RefreshTokenPayload;
-    return decoded;
+    try {
+      const decoded = jwt.verify(
+        token,
+        authConfig.JWT_REFRESH_TOKEN_SECRET
+      ) as RefreshTokenPayload;
+      return decoded;
+    } catch (error) {
+      throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
+    }
   }
 
   getCookies(req: Request): CookieNames {
@@ -98,7 +118,7 @@ export class AuthService {
 
     const isPassMatched = await bcrypt.compare(
       parse_payload.password,
-      result.password
+      result.password as string
     );
     if (!isPassMatched) {
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
@@ -116,24 +136,30 @@ export class AuthService {
     };
   }
 
-  async sendSignupCode(payload: IdZType): Promise<string> {
-    const parse_id = userInputValidators.idInput(payload);
-    if (isZodError(parse_id)) throw validationError(parse_id);
 
-    const verify_code = generateVerificationCode();
-    const verify_expiry = getVerifyExpiry();
 
-    const user = await userRepository.SetVerifyCodeForLogin(
-      verify_code,
-      verify_expiry,
-      parse_id
-    );
+  async signupUser(payload: CreateUserWithProfileInputType, deviceInfo: string) {
+   
+    const result = await userService.createUserWithProfile(payload);
+    const { user } = result;
 
-    if (!user) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
-    }
+    const data: AccessTokenPayload = {
+      email: user.email,
+      id: user.id,
+      is_verified: user.is_verified,
+      role: user.role,
+      username: user.username,
+    };
 
-    return user.id;
+    const tokens = this.createTokens(data);
+
+    await authRedis.cacheUserLoginData(user?.id as string, data);
+    await emailService.sendSignupCode(user.email, deviceInfo);
+
+    return {
+      tokens,
+      user_id: user.id,
+    };
   }
 
   async verifySignupCode(payload: VerifyCodeInputType): Promise<string> {

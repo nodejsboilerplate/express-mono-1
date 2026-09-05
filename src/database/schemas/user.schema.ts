@@ -2,7 +2,7 @@ import { pgTable, pgEnum } from "drizzle-orm/pg-core";
 import * as t from "drizzle-orm/pg-core";
 import { table_timestamps } from "./helper";
 import { v4 as uuidv4 } from "uuid";
-import { USER_GENDERS, USER_ROLES } from "@/constants";
+import { USER_ACCOUNT_PROVIDERS, USER_GENDERS, USER_ROLES } from "@/constants";
 import type { SocialLink } from "@/types";
 
 // ---------------------------------------------------------
@@ -10,6 +10,7 @@ import type { SocialLink } from "@/types";
 // ---------------------------------------------------------
 export const userRoleEnum = pgEnum("user_role", USER_ROLES);
 export const userGenderRoleEnum = pgEnum("user_gender_role", USER_GENDERS);
+export const userAccountProviderEnum = pgEnum("user_account_provider", USER_ACCOUNT_PROVIDERS)
 
 // ---------------------------------------------------------
 // Users
@@ -21,11 +22,12 @@ export const usersTable = pgTable("users", {
     .$defaultFn(() => uuidv4()),
   email: t.varchar({ length: 255 }).notNull().unique(),
   username: t.varchar({ length: 100 }).notNull().unique(),
-  password: t.varchar({ length: 255 }).notNull(),
+  password: t.varchar({ length: 255 }),
   is_verified: t.boolean().notNull().default(false),
   verify_code: t.varchar({ length: 10 }),
   verify_expiry: t.timestamp({ withTimezone: true }),
   role: userRoleEnum().notNull().default("USER"),
+  provider: userAccountProviderEnum().notNull().default("MANUAL"),
   ...table_timestamps,
 });
 
