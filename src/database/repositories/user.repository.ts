@@ -24,7 +24,7 @@ import type {
   UpdatePhoneInputType,
   UpdateProfileInputType,
 } from "@/zod";
-import type {  UserSelectType } from "../type";
+import type { UserSelectType } from "../type";
 
 export class UserRepository {
   async CreateNewUserAndProfile(data: CreateUserWithProfileInputType) {

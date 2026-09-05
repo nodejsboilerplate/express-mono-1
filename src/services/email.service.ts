@@ -10,9 +10,7 @@ import {
 import { UserInputValidators } from "@/validators/inputs";
 import { ApiError } from "@/libs";
 import { getSystemCustomErrorMsgByKey } from "@/events";
-import type {
-  UserIdWithContextIdInputType,
-} from "@/zod";
+import type { UserIdWithContextIdInputType } from "@/zod";
 
 const userRepository = new UserRepository();
 const userInputValidators = new UserInputValidators();

@@ -17,7 +17,8 @@
     "db:reset": "tsx ./src/libs/reset.db.ts",
     "test": "vitest",
     "check:types": "node ./node_modules/typescript-7/bin/tsc --noEmit",
-    "clean": "rm -rf node_modules && echo 'Cleanup complete!'"
+    "clean": "rm -rf node_modules && echo 'Cleanup complete!'",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",

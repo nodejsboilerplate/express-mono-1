@@ -17,10 +17,7 @@ import type {
   VerifyCodeInputType,
 } from "@/zod";
 import { UserInputValidators } from "@/validators/inputs";
-import {
-  isZodError,
-  validationError,
-} from "@/utils";
+import { isZodError, validationError } from "@/utils";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
 import bcrypt from "bcryptjs";
