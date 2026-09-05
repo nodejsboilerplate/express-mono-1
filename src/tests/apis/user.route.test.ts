@@ -13,7 +13,7 @@ import {
 import { pgDb } from "@/libs/db.connect";
 import { app } from "@/server";
 
-const BASE = "/api/v1/user";
+const BASE = "/api/v1/users";
 const AUTH_BASE = "/api/v1/auth";
 
 function validSignupPayload(
