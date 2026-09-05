@@ -4,7 +4,12 @@ import { ApiError } from "@/libs";
 import { AuthRedis } from "@/redis";
 import { AuthService } from "@/services";
 import { CookieService } from "@/services/cookie.service";
-import type { AccessTokenPayload } from "@/types";
+import type {
+  AccessTokenPayload,
+  UserBasicInfoDataType,
+  UserProfileDataByLoginType,
+} from "@/types";
+import { finalLoginResponseUserData } from "@/utils";
 import type { NextFunction, Response, Request } from "express";
 
 const authService = new AuthService();
@@ -76,16 +81,28 @@ export const authMiddlware = async (
     const get_cached_data = await authRedis.getCachedLoginData(decoded.id);
 
     if (!get_cached_data) {
-      const result = await userRepository.GetUserLoginDataForCache(
-        decoded.id,
-        decoded.role
+      const user =
+        await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
+          decoded.id
+        );
+
+      if (!user?.id) {
+        throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
+      }
+
+      const profile = user?.profile;
+
+      const { tokenData, profileData } = finalLoginResponseUserData(
+        user,
+        profile!
       );
 
-      await authRedis.cacheUserLoginData(
-        result?.id as string,
-        result as AccessTokenPayload
-      );
-      temp_user = result as AccessTokenPayload;
+      await authRedis.cacheUserLoginData(user?.id as string, {
+        ...tokenData,
+        ...profileData,
+      });
+
+      temp_user = tokenData;
     } else {
       temp_user = {
         id: get_cached_data.id,
@@ -96,7 +113,7 @@ export const authMiddlware = async (
       };
     }
 
-    if (!temp_user) {
+    if (!temp_user.id) {
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
     }
 

@@ -10,6 +10,8 @@ import type {
   AccessTokenPayload,
   CookieNames,
   RefreshTokenPayload,
+  UserBasicInfoDataType,
+  UserProfileDataByLoginType,
 } from "@/types";
 import type {
   CreateUserWithProfileInputType,
@@ -17,7 +19,11 @@ import type {
   VerifyCodeInputType,
 } from "@/zod";
 import { UserInputValidators } from "@/validators/inputs";
-import { isZodError, validationError } from "@/utils";
+import {
+  finalLoginResponseUserData,
+  isZodError,
+  validationError,
+} from "@/utils";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
 import bcrypt from "bcryptjs";
@@ -100,9 +106,10 @@ export class AuthService {
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
-    const result = await userRepository.GetUserDataForLoginByEmailOrUsername(
-      parse_payload.identifier
-    );
+    const result =
+      await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
+        parse_payload.identifier
+      );
 
     if (!result?.id) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
@@ -116,11 +123,19 @@ export class AuthService {
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
     }
 
-    const { accessToken, refreshToken } = this.createTokens(result);
+    const { password, profile, ...rest } = result;
 
-    const { password, ...rest } = result;
+    const { tokenData, profileData } = finalLoginResponseUserData(
+      rest,
+      profile!
+    );
 
-    await authRedis.cacheUserLoginData(result?.id as string, rest);
+    const { accessToken, refreshToken } = this.createTokens(tokenData);
+
+    await authRedis.cacheUserLoginData(result?.id as string, {
+      ...tokenData,
+      ...profileData,
+    });
 
     return {
       accessToken,
@@ -133,19 +148,19 @@ export class AuthService {
     deviceInfo: string
   ) {
     const result = await userService.createUserWithProfile(payload);
-    const { user } = result;
+    const { user, profile } = result;
 
-    const data: AccessTokenPayload = {
-      email: user.email,
-      id: user.id,
-      is_verified: user.is_verified,
-      role: user.role,
-      username: user.username,
-    };
+    const { tokenData, profileData } = finalLoginResponseUserData(
+      user,
+      profile!
+    );
 
-    const tokens = this.createTokens(data);
+    const tokens = this.createTokens(tokenData);
 
-    await authRedis.cacheUserLoginData(user?.id as string, data);
+    await authRedis.cacheUserLoginData(user?.id as string, {
+      ...tokenData,
+      ...profileData,
+    });
     await emailService.sendSignupCode(user.email, deviceInfo);
 
     return {

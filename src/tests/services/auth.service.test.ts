@@ -164,7 +164,7 @@ describe("AuthService Test", { tags: ["services/auth"] }, () => {
     test("throws 404 when no user is found for the identifier", async () => {
       vi.spyOn(
         UserRepository.prototype,
-        "GetUserDataForLoginByEmailOrUsername"
+        "GetUserDataForLoginByEmailOrUsernameOrId"
       ).mockResolvedValue(null as any);
 
       await expect(
@@ -179,7 +179,7 @@ describe("AuthService Test", { tags: ["services/auth"] }, () => {
       const user = mockUserRecord();
       vi.spyOn(
         UserRepository.prototype,
-        "GetUserDataForLoginByEmailOrUsername"
+        "GetUserDataForLoginByEmailOrUsernameOrId"
       ).mockResolvedValue(user as any);
       vi.spyOn(bcrypt, "compare").mockResolvedValue(false as never);
 
@@ -195,7 +195,7 @@ describe("AuthService Test", { tags: ["services/auth"] }, () => {
       const user = mockUserRecord();
       vi.spyOn(
         UserRepository.prototype,
-        "GetUserDataForLoginByEmailOrUsername"
+        "GetUserDataForLoginByEmailOrUsernameOrId"
       ).mockResolvedValue(user as any);
       vi.spyOn(bcrypt, "compare").mockResolvedValue(true as never);
 

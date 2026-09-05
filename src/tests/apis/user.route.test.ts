@@ -16,10 +16,6 @@ import { app } from "@/server";
 const BASE = "/api/v1/user";
 const AUTH_BASE = "/api/v1/auth";
 
-// ---------------------------------------------------------------
-// Payload builders
-// ---------------------------------------------------------------
-
 function validSignupPayload(
   overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
 ) {
@@ -71,21 +67,12 @@ function validEmailPayload(overrides: Partial<any> = {}) {
   };
 }
 
-// ---------------------------------------------------------------
-// Cookie extraction - signupUserHandler sets access+refresh cookies
-// directly on the response, so we capture and replay them.
-// ---------------------------------------------------------------
-
 function extractCookies(res: request.Response): string[] {
   const raw = res.headers["set-cookie"];
   if (!raw) return [];
   const arr = Array.isArray(raw) ? raw : [raw];
   return arr.map((c: string) => c.split(";")[0]!);
 }
-
-// ---------------------------------------------------------------
-// Fixture helpers
-// ---------------------------------------------------------------
 
 async function signupTestUser(
   overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
@@ -117,7 +104,7 @@ async function createTestContact(
   overrides: Partial<any> = {}
 ) {
   const res = await request(app)
-    .post(`${BASE}/contact`)
+    .post(`${BASE}/contacts`)
     .set("Cookie", cookies)
     .send({ socials: [], ...overrides });
 
@@ -135,7 +122,7 @@ async function createTestContact(
 
 async function sendAndGetPhoneCode(cookies: string[], phoneId: string) {
   await request(app)
-    .post(`${BASE}/phone/${phoneId}/send-verification-code`)
+    .post(`${BASE}/messages/contacts/phones/${phoneId}/code`)
     .set("Cookie", cookies);
   const [row] = await pgDb
     .select({ verify_code: userPhonesTable.verify_code })
@@ -146,7 +133,7 @@ async function sendAndGetPhoneCode(cookies: string[], phoneId: string) {
 
 async function sendAndGetEmailCode(cookies: string[], emailId: string) {
   await request(app)
-    .post(`${BASE}/email/${emailId}/send-verification-code`)
+    .post(`${BASE}/messages/contacts/emails/${emailId}/code`)
     .set("Cookie", cookies);
   const [row] = await pgDb
     .select({ verify_code: userEmailsTable.verify_code })
@@ -155,16 +142,13 @@ async function sendAndGetEmailCode(cookies: string[], emailId: string) {
   return row!.verify_code as string;
 }
 
-// ---------------------------------------------------------------
-// Create
-// ---------------------------------------------------------------
 describe("User API Test", { tags: ["apis/user"] }, () => {
-  describe(`POST ${BASE}/address`, () => {
+  describe(`POST ${BASE}/addresses`, () => {
     test("creates an address and persists it", async () => {
       const { userId, cookies } = await signupTestUser();
 
       const res = await request(app)
-        .post(`${BASE}/address`)
+        .post(`${BASE}/addresses`)
         .set("Cookie", cookies)
         .send(validAddressPayload());
 
@@ -180,7 +164,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
     test("returns 401 without an access token", async () => {
       const res = await request(app)
-        .post(`${BASE}/address`)
+        .post(`${BASE}/addresses`)
         .send(validAddressPayload());
       expect(res.status).toBe(401);
     });
@@ -188,7 +172,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 400 when required fields are missing", async () => {
       const { cookies } = await signupTestUser();
       const res = await request(app)
-        .post(`${BASE}/address`)
+        .post(`${BASE}/addresses`)
         .set("Cookie", cookies)
         .send({});
       expect(res.status).toBe(400);
@@ -197,19 +181,19 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 400 for a country_iso longer than 2 characters", async () => {
       const { cookies } = await signupTestUser();
       const res = await request(app)
-        .post(`${BASE}/address`)
+        .post(`${BASE}/addresses`)
         .set("Cookie", cookies)
         .send(validAddressPayload({ country_iso: "BGD" }));
       expect(res.status).toBe(400);
     });
   });
 
-  describe(`POST ${BASE}/contact`, () => {
+  describe(`POST ${BASE}/contacts`, () => {
     test("creates a contact with no client-supplied id", async () => {
       const { userId, cookies } = await signupTestUser();
 
       const res = await request(app)
-        .post(`${BASE}/contact`)
+        .post(`${BASE}/contacts`)
         .set("Cookie", cookies)
         .send({ socials: [] });
 
@@ -226,7 +210,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("creates a contact with socials omitted (defaults to empty array)", async () => {
       const { cookies } = await signupTestUser();
       const res = await request(app)
-        .post(`${BASE}/contact`)
+        .post(`${BASE}/contacts`)
         .set("Cookie", cookies)
         .send({});
       expect(res.status).toBe(201);
@@ -235,7 +219,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 400 for an invalid social link url", async () => {
       const { cookies } = await signupTestUser();
       const res = await request(app)
-        .post(`${BASE}/contact`)
+        .post(`${BASE}/contacts`)
         .set("Cookie", cookies)
         .send({ socials: [{ type: "invalid-platform", url: "not-a-url" }] });
       expect(res.status).toBe(400);
@@ -243,19 +227,19 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
 
     test("returns 401 without an access token", async () => {
       const res = await request(app)
-        .post(`${BASE}/contact`)
+        .post(`${BASE}/contacts`)
         .send({ socials: [] });
       expect(res.status).toBe(401);
     });
   });
 
-  describe(`POST ${BASE}/contact/:id/phone`, () => {
+  describe(`POST ${BASE}/contacts/:id/phones`, () => {
     test("creates a phone tied to a contact", async () => {
       const { userId, cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
 
       const res = await request(app)
-        .post(`${BASE}/contact/${contactId}/phone`)
+        .post(`${BASE}/contacts/${contactId}/phones`)
         .set("Cookie", cookies)
         .send(validPhonePayload());
 
@@ -274,20 +258,20 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const res = await request(app)
-        .post(`${BASE}/contact/${contactId}/phone`)
+        .post(`${BASE}/contacts/${contactId}/phones`)
         .set("Cookie", cookies)
         .send(validPhonePayload({ phone_code: "" }));
       expect(res.status).toBe(400);
     });
   });
 
-  describe(`POST ${BASE}/contact/:id/email`, () => {
+  describe(`POST ${BASE}/contacts/:id/emails`, () => {
     test("creates an email tied to a contact", async () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
 
       const res = await request(app)
-        .post(`${BASE}/contact/${contactId}/email`)
+        .post(`${BASE}/contacts/${contactId}/emails`)
         .set("Cookie", cookies)
         .send(validEmailPayload());
 
@@ -298,16 +282,12 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const res = await request(app)
-        .post(`${BASE}/contact/${contactId}/email`)
+        .post(`${BASE}/contacts/${contactId}/emails`)
         .set("Cookie", cookies)
         .send({ email: "not-an-email" });
       expect(res.status).toBe(400);
     });
   });
-
-  // ---------------------------------------------------------------
-  // Read
-  // ---------------------------------------------------------------
 
   describe(`GET ${BASE}/profile`, () => {
     test("returns the authenticated user's profile", async () => {
@@ -329,22 +309,18 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     });
   });
 
-  // ---------------------------------------------------------------
-  // Send Verification Code
-  // ---------------------------------------------------------------
-
-  describe(`POST ${BASE}/phone/:id/send-verification-code`, () => {
+  describe(`POST ${BASE}/messages/contacts/phones/:id/code`, () => {
     test("sends a verification code for the phone", async () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const phoneRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/phone`)
+        .post(`${BASE}/contacts/${contactId}/phones`)
         .set("Cookie", cookies)
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
 
       const res = await request(app)
-        .post(`${BASE}/phone/${phoneId}/send-verification-code`)
+        .post(`${BASE}/messages/contacts/phones/${phoneId}/code`)
         .set("Cookie", cookies);
       expect(res.status).toBe(200);
 
@@ -360,7 +336,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 404 for a nonexistent phone", async () => {
       const { cookies } = await signupTestUser();
       const res = await request(app)
-        .post(`${BASE}/phone/${crypto.randomUUID()}/send-verification-code`)
+        .post(`${BASE}/messages/contacts/phones/${crypto.randomUUID()}/code`)
         .set("Cookie", cookies);
       expect(res.status).toBe(404);
     });
@@ -370,30 +346,30 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const { cookies: otherCookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const phoneRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/phone`)
+        .post(`${BASE}/contacts/${contactId}/phones`)
         .set("Cookie", cookies)
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
 
       const res = await request(app)
-        .post(`${BASE}/phone/${phoneId}/send-verification-code`)
+        .post(`${BASE}/messages/contacts/phones/${phoneId}/code`)
         .set("Cookie", otherCookies);
       expect(res.status).toBe(404);
     });
   });
 
-  describe(`POST ${BASE}/email/:id/send-verification-code`, () => {
+  describe(`POST ${BASE}/messages/contacts/emails/:id/code`, () => {
     test("sends a verification code for the email", async () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const emailRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/email`)
+        .post(`${BASE}/contacts/${contactId}/emails`)
         .set("Cookie", cookies)
         .send(validEmailPayload());
       const emailId = emailRes.body.data.id as string;
 
       const res = await request(app)
-        .post(`${BASE}/email/${emailId}/send-verification-code`)
+        .post(`${BASE}/messages/contacts/emails/${emailId}/code`)
         .set("Cookie", cookies);
       expect(res.status).toBe(200);
 
@@ -409,7 +385,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 404 for a nonexistent email", async () => {
       const { cookies } = await signupTestUser();
       const res = await request(app)
-        .post(`${BASE}/email/${crypto.randomUUID()}/send-verification-code`)
+        .post(`${BASE}/messages/contacts/emails/${crypto.randomUUID()}/code`)
         .set("Cookie", cookies);
       expect(res.status).toBe(404);
     });
@@ -419,28 +395,24 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const { cookies: otherCookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const emailRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/email`)
+        .post(`${BASE}/contacts/${contactId}/emails`)
         .set("Cookie", cookies)
         .send(validEmailPayload());
       const emailId = emailRes.body.data.id as string;
 
       const res = await request(app)
-        .post(`${BASE}/email/${emailId}/send-verification-code`)
+        .post(`${BASE}/messages/contacts/emails/${emailId}/code`)
         .set("Cookie", otherCookies);
       expect(res.status).toBe(404);
     });
   });
 
-  // ---------------------------------------------------------------
-  // Verify
-  // ---------------------------------------------------------------
-
-  describe(`POST ${BASE}/phone/:id/verify`, () => {
+  describe(`POST ${BASE}/verify/contacts/phones/:id`, () => {
     test("verifies a phone with the correct code", async () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const phoneRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/phone`)
+        .post(`${BASE}/contacts/${contactId}/phones`)
         .set("Cookie", cookies)
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
@@ -448,7 +420,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const code = await sendAndGetPhoneCode(cookies, phoneId);
 
       const res = await request(app)
-        .post(`${BASE}/phone/${phoneId}/verify`)
+        .post(`${BASE}/verify/contacts/phones/${phoneId}`)
         .set("Cookie", cookies)
         .send({ verify_code: code });
       expect(res.status).toBe(200);
@@ -464,7 +436,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const phoneRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/phone`)
+        .post(`${BASE}/contacts/${contactId}/phones`)
         .set("Cookie", cookies)
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
@@ -472,7 +444,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       await sendAndGetPhoneCode(cookies, phoneId);
 
       const res = await request(app)
-        .post(`${BASE}/phone/${phoneId}/verify`)
+        .post(`${BASE}/verify/contacts/phones/${phoneId}`)
         .set("Cookie", cookies)
         .send({ verify_code: "000000" });
       expect(res.status).toBe(400);
@@ -482,7 +454,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const phoneRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/phone`)
+        .post(`${BASE}/contacts/${contactId}/phones`)
         .set("Cookie", cookies)
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
@@ -494,7 +466,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
         .where(eq(userPhonesTable.id, phoneId));
 
       const res = await request(app)
-        .post(`${BASE}/phone/${phoneId}/verify`)
+        .post(`${BASE}/verify/contacts/phones/${phoneId}`)
         .set("Cookie", cookies)
         .send({ verify_code: code });
       expect(res.status).toBe(400);
@@ -503,7 +475,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 404 for a nonexistent phone", async () => {
       const { cookies } = await signupTestUser();
       const res = await request(app)
-        .post(`${BASE}/phone/${crypto.randomUUID()}/verify`)
+        .post(`${BASE}/verify/contacts/phones/${crypto.randomUUID()}`)
         .set("Cookie", cookies)
         .send({ verify_code: "123456" });
       expect(res.status).toBe(404);
@@ -513,7 +485,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const phoneRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/phone`)
+        .post(`${BASE}/contacts/${contactId}/phones`)
         .set("Cookie", cookies)
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
@@ -521,7 +493,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       await sendAndGetPhoneCode(cookies, phoneId);
 
       const res = await request(app)
-        .post(`${BASE}/phone/${phoneId}/verify`)
+        .post(`${BASE}/verify/contacts/phones/${phoneId}`)
         .set("Cookie", cookies)
         .send({ verify_code: "12" });
       expect(res.status).toBe(400);
@@ -531,31 +503,31 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const phoneRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/phone`)
+        .post(`${BASE}/contacts/${contactId}/phones`)
         .set("Cookie", cookies)
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
 
       const code = await sendAndGetPhoneCode(cookies, phoneId);
       await request(app)
-        .post(`${BASE}/phone/${phoneId}/verify`)
+        .post(`${BASE}/verify/contacts/phones/${phoneId}`)
         .set("Cookie", cookies)
         .send({ verify_code: code });
 
       const res = await request(app)
-        .post(`${BASE}/phone/${phoneId}/verify`)
+        .post(`${BASE}/verify/contacts/phones/${phoneId}`)
         .set("Cookie", cookies)
         .send({ verify_code: code });
       expect(res.status).toBe(409);
     });
   });
 
-  describe(`POST ${BASE}/email/:id/verify`, () => {
+  describe(`POST ${BASE}/verify/contacts/emails/:id`, () => {
     test("verifies an email with the correct code", async () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const emailRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/email`)
+        .post(`${BASE}/contacts/${contactId}/emails`)
         .set("Cookie", cookies)
         .send(validEmailPayload());
       const emailId = emailRes.body.data.id as string;
@@ -563,7 +535,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const code = await sendAndGetEmailCode(cookies, emailId);
 
       const res = await request(app)
-        .post(`${BASE}/email/${emailId}/verify`)
+        .post(`${BASE}/verify/contacts/emails/${emailId}`)
         .set("Cookie", cookies)
         .send({ verify_code: code });
       expect(res.status).toBe(200);
@@ -579,7 +551,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const emailRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/email`)
+        .post(`${BASE}/contacts/${contactId}/emails`)
         .set("Cookie", cookies)
         .send(validEmailPayload());
       const emailId = emailRes.body.data.id as string;
@@ -587,7 +559,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       await sendAndGetEmailCode(cookies, emailId);
 
       const res = await request(app)
-        .post(`${BASE}/email/${emailId}/verify`)
+        .post(`${BASE}/verify/contacts/emails/${emailId}`)
         .set("Cookie", cookies)
         .send({ verify_code: "000000" });
       expect(res.status).toBe(400);
@@ -597,7 +569,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const emailRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/email`)
+        .post(`${BASE}/contacts/${contactId}/emails`)
         .set("Cookie", cookies)
         .send(validEmailPayload());
       const emailId = emailRes.body.data.id as string;
@@ -609,7 +581,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
         .where(eq(userEmailsTable.id, emailId));
 
       const res = await request(app)
-        .post(`${BASE}/email/${emailId}/verify`)
+        .post(`${BASE}/verify/contacts/emails/${emailId}`)
         .set("Cookie", cookies)
         .send({ verify_code: code });
       expect(res.status).toBe(400);
@@ -618,7 +590,7 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 404 for a nonexistent email", async () => {
       const { cookies } = await signupTestUser();
       const res = await request(app)
-        .post(`${BASE}/email/${crypto.randomUUID()}/verify`)
+        .post(`${BASE}/verify/contacts/emails/${crypto.randomUUID()}`)
         .set("Cookie", cookies)
         .send({ verify_code: "123456" });
       expect(res.status).toBe(404);
@@ -628,28 +600,24 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const emailRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/email`)
+        .post(`${BASE}/contacts/${contactId}/emails`)
         .set("Cookie", cookies)
         .send(validEmailPayload());
       const emailId = emailRes.body.data.id as string;
 
       const code = await sendAndGetEmailCode(cookies, emailId);
       await request(app)
-        .post(`${BASE}/email/${emailId}/verify`)
+        .post(`${BASE}/verify/contacts/emails/${emailId}`)
         .set("Cookie", cookies)
         .send({ verify_code: code });
 
       const res = await request(app)
-        .post(`${BASE}/email/${emailId}/verify`)
+        .post(`${BASE}/verify/contacts/emails/${emailId}`)
         .set("Cookie", cookies)
         .send({ verify_code: code });
       expect(res.status).toBe(409);
     });
   });
-
-  // ---------------------------------------------------------------
-  // Update
-  // ---------------------------------------------------------------
 
   describe(`PATCH ${BASE}/profile`, () => {
     test("updates the profile", async () => {
@@ -698,17 +666,17 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     });
   });
 
-  describe(`PATCH ${BASE}/address/:id`, () => {
+  describe(`PATCH ${BASE}/addresses/:id`, () => {
     test("updates the address", async () => {
       const { cookies } = await signupTestUser();
       const createRes = await request(app)
-        .post(`${BASE}/address`)
+        .post(`${BASE}/addresses`)
         .set("Cookie", cookies)
         .send(validAddressPayload());
       const addressId = createRes.body.data.id as string;
 
       const res = await request(app)
-        .patch(`${BASE}/address/${addressId}`)
+        .patch(`${BASE}/addresses/${addressId}`)
         .set("Cookie", cookies)
         .send({ city: "Chattogram" });
       expect(res.status).toBe(200);
@@ -723,20 +691,20 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 404 for a nonexistent address", async () => {
       const { cookies } = await signupTestUser();
       const res = await request(app)
-        .patch(`${BASE}/address/${crypto.randomUUID()}`)
+        .patch(`${BASE}/addresses/${crypto.randomUUID()}`)
         .set("Cookie", cookies)
         .send({ city: "Nowhere" });
       expect(res.status).toBe(404);
     });
   });
 
-  describe(`PATCH ${BASE}/contact`, () => {
+  describe(`PATCH ${BASE}/contacts`, () => {
     test("updates the contact", async () => {
       const { userId, cookies } = await signupTestUser();
       await createTestContact(cookies);
 
       const res = await request(app)
-        .patch(`${BASE}/contact`)
+        .patch(`${BASE}/contacts`)
         .set("Cookie", cookies)
         .send({
           socials: [{ type: "facebook", url: "https://facebook.com/mahin" }],
@@ -755,25 +723,25 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 404 when no contact row exists", async () => {
       const { cookies } = await signupTestUser();
       const res = await request(app)
-        .patch(`${BASE}/contact`)
+        .patch(`${BASE}/contacts`)
         .set("Cookie", cookies)
         .send({ socials: [] });
       expect(res.status).toBe(404);
     });
   });
 
-  describe(`PATCH ${BASE}/phone/:id`, () => {
+  describe(`PATCH ${BASE}/contacts/phones/:id`, () => {
     test("updates the phone", async () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const phoneRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/phone`)
+        .post(`${BASE}/contacts/${contactId}/phones`)
         .set("Cookie", cookies)
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
 
       const res = await request(app)
-        .patch(`${BASE}/phone/${phoneId}`)
+        .patch(`${BASE}/contacts/phones/${phoneId}`)
         .set("Cookie", cookies)
         .send({ phone: "1999999999" });
       expect(res.status).toBe(200);
@@ -788,26 +756,26 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 404 for a nonexistent phone", async () => {
       const { cookies } = await signupTestUser();
       const res = await request(app)
-        .patch(`${BASE}/phone/${crypto.randomUUID()}`)
+        .patch(`${BASE}/contacts/phones/${crypto.randomUUID()}`)
         .set("Cookie", cookies)
         .send({ phone: "1999999999" });
       expect(res.status).toBe(404);
     });
   });
 
-  describe(`PATCH ${BASE}/email/:id`, () => {
+  describe(`PATCH ${BASE}/contacts/emails/:id`, () => {
     test("updates the email", async () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const emailRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/email`)
+        .post(`${BASE}/contacts/${contactId}/emails`)
         .set("Cookie", cookies)
         .send(validEmailPayload());
       const emailId = emailRes.body.data.id as string;
 
       const newEmail = `updated-${crypto.randomUUID()}@example.com`;
       const res = await request(app)
-        .patch(`${BASE}/email/${emailId}`)
+        .patch(`${BASE}/contacts/emails/${emailId}`)
         .set("Cookie", cookies)
         .send({ email: newEmail });
       expect(res.status).toBe(200);
@@ -819,10 +787,6 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
       expect(row?.email).toBe(newEmail);
     });
   });
-
-  // ---------------------------------------------------------------
-  // Delete
-  // ---------------------------------------------------------------
 
   describe(`DELETE ${BASE}`, () => {
     test("deletes the authenticated user", async () => {
@@ -843,17 +807,17 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     });
   });
 
-  describe(`DELETE ${BASE}/address/:id`, () => {
+  describe(`DELETE ${BASE}/addresses/:id`, () => {
     test("deletes the address", async () => {
       const { cookies } = await signupTestUser();
       const createRes = await request(app)
-        .post(`${BASE}/address`)
+        .post(`${BASE}/addresses`)
         .set("Cookie", cookies)
         .send(validAddressPayload());
       const addressId = createRes.body.data.id as string;
 
       const res = await request(app)
-        .delete(`${BASE}/address/${addressId}`)
+        .delete(`${BASE}/addresses/${addressId}`)
         .set("Cookie", cookies);
       expect(res.status).toBe(200);
     });
@@ -861,19 +825,19 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 404 for a nonexistent address", async () => {
       const { cookies } = await signupTestUser();
       const res = await request(app)
-        .delete(`${BASE}/address/${crypto.randomUUID()}`)
+        .delete(`${BASE}/addresses/${crypto.randomUUID()}`)
         .set("Cookie", cookies);
       expect(res.status).toBe(404);
     });
   });
 
-  describe(`DELETE ${BASE}/contact/:id`, () => {
+  describe(`DELETE ${BASE}/contacts/:id`, () => {
     test("deletes the contact", async () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
 
       const res = await request(app)
-        .delete(`${BASE}/contact/${contactId}`)
+        .delete(`${BASE}/contacts/${contactId}`)
         .set("Cookie", cookies);
       expect(res.status).toBe(200);
     });
@@ -881,41 +845,41 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns 404 for a nonexistent contact", async () => {
       const { cookies } = await signupTestUser();
       const res = await request(app)
-        .delete(`${BASE}/contact/${crypto.randomUUID()}`)
+        .delete(`${BASE}/contacts/${crypto.randomUUID()}`)
         .set("Cookie", cookies);
       expect(res.status).toBe(404);
     });
   });
 
-  describe(`DELETE ${BASE}/phone/:id`, () => {
+  describe(`DELETE ${BASE}/contacts/phones/:id`, () => {
     test("deletes the phone", async () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const phoneRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/phone`)
+        .post(`${BASE}/contacts/${contactId}/phones`)
         .set("Cookie", cookies)
         .send(validPhonePayload());
       const phoneId = phoneRes.body.data.id as string;
 
       const res = await request(app)
-        .delete(`${BASE}/phone/${phoneId}`)
+        .delete(`${BASE}/contacts/phones/${phoneId}`)
         .set("Cookie", cookies);
       expect(res.status).toBe(200);
     });
   });
 
-  describe(`DELETE ${BASE}/email/:id`, () => {
+  describe(`DELETE ${BASE}/contacts/emails/:id`, () => {
     test("deletes the email", async () => {
       const { cookies } = await signupTestUser();
       const contactId = await createTestContact(cookies);
       const emailRes = await request(app)
-        .post(`${BASE}/contact/${contactId}/email`)
+        .post(`${BASE}/contacts/${contactId}/emails`)
         .set("Cookie", cookies)
         .send(validEmailPayload());
       const emailId = emailRes.body.data.id as string;
 
       const res = await request(app)
-        .delete(`${BASE}/email/${emailId}`)
+        .delete(`${BASE}/contacts/emails/${emailId}`)
         .set("Cookie", cookies);
       expect(res.status).toBe(200);
     });

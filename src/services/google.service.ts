@@ -7,8 +7,8 @@ import type { CreateUserWithProfileByProviderInputType } from "@/zod";
 import { AuthService } from "./auth.service";
 import { UserService } from "./user.service";
 import { AuthRedis } from "@/redis";
-import type { AccessTokenPayload } from "@/types";
-import { generateRandomUsername } from "@/utils";
+import type { AccessTokenPayload, UserProfileDataByLoginType } from "@/types";
+import { finalLoginResponseUserData, generateRandomUsername } from "@/utils";
 import { EmailService } from "./email.service";
 
 const userService = new UserService();
@@ -92,18 +92,19 @@ export class GoogleService extends AuthService {
     };
 
     console.log("Hello mahin: ", payload);
-    const user = await userService.createUserWithProfileByProvider(payload);
+    const { profile, ...user } =
+      await userService.createUserWithProfileByProvider(payload);
 
-    const data: AccessTokenPayload = {
-      email: user.email,
-      id: user.id,
-      is_verified: user.is_verified,
-      role: user.role,
-      username: user.username,
-    };
+    const { tokenData, profileData } = finalLoginResponseUserData(
+      user,
+      profile!
+    );
 
-    const tokens = this.createTokens(data);
-    await authRedis.cacheUserLoginData(user?.id as string, data);
+    const tokens = this.createTokens(tokenData);
+    await authRedis.cacheUserLoginData(user?.id as string, {
+      ...tokenData,
+      ...profileData,
+    });
 
     if (!payload.user.is_verified) {
       await emailService.sendSignupCode(user.email, deviceInfo);

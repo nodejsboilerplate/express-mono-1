@@ -36,9 +36,10 @@ function validUserWithProfilePayload(
 async function createUser(
   overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
 ) {
-  const { user, profileId } = await userService.createUserWithProfile(
+  const { user, profile } = await userService.createUserWithProfile(
     validUserWithProfilePayload(overrides)
   );
+  const profileId = profile.id;
   const userId = user.id;
   if (!userId) throw new Error("Fixture setup failed: no userId returned");
   return { userId, profileId };
@@ -104,9 +105,10 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
   describe("UserService.createUserWithProfile", () => {
     test("creates a user + profile and returns both ids", async () => {
-      const { user, profileId } = await userService.createUserWithProfile(
+      const { user, profile } = await userService.createUserWithProfile(
         validUserWithProfilePayload()
       );
+      const profileId = profile.id;
       const userId = user.id;
       expect(typeof userId).toBe("string");
       expect(typeof profileId).toBe("string");
@@ -128,11 +130,12 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
 
     test("coerces date_of_birth to a date-only string", async () => {
       const dob = new Date("1998-04-12T00:00:00.000Z");
-      const { profileId } = await userService.createUserWithProfile(
+      const { profile } = await userService.createUserWithProfile(
         validUserWithProfilePayload({
           profile: { first_name: "Mahin", date_of_birth: dob },
         })
       );
+      const profileId = profile.id;
 
       const [row] = await pgDb
         .select()

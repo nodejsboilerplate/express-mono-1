@@ -24,13 +24,14 @@ import type {
   UpdatePhoneInputType,
   UpdateProfileInputType,
 } from "@/zod";
-import type { UserSelectType } from "../type";
+import type { UserProfileSelectType, UserSelectType } from "../type";
+import { validate as isUUID } from "uuid";
 
 export class UserRepository {
   async CreateNewUserAndProfile(data: CreateUserWithProfileInputType) {
     const { user: user_payload, profile: profile_payload } = data;
     const result = await pgDb.transaction(async (tx) => {
-      const { password, ...userWithoutPass } = await getColumns(usersTable);
+      const { password, ...userWithoutPass } = getColumns(usersTable);
       const [user] = await tx
         .insert(usersTable)
         .values(user_payload)
@@ -59,7 +60,7 @@ export class UserRepository {
             ? profile_payload.date_of_birth.toISOString().split("T")[0]
             : undefined,
         })
-        .returning({ id: userProfilesTable.id });
+        .returning();
 
       if (!createdUserProfie?.id) {
         throw new ApiError(
@@ -68,7 +69,7 @@ export class UserRepository {
         );
       }
 
-      return { user: user, profileId: createdUserProfie.id };
+      return { user: user, profile: createdUserProfie };
     });
 
     return result;
@@ -79,7 +80,7 @@ export class UserRepository {
   ) {
     const { user: user_payload, profile: profile_payload } = data;
     const result = await pgDb.transaction(async (tx) => {
-      const { password, ...userWithoutPass } = await getColumns(usersTable);
+      const { password, ...userWithoutPass } = getColumns(usersTable);
       const [user] = await tx
         .insert(usersTable)
         .values(user_payload)
@@ -101,7 +102,7 @@ export class UserRepository {
             ? profile_payload.date_of_birth.toISOString().split("T")[0]
             : undefined,
         })
-        .returning({ id: userProfilesTable.id });
+        .returning();
 
       if (!createdUserProfie?.id) {
         throw new ApiError(
@@ -110,7 +111,7 @@ export class UserRepository {
         );
       }
 
-      return { ...user, profileId: createdUserProfie.id };
+      return { ...user, profile: createdUserProfie };
     });
 
     return result;
@@ -173,26 +174,6 @@ export class UserRepository {
       .returning({ id: userPhonesTable.id });
 
     return updatedPhone;
-  }
-
-  async GetUserLoginDataForCache(id: string, role: UserSelectType["role"]) {
-    const prepared = pgDb.query.usersTable
-      .findFirst({
-        columns: {
-          email: true,
-          id: true,
-          is_verified: true,
-          role: true,
-          username: true,
-        },
-        where: {
-          id: { eq: sql.placeholder("id") },
-          role: { eq: sql.placeholder("role") },
-        },
-      })
-      .prepare("prepareGetUserLoginDataForCache");
-    const result = await prepared.execute({ id, role });
-    return result;
   }
 
   async SetEmailVerifyCode(
@@ -437,7 +418,7 @@ export class UserRepository {
     return deletedAddress;
   }
 
-  async GetUserDataForLoginByEmailOrUsername(data: string) {
+  async GetUserDataForLoginByEmailOrUsernameOrId(data: string) {
     const result = await pgDb.query.usersTable.findFirst({
       columns: {
         id: true,
@@ -447,6 +428,16 @@ export class UserRepository {
         role: true,
         is_verified: true,
       },
+      with: {
+        profile: {
+          columns: {
+            avatar: true,
+            first_name: true,
+            last_name: true,
+            nickname: true,
+          },
+        },
+      },
       where: {
         OR: [
           {
@@ -455,6 +446,7 @@ export class UserRepository {
           {
             username: { eq: data },
           },
+          ...(isUUID(data) ? [{ id: { eq: data } }] : []),
         ],
       },
     });

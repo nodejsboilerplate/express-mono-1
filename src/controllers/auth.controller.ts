@@ -146,4 +146,8 @@ export class AuthController {
       .status(201)
       .json(new ApiResponse(200, "OK", { id: result.user_id }));
   }
+
+  async authUserBasicDataProvider(req: Request, res: Response) {
+    const user = req.auth_user;
+  }
 }

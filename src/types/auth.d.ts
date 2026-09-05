@@ -1,9 +1,17 @@
-import type { UserSelectType } from "@/database/type";
+import type { UserProfileSelectType, UserSelectType } from "@/database/type";
 
 export type AccessTokenPayload = Pick<
   UserSelectType,
   "email" | "id" | "is_verified" | "role" | "username"
 >;
+
+export type UserProfileDataByLoginType = Pick<
+  UserProfileSelectType,
+  "first_name" | "last_name" | "nickname" | "avatar"
+>;
+export type UserBasicInfoDataType = AccessTokenPayload &
+  UserProfileDataByLoginType;
+
 export type RefreshTokenPayload = Pick<UserSelectType, "id" | "role">;
 
 export type CookieNames = {

@@ -1,12 +1,12 @@
 import { RedisResponse } from "@/constants";
 import { redisClient } from "@/libs";
 import { ACCESS_TOKEN_EXPIRY_SEC } from "@/services";
-import type { AccessTokenPayload } from "@/types";
+import type { AccessTokenPayload, UserBasicInfoDataType } from "@/types";
 
 export class AuthRedis {
   async cacheUserLoginData(
     key: string,
-    payload: AccessTokenPayload
+    payload: UserBasicInfoDataType
   ): Promise<boolean> {
     const [result, expiry_result] = await redisClient
       .multi()
@@ -19,8 +19,8 @@ export class AuthRedis {
     return (result as unknown as string) === RedisResponse.OK;
   }
 
-  async getCachedLoginData(key: string): Promise<AccessTokenPayload | null> {
-    const result = (await redisClient.get(key)) as AccessTokenPayload | null;
+  async getCachedLoginData(key: string): Promise<UserBasicInfoDataType | null> {
+    const result = (await redisClient.get(key)) as UserBasicInfoDataType | null;
     return result;
   }
 

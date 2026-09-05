@@ -61,7 +61,7 @@ export class UserService {
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
     const existedUser =
-      await userRepository.GetUserDataForLoginByEmailOrUsername(
+      await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
         parse_payload.user.email
       );
 

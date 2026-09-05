@@ -8,10 +8,6 @@ import { app } from "@/server";
 
 const AUTH_BASE = "/api/v1/auth";
 
-// ---------------------------------------------------------------
-// Payload builders
-// ---------------------------------------------------------------
-
 function validSignupPayload(
   overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
 ) {
@@ -31,20 +27,12 @@ function validSignupPayload(
   };
 }
 
-// ---------------------------------------------------------------
-// Cookie extraction
-// ---------------------------------------------------------------
-
 function extractCookies(res: request.Response): string[] {
   const raw = res.headers["set-cookie"];
   if (!raw) return [];
   const arr = Array.isArray(raw) ? raw : [raw];
   return arr.map((c: string) => c.split(";")[0]!);
 }
-
-// ---------------------------------------------------------------
-// Fixture helper
-// ---------------------------------------------------------------
 
 async function signupTestUser(
   overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
@@ -72,10 +60,6 @@ async function signupTestUser(
 }
 
 describe("Auth API Test", { tags: ["apis/auth"] }, () => {
-  // ---------------------------------------------------------------
-  // Signup
-  // ---------------------------------------------------------------
-
   describe(`POST ${AUTH_BASE}/signup`, () => {
     test("creates a user + profile, sets auth cookies, returns 201", async () => {
       const payload = validSignupPayload();
@@ -152,10 +136,6 @@ describe("Auth API Test", { tags: ["apis/auth"] }, () => {
     });
   });
 
-  // ---------------------------------------------------------------
-  // Login
-  // ---------------------------------------------------------------
-
   describe(`POST ${AUTH_BASE}/login`, () => {
     test("logs in with a correct email + password, sets cookies", async () => {
       const { email, password } = await signupTestUser();
@@ -204,16 +184,12 @@ describe("Auth API Test", { tags: ["apis/auth"] }, () => {
     });
   });
 
-  // ---------------------------------------------------------------
-  // Resend signup code
-  // ---------------------------------------------------------------
-
-  describe(`POST ${AUTH_BASE}/resend-signup-code`, () => {
+  describe(`POST ${AUTH_BASE}/messages/signup/code`, () => {
     test("resends a verification code for the authenticated user", async () => {
       const { userId, cookies } = await signupTestUser();
 
       const res = await request(app)
-        .post(`${AUTH_BASE}/resend-signup-code`)
+        .post(`${AUTH_BASE}/messages/signup/code`)
         .set("Cookie", cookies);
 
       expect(res.status).toBe(200);
@@ -227,16 +203,12 @@ describe("Auth API Test", { tags: ["apis/auth"] }, () => {
     });
 
     test("returns 401 without an access token", async () => {
-      const res = await request(app).post(`${AUTH_BASE}/resend-signup-code`);
+      const res = await request(app).post(`${AUTH_BASE}/messages/signup/code`);
       expect(res.status).toBe(401);
     });
   });
 
-  // ---------------------------------------------------------------
-  // Verify signup code
-  // ---------------------------------------------------------------
-
-  describe(`POST ${AUTH_BASE}/verify-signup-code`, () => {
+  describe(`POST ${AUTH_BASE}/verify/signup/code`, () => {
     test("verifies the authenticated user with a correct, unexpired code", async () => {
       const { userId, cookies } = await signupTestUser();
 
@@ -246,7 +218,7 @@ describe("Auth API Test", { tags: ["apis/auth"] }, () => {
         .where(eq(usersTable.id, userId));
 
       const res = await request(app)
-        .post(`${AUTH_BASE}/verify-signup-code`)
+        .post(`${AUTH_BASE}/verify/signup/code`)
         .set("Cookie", cookies)
         .send({ verify_code: row!.verify_code });
 
@@ -265,7 +237,7 @@ describe("Auth API Test", { tags: ["apis/auth"] }, () => {
       const { cookies } = await signupTestUser();
 
       const res = await request(app)
-        .post(`${AUTH_BASE}/verify-signup-code`)
+        .post(`${AUTH_BASE}/verify/signup/code`)
         .set("Cookie", cookies)
         .send({ verify_code: "000000" });
       expect(res.status).toBe(400);
@@ -285,7 +257,7 @@ describe("Auth API Test", { tags: ["apis/auth"] }, () => {
         .where(eq(usersTable.id, userId));
 
       const res = await request(app)
-        .post(`${AUTH_BASE}/verify-signup-code`)
+        .post(`${AUTH_BASE}/verify/signup/code`)
         .set("Cookie", cookies)
         .send({ verify_code: row!.verify_code });
       expect(res.status).toBe(400);
@@ -300,12 +272,12 @@ describe("Auth API Test", { tags: ["apis/auth"] }, () => {
         .where(eq(usersTable.id, userId));
 
       await request(app)
-        .post(`${AUTH_BASE}/verify-signup-code`)
+        .post(`${AUTH_BASE}/verify/signup/code`)
         .set("Cookie", cookies)
         .send({ verify_code: row!.verify_code });
 
       const res = await request(app)
-        .post(`${AUTH_BASE}/verify-signup-code`)
+        .post(`${AUTH_BASE}/verify/signup/code`)
         .set("Cookie", cookies)
         .send({ verify_code: row!.verify_code });
       expect(res.status).toBe(400);
@@ -313,7 +285,7 @@ describe("Auth API Test", { tags: ["apis/auth"] }, () => {
 
     test("returns 401 without an access token", async () => {
       const res = await request(app)
-        .post(`${AUTH_BASE}/verify-signup-code`)
+        .post(`${AUTH_BASE}/verify/signup/code`)
         .send({ verify_code: "123456" });
       expect(res.status).toBe(401);
     });
