@@ -26,14 +26,14 @@ router
   );
 
 router
-  .route("/resend-signup-code")
+  .route("/messages/signup/code")
   .post(
     authMiddlware,
     asyncHandler(authController.resendSignupCodeHandler.bind(authController))
   );
 
 router
-  .route("/verify-signup-code")
+  .route("/verify/signup/code")
   .post(
     authMiddlware,
     asyncHandler(authController.verifySignupCodeHandler.bind(authController))

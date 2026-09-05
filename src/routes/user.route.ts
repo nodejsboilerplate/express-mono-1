@@ -11,28 +11,28 @@ const userController = new UserController();
 // ---------------------------------------------------------
 
 router
-  .route("/address")
+  .route("/addresses")
   .post(
     authMiddlware,
     asyncHandler(userController.createAddressHandler.bind(userController))
   );
 
 router
-  .route("/contact")
+  .route("/contacts")
   .post(
     authMiddlware,
     asyncHandler(userController.createContactHandler.bind(userController))
   );
 
 router
-  .route("/contact/:id/phone")
+  .route("/contacts/:id/phones")
   .post(
     authMiddlware,
     asyncHandler(userController.createPhoneHandler.bind(userController))
   );
 
 router
-  .route("/contact/:id/email")
+  .route("/contacts/:id/emails")
   .post(
     authMiddlware,
     asyncHandler(userController.createEmailHandler.bind(userController))
@@ -53,7 +53,7 @@ router
 // ---------------------------------------------------------
 
 router
-  .route("/phone/:id/send-verification-code")
+  .route("/messages/contacts/phones/:id/code")
   .post(
     authMiddlware,
     asyncHandler(
@@ -62,7 +62,7 @@ router
   );
 
 router
-  .route("/email/:id/send-verification-code")
+  .route("/messages/contacts/emails/:id/code")
   .post(
     authMiddlware,
     asyncHandler(
@@ -71,14 +71,14 @@ router
   );
 
 router
-  .route("/phone/:id/verify")
+  .route("/verify/contacts/phones/:id")
   .post(
     authMiddlware,
     asyncHandler(userController.verifyContactPhoneHandler.bind(userController))
   );
 
 router
-  .route("/email/:id/verify")
+  .route("/verify/contacts/emails/:id")
   .post(
     authMiddlware,
     asyncHandler(userController.verifyContactEmailHandler.bind(userController))
@@ -95,28 +95,28 @@ router
   );
 
 router
-  .route("/address/:id")
+  .route("/addresses/:id")
   .patch(
     authMiddlware,
     asyncHandler(userController.updateAddressHandler.bind(userController))
   );
 
 router
-  .route("/contact")
+  .route("/contacts")
   .patch(
     authMiddlware,
     asyncHandler(userController.updateContactHandler.bind(userController))
   );
 
 router
-  .route("/phone/:id")
+  .route("/contacts/phones/:id")
   .patch(
     authMiddlware,
     asyncHandler(userController.updatePhoneHandler.bind(userController))
   );
 
 router
-  .route("/email/:id")
+  .route("/contacts/emails/:id")
   .patch(
     authMiddlware,
     asyncHandler(userController.updateEmailHandler.bind(userController))
@@ -133,28 +133,28 @@ router
   );
 
 router
-  .route("/address/:id")
+  .route("/addresses/:id")
   .delete(
     authMiddlware,
     asyncHandler(userController.deleteAddressHandler.bind(userController))
   );
 
 router
-  .route("/contact/:id")
+  .route("/contacts/:id")
   .delete(
     authMiddlware,
     asyncHandler(userController.deleteContactHandler.bind(userController))
   );
 
 router
-  .route("/phone/:id")
+  .route("/contacts/phones/:id")
   .delete(
     authMiddlware,
     asyncHandler(userController.deletePhoneHandler.bind(userController))
   );
 
 router
-  .route("/email/:id")
+  .route("/contacts/emails/:id")
   .delete(
     authMiddlware,
     asyncHandler(userController.deleteEmailHandler.bind(userController))

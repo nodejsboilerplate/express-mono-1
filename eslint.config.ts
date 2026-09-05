@@ -9,17 +9,24 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig([
   {
-    files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
+      files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+
     plugins: { js },
+
     extends: ["js/recommended"],
+
     languageOptions: {
       globals: globals.browser,
+
       parserOptions: {
+        projectService: true,
         tsconfigRootDir: __dirname,
       },
     },
   },
+
   ...tseslint.configs.recommended,
+
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
