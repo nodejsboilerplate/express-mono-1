@@ -247,10 +247,11 @@ export const SystemCustomErrorMsgByCode: SystemCustomErrorMessageType = {
     code: SystemCustomErrorCode.WEBHOOK_SECRET_NOT_CONFIGURED,
   },
   [SystemCustomErrorCode.SERVICE_UNAVAILABLE]: {
-  title: "Service Unavailable",
-  message: "The service is temporarily unavailable. Please try again in a few moments.",
-  code: SystemCustomErrorCode.SERVICE_UNAVAILABLE,
-},
+    title: "Service Unavailable",
+    message:
+      "The service is temporarily unavailable. Please try again in a few moments.",
+    code: SystemCustomErrorCode.SERVICE_UNAVAILABLE,
+  },
 
   // -- 500: profile --
   [SystemCustomErrorCode.PROFILE_CREATION_FAILED]: {

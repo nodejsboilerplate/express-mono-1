@@ -22,7 +22,8 @@ const { sendSignupCodeMock } = vi.hoisted(() => ({
   sendSignupCodeMock: vi.fn().mockResolvedValue("mock-user-id"),
 }));
 vi.mock("@/services/email.service", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/services/email.service")>();
+  const actual =
+    await importOriginal<typeof import("@/services/email.service")>();
   return {
     ...actual,
     EmailService: class {
@@ -232,7 +233,10 @@ describe("AuthService Test", { tags: ["services/auth"] }, () => {
         is_verified: false,
       };
 
-      vi.spyOn(UserService.prototype, "createUserWithProfile").mockResolvedValue({
+      vi.spyOn(
+        UserService.prototype,
+        "createUserWithProfile"
+      ).mockResolvedValue({
         user: createdUser,
       } as any);
 
@@ -273,9 +277,10 @@ describe("AuthService Test", { tags: ["services/auth"] }, () => {
     });
 
     test("throws 404 when the user is not found", async () => {
-      vi.spyOn(UserRepository.prototype, "GetUserVerifyDetails").mockResolvedValue(
-        null as any
-      );
+      vi.spyOn(
+        UserRepository.prototype,
+        "GetUserVerifyDetails"
+      ).mockResolvedValue(null as any);
 
       await expect(
         authService.verifySignupCode({
@@ -286,7 +291,10 @@ describe("AuthService Test", { tags: ["services/auth"] }, () => {
     });
 
     test("throws 400 when the user is already verified", async () => {
-      vi.spyOn(UserRepository.prototype, "GetUserVerifyDetails").mockResolvedValue({
+      vi.spyOn(
+        UserRepository.prototype,
+        "GetUserVerifyDetails"
+      ).mockResolvedValue({
         id: crypto.randomUUID(),
         is_verified: true,
       } as any);
@@ -300,7 +308,10 @@ describe("AuthService Test", { tags: ["services/auth"] }, () => {
     });
 
     test("throws 400 when the verify code does not match", async () => {
-      vi.spyOn(UserRepository.prototype, "GetUserVerifyDetails").mockResolvedValue({
+      vi.spyOn(
+        UserRepository.prototype,
+        "GetUserVerifyDetails"
+      ).mockResolvedValue({
         id: crypto.randomUUID(),
         is_verified: false,
         verify_code: "111111",
@@ -316,7 +327,10 @@ describe("AuthService Test", { tags: ["services/auth"] }, () => {
     });
 
     test("throws 400 when the verify code has expired", async () => {
-      vi.spyOn(UserRepository.prototype, "GetUserVerifyDetails").mockResolvedValue({
+      vi.spyOn(
+        UserRepository.prototype,
+        "GetUserVerifyDetails"
+      ).mockResolvedValue({
         id: crypto.randomUUID(),
         is_verified: false,
         verify_code: "123456",
@@ -333,13 +347,19 @@ describe("AuthService Test", { tags: ["services/auth"] }, () => {
 
     test("verifies the user and returns their id on success", async () => {
       const userId = crypto.randomUUID();
-      vi.spyOn(UserRepository.prototype, "GetUserVerifyDetails").mockResolvedValue({
+      vi.spyOn(
+        UserRepository.prototype,
+        "GetUserVerifyDetails"
+      ).mockResolvedValue({
         id: userId,
         is_verified: false,
         verify_code: "123456",
         verify_expiry: new Date(Date.now() + 60_000),
       } as any);
-      vi.spyOn(UserRepository.prototype, "UpdateUserVerifyDetails").mockResolvedValue({
+      vi.spyOn(
+        UserRepository.prototype,
+        "UpdateUserVerifyDetails"
+      ).mockResolvedValue({
         id: userId,
       } as any);
 
@@ -352,15 +372,19 @@ describe("AuthService Test", { tags: ["services/auth"] }, () => {
     });
 
     test("throws 500 if the verify update fails", async () => {
-      vi.spyOn(UserRepository.prototype, "GetUserVerifyDetails").mockResolvedValue({
+      vi.spyOn(
+        UserRepository.prototype,
+        "GetUserVerifyDetails"
+      ).mockResolvedValue({
         id: crypto.randomUUID(),
         is_verified: false,
         verify_code: "123456",
         verify_expiry: new Date(Date.now() + 60_000),
       } as any);
-      vi.spyOn(UserRepository.prototype, "UpdateUserVerifyDetails").mockResolvedValue(
-        null as any
-      );
+      vi.spyOn(
+        UserRepository.prototype,
+        "UpdateUserVerifyDetails"
+      ).mockResolvedValue(null as any);
 
       await expect(
         authService.verifySignupCode({

@@ -1,6 +1,11 @@
 export const USER_ROLES = ["ADMIN", "USER"] as const;
 
-export const USER_ACCOUNT_PROVIDERS = ["GOOGLE", "GITHUB", "DISCORD", "MANUAL"] as const
+export const USER_ACCOUNT_PROVIDERS = [
+  "GOOGLE",
+  "GITHUB",
+  "DISCORD",
+  "MANUAL",
+] as const;
 
 export const USER_GENDERS = [
   "MALE",

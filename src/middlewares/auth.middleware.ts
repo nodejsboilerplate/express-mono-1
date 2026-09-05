@@ -23,7 +23,7 @@ const authRedis = new AuthRedis();
  *
  * @throws {ApiError} 401 Unauthorized if both tokens are invalid or user lacks Admin permissions.
  */
-export const authMiddlware =  async (
+export const authMiddlware = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -122,10 +122,10 @@ export const authMiddlware =  async (
       is_verified: temp_user.is_verified,
       username: temp_user.username,
     };
-    
+
     console.log("Token refreshed", req.auth_user);
     return next();
   } catch (error) {
     throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
   }
-}
+};

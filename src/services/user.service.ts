@@ -30,7 +30,7 @@ import type {
 } from "@/zod";
 
 const userRepository = new UserRepository();
-const userInputValidators = new UserInputValidators()
+const userInputValidators = new UserInputValidators();
 
 export class UserService {
   // ---------------------------------------------------------

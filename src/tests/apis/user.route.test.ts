@@ -112,7 +112,10 @@ async function signupTestUser(
   };
 }
 
-async function createTestContact(cookies: string[], overrides: Partial<any> = {}) {
+async function createTestContact(
+  cookies: string[],
+  overrides: Partial<any> = {}
+) {
   const res = await request(app)
     .post(`${BASE}/contact`)
     .set("Cookie", cookies)
@@ -176,7 +179,9 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     });
 
     test("returns 401 without an access token", async () => {
-      const res = await request(app).post(`${BASE}/address`).send(validAddressPayload());
+      const res = await request(app)
+        .post(`${BASE}/address`)
+        .send(validAddressPayload());
       expect(res.status).toBe(401);
     });
 
@@ -237,7 +242,9 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     });
 
     test("returns 401 without an access token", async () => {
-      const res = await request(app).post(`${BASE}/contact`).send({ socials: [] });
+      const res = await request(app)
+        .post(`${BASE}/contact`)
+        .send({ socials: [] });
       expect(res.status).toBe(401);
     });
   });
@@ -306,7 +313,9 @@ describe("User API Test", { tags: ["apis/user"] }, () => {
     test("returns the authenticated user's profile", async () => {
       const { cookies, email, username } = await signupTestUser();
 
-      const res = await request(app).get(`${BASE}/profile`).set("Cookie", cookies);
+      const res = await request(app)
+        .get(`${BASE}/profile`)
+        .set("Cookie", cookies);
 
       expect(res.status).toBe(200);
       expect(res.body.data.email).toBe(email);

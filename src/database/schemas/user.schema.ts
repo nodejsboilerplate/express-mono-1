@@ -10,7 +10,10 @@ import type { SocialLink } from "@/types";
 // ---------------------------------------------------------
 export const userRoleEnum = pgEnum("user_role", USER_ROLES);
 export const userGenderRoleEnum = pgEnum("user_gender_role", USER_GENDERS);
-export const userAccountProviderEnum = pgEnum("user_account_provider", USER_ACCOUNT_PROVIDERS)
+export const userAccountProviderEnum = pgEnum(
+  "user_account_provider",
+  USER_ACCOUNT_PROVIDERS
+);
 
 // ---------------------------------------------------------
 // Users

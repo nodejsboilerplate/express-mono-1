@@ -1,6 +1,6 @@
 import { generate } from "random-words";
 
-export const generateRandomUsername = (): string  =>{
+export const generateRandomUsername = (): string => {
   let word: string;
   do {
     word = (generate(1) as string[])[0]?.replace(/[^a-zA-Z0-9]/g, "")!;
@@ -10,4 +10,4 @@ export const generateRandomUsername = (): string  =>{
 
   const suffix = Math.floor(1000000 + Math.random() * 9000000);
   return `${word}${suffix}`; // "Falcon4839201"
-}
+};

@@ -33,12 +33,11 @@ import { UserRepository } from "@/database/repositories";
 import { UserService } from "./user.service";
 import { EmailService } from "./email.service";
 
-
 const userRepository = new UserRepository();
 const userService = new UserService();
 const authRedis = new AuthRedis();
-const emailService = new EmailService()
-const userInputValidators = new UserInputValidators()
+const emailService = new EmailService();
+const userInputValidators = new UserInputValidators();
 
 export class AuthService {
   createTokens(payload: AccessTokenPayload): CookieNames {
@@ -136,10 +135,10 @@ export class AuthService {
     };
   }
 
-
-
-  async signupUser(payload: CreateUserWithProfileInputType, deviceInfo: string) {
-   
+  async signupUser(
+    payload: CreateUserWithProfileInputType,
+    deviceInfo: string
+  ) {
     const result = await userService.createUserWithProfile(payload);
     const { user } = result;
 

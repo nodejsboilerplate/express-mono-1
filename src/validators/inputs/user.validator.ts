@@ -45,7 +45,7 @@ export class UserInputValidators extends Validator {
   createUserWithProfileByProviderInput(
     payload: CreateUserWithProfileByProviderInputType
   ) {
-     const { data, success, error } = this.validate(
+    const { data, success, error } = this.validate(
       payload,
       UserZSchema.createUserWithProfileByProvider
     );

@@ -21,7 +21,8 @@ const { sendSignupCodeMock } = vi.hoisted(() => ({
   sendSignupCodeMock: vi.fn().mockResolvedValue("mock-user-id"),
 }));
 vi.mock("@/services/email.service", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/services/email.service")>();
+  const actual =
+    await importOriginal<typeof import("@/services/email.service")>();
   return {
     ...actual,
     EmailService: class {
@@ -65,9 +66,7 @@ describe("GoogleService Test", { tags: ["services/google"] }, () => {
 
   describe("GoogleService.login", () => {
     test("throws 401 when no code is provided", async () => {
-      await expect(
-        googleService.login("", "test-device")
-      ).rejects.toThrow();
+      await expect(googleService.login("", "test-device")).rejects.toThrow();
     });
 
     test("throws 503 when no idToken is returned from Google", async () => {
@@ -102,7 +101,10 @@ describe("GoogleService Test", { tags: ["services/google"] }, () => {
         "createUserWithProfileByProvider"
       ).mockResolvedValue(createdUser as any);
 
-      const result = await googleService.login("valid-auth-code", "Chrome on macOS");
+      const result = await googleService.login(
+        "valid-auth-code",
+        "Chrome on macOS"
+      );
 
       expect(result.user_id).toBe(createdUser.id);
       expect(typeof result.tokens.accessToken).toBe("string");
@@ -151,7 +153,10 @@ describe("GoogleService Test", { tags: ["services/google"] }, () => {
       await googleService.login("valid-auth-code", "Chrome on macOS");
 
       expect(sendSignupCodeMock).toHaveBeenCalledTimes(1);
-      expect(sendSignupCodeMock).toHaveBeenCalledWith(profile.email, "Chrome on macOS");
+      expect(sendSignupCodeMock).toHaveBeenCalledWith(
+        profile.email,
+        "Chrome on macOS"
+      );
     });
 
     test("returns existing user's tokens on repeat login (no duplicate creation)", async () => {
@@ -176,7 +181,10 @@ describe("GoogleService Test", { tags: ["services/google"] }, () => {
         .spyOn(UserService.prototype, "createUserWithProfileByProvider")
         .mockResolvedValue(existingUser as any);
 
-      const result = await googleService.login("valid-auth-code", "Chrome on macOS");
+      const result = await googleService.login(
+        "valid-auth-code",
+        "Chrome on macOS"
+      );
 
       expect(createSpy).toHaveBeenCalledTimes(1);
       expect(result.user_id).toBe(existingUser.id);

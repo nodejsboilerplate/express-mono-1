@@ -13,7 +13,7 @@ import { EmailService } from "./email.service";
 
 const userService = new UserService();
 const authRedis = new AuthRedis();
-const emailService = new EmailService()
+const emailService = new EmailService();
 
 export class GoogleService extends AuthService {
   private static CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -91,7 +91,7 @@ export class GoogleService extends AuthService {
       },
     };
 
-    console.log("Hello mahin: ", payload)
+    console.log("Hello mahin: ", payload);
     const user = await userService.createUserWithProfileByProvider(payload);
 
     const data: AccessTokenPayload = {

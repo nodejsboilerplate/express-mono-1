@@ -54,7 +54,7 @@ export class UserController {
   }
 
   async createPhoneHandler(req: Request, res: Response): Promise<Response> {
-    const { id } = req.params as {id: string}
+    const { id } = req.params as { id: string };
 
     const payload = req.body as Omit<
       CreateUserPhoneInputType,
@@ -75,7 +75,7 @@ export class UserController {
   }
 
   async createEmailHandler(req: Request, res: Response): Promise<Response> {
-       const { id } = req.params as {id: string}
+    const { id } = req.params as { id: string };
 
     const payload = req.body as Omit<
       CreateUserEmailInputType,
@@ -107,7 +107,7 @@ export class UserController {
     req: Request,
     res: Response
   ): Promise<Response> {
-    const { id } = req.params as Pick<UserIdWithContextIdInputType, "id">
+    const { id } = req.params as Pick<UserIdWithContextIdInputType, "id">;
     const result = await userService.sendVerificationCodeForPhone({
       id,
       user_id: req.auth_user.id,
