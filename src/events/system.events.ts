@@ -8,6 +8,7 @@ enum SYSTEM_CUSTOM_ERROR_EVENTS {
   INVALID_VERIFICATION_CODE = "INVALID_VERIFICATION_CODE",
   VERIFICATION_CODE_EXPIRED = "VERIFICATION_CODE_EXPIRED",
   WEBHOOK_HEADERS_MISSING = "WEBHOOK_HEADERS_MISSING",
+  USER_NOT_VERIFIED = "USER_NOT_VERIFIED",
 
   // -- 404: not found, one per resource --
   USER_NOT_FOUND = "USER_NOT_FOUND",
@@ -63,6 +64,7 @@ export const SystemCustomErrorCode: Record<SYSTEM_CUSTOM_ERROR_EVENTS, string> =
     VERIFICATION_CODE_EXPIRED: "40003",
     WEBHOOK_HEADERS_MISSING: "40004",
     WEBHOOK_SIGNATURE_INVALID: "40005",
+    USER_NOT_VERIFIED: "40006",
 
     USER_NOT_FOUND: "40401",
     PROFILE_NOT_FOUND: "40402",
@@ -168,6 +170,11 @@ export const SystemCustomErrorMsgByCode: SystemCustomErrorMessageType = {
     title: "Invalid Webhook Signature",
     message: "The webhook signature could not be verified.",
     code: SystemCustomErrorCode.WEBHOOK_SIGNATURE_INVALID,
+  },
+  [SystemCustomErrorCode.USER_NOT_VERIFIED]: {
+    title: "Account Not Verified",
+    message: "Please verify your account before continuing.",
+    code: SystemCustomErrorCode.USER_NOT_VERIFIED,
   },
 
   // -- 404 --

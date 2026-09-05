@@ -23,7 +23,7 @@ import type { Request, Response } from "express";
 
 const authService = new AuthService();
 const googleService = new GoogleService();
-const emailService = new EmailService();
+const emailService = new EmailService(); // Seperate Domain
 const userRepository = new UserRepository();
 const authRedis = new AuthRedis();
 
@@ -72,7 +72,10 @@ export class AuthController {
 
   async loginUserHandler(req: Request, res: Response): Promise<Response> {
     const payload = req.body as LoginUserInputType;
-    const { accessToken, refreshToken } = await authService.loginUser(payload);
+    const { accessToken, refreshToken } = await authService.loginUser(
+      payload,
+      req?.headers["user-agent"] ?? "Unknown device"
+    );
 
     res.cookie(
       CookieService.ACCESS_TOKEN.name,

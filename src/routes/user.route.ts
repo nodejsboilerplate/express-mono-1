@@ -65,7 +65,9 @@ router
   .route("/messages/contacts/emails/:id/code")
   .post(
     authMiddlware,
-    asyncHandler(userController.sendEmailVerifyCodeHandler.bind(userController))
+    asyncHandler(
+      userController.sendContactEmailVerifyCodeHandler.bind(userController)
+    )
   );
 
 router

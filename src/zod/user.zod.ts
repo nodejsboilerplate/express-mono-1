@@ -335,7 +335,7 @@ export abstract class UserZSchema extends ZodBase {
   // ---------------------------------------------------------
   static loginUser = z4.object({
     identifier: z4.string({ error: "Invalid email or username!" }),
-    password: z4.string({ error: "Password is required" }),
+    password: z4.string({ error: "Invalid password" }).optional(),
   });
 }
 

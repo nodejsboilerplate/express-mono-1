@@ -19,7 +19,7 @@ import { ApiResponse } from "@/libs";
 import { EmailService, UserService } from "@/services";
 
 const userService = new UserService();
-const emailService = new EmailService();
+const emailService = new EmailService(); // Seperate Domain
 
 export class UserController {
   // ---------------------------------------------------------
@@ -122,12 +122,12 @@ export class UserController {
     );
   }
 
-  async sendEmailVerifyCodeHandler(
+  async sendContactEmailVerifyCodeHandler(
     req: Request,
     res: Response
   ): Promise<Response> {
     const { id } = req.params as Pick<UserIdWithContextIdInputType, "id">;
-    const result = await emailService.sendVerifyEmailCode(
+    const result = await emailService.sendVerifyContactEmailCode(
       {
         id,
         user_id: req.auth_user.id,

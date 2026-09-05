@@ -24,15 +24,27 @@ export class EmailService extends ResendService {
     const verify_code = generateVerificationCode();
     const verify_expiry = getVerifyExpiry();
 
-    const user = await userRepository.SetVerifyCodeForSignup(
+    const existedUser =
+      await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
+        parse_email
+      );
+
+    if (!existedUser?.id) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
+    }
+
+    if (existedUser.is_verified) {
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("USER_ALREADY_VERIFIED")
+      );
+    }
+
+    const user = await userRepository.SetVerifyCodeForCoreUser(
       verify_code,
       verify_expiry,
       email
     );
-
-    if (!user?.id) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
-    }
 
     await EmailService.resend?.emails.send({
       from: EmailService.GetFullEmail(
@@ -53,11 +65,67 @@ export class EmailService extends ResendService {
       }),
     });
 
+    return user?.id;
+  }
+
+  async sendLoginCode(email: string, deviceInfo: string) {
+    const parse_email = userInputValidators.emailInput(email);
+
+    if (isZodError(parse_email)) throw validationError(parse_email);
+
+    const verify_code = generateVerificationCode();
+    const verify_expiry = getVerifyExpiry();
+
+    const existedUser =
+      await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
+        parse_email
+      );
+
+    if (!existedUser?.id) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
+    }
+
+    if (!existedUser.is_verified) {
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("USER_NOT_VERIFIED")
+      );
+    }
+
+    const user = await userRepository.SetVerifyCodeForCoreUser(
+      verify_code,
+      verify_expiry,
+      email
+    );
+
+    if (!user?.id) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
+    }
+
+    await EmailService.resend?.emails.send({
+      from: EmailService.GetFullEmail(
+        "Signup",
+        EmailService.EMAIL_ADDRESS_FOR_AUTH
+      ),
+      to: email,
+      subject: "Your Login Verification Code",
+      react: OtpVerificationEmail2({
+        appLogoUrl: EmailService.APP_LOGO_URL,
+        deviceInfo,
+        otp: verify_code,
+        requestDate: new Date().toLocaleString("en-US", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }),
+        teamName: EmailService.TEAM_NAME,
+      }),
+    });
+
     return user.id;
   }
 
   // For verifing contact individual emails
-  async sendVerifyEmailCode(
+  async sendVerifyContactEmailCode(
     payload: UserIdWithContextIdInputType,
     deviceInfo: string
   ) {

@@ -35,7 +35,7 @@ import { EmailService } from "./email.service";
 const userRepository = new UserRepository();
 const userService = new UserService();
 const authRedis = new AuthRedis();
-const emailService = new EmailService();
+const emailService = new EmailService(); // Seperate Domain
 const userInputValidators = new UserInputValidators();
 
 export class AuthService {
@@ -100,7 +100,8 @@ export class AuthService {
   }
 
   async loginUser(
-    payload: LoginUserInputType
+    payload: LoginUserInputType,
+    deviceInfo?: string
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const parse_payload = userInputValidators.loginUserInput(payload);
 
@@ -115,12 +116,16 @@ export class AuthService {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
     }
 
-    const isPassMatched = await bcrypt.compare(
-      parse_payload.password,
-      result.password as string
-    );
-    if (!isPassMatched) {
-      throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
+    if (parse_payload.password && result.password) {
+      const isPassMatched = await bcrypt.compare(
+        parse_payload.password,
+        result.password as string
+      );
+      if (!isPassMatched) {
+        throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
+      }
+    } else {
+      await emailService.sendLoginCode(result.email, deviceInfo ?? "");
     }
 
     const { password, profile, ...rest } = result;

@@ -454,16 +454,14 @@ export class UserRepository {
     return result;
   }
 
-  async SetVerifyCodeForSignup(code: string, expiry: Date, email: string) {
+  async SetVerifyCodeForCoreUser(code: string, expiry: Date, email: string) {
     const [user] = await pgDb
       .update(usersTable)
       .set({
         verify_code: code,
         verify_expiry: expiry,
       })
-      .where(
-        and(eq(usersTable.email, email), eq(usersTable.is_verified, false))
-      )
+      .where(eq(usersTable.email, email))
       .returning({
         id: usersTable.id,
       });

@@ -322,13 +322,13 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
     });
   });
 
-  describe("EmailService.sendVerifyEmailCode", () => {
+  describe("EmailService.sendVerifyContactEmailCode", () => {
     test("sets a verification code on an unverified email and returns its id", async () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
 
-      const result = await emailService.sendVerifyEmailCode(
+      const result = await emailService.sendVerifyContactEmailCode(
         { id: emailId, user_id: userId },
         "test device"
       );
@@ -353,7 +353,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
         .where(eq(userEmailsTable.id, emailId));
 
       await expect(
-        emailService.sendVerifyEmailCode(
+        emailService.sendVerifyContactEmailCode(
           { id: emailId, user_id: userId },
           "test device"
         )
@@ -367,7 +367,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const emailId = await createEmail(userId, contactId);
 
       await expect(
-        emailService.sendVerifyEmailCode(
+        emailService.sendVerifyContactEmailCode(
           { id: emailId, user_id: otherUserId },
           "test device"
         )
@@ -378,7 +378,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
 
       await expect(
-        emailService.sendVerifyEmailCode(
+        emailService.sendVerifyContactEmailCode(
           { id: crypto.randomUUID(), user_id: userId },
           "test device"
         )
@@ -668,7 +668,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
-      await emailService.sendVerifyEmailCode(
+      await emailService.sendVerifyContactEmailCode(
         { id: emailId, user_id: userId },
         "test device"
       );
@@ -698,7 +698,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
-      await emailService.sendVerifyEmailCode(
+      await emailService.sendVerifyContactEmailCode(
         { id: emailId, user_id: userId },
         "test device"
       );
@@ -726,7 +726,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
-      await emailService.sendVerifyEmailCode(
+      await emailService.sendVerifyContactEmailCode(
         { id: emailId, user_id: userId },
         "test device"
       );
@@ -744,7 +744,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
-      await emailService.sendVerifyEmailCode(
+      await emailService.sendVerifyContactEmailCode(
         { id: emailId, user_id: userId },
         "test device"
       );
