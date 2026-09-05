@@ -12,6 +12,7 @@ export class ResendService {
   static APP_LOGO_URL: string = "";
   static EMAIL_DOMAIN: string = process.env.EMAIL_DOMAIN ?? "fluctux.com";
   static EMAIL_ADDRESS_FOR_AUTH: string = "auth";
+  static EMAIL_ADDRESS_FOR_VERIFICATION: string = "verify"
 
   constructor() {
     if (!ResendService.resend) {

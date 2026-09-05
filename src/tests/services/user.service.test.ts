@@ -10,9 +10,10 @@ import {
 } from "@/database";
 import { eq } from "drizzle-orm";
 import { Socials } from "@/constants";
-import { UserService } from "@/services";
+import { EmailService, UserService } from "@/services";
 
 const userService = new UserService();
+const emailService = new EmailService();
 
 function validUserWithProfilePayload(
   overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
@@ -318,16 +319,16 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
     });
   });
 
-  describe("UserService.sendVerificationCodeForEmail", () => {
+  describe("EmailService.sendVerifyEmailCode", () => {
     test("sets a verification code on an unverified email and returns its id", async () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
 
-      const result = await userService.sendVerificationCodeForEmail({
-        id: emailId,
-        user_id: userId,
-      });
+      const result = await emailService.sendVerifyEmailCode(
+        { id: emailId, user_id: userId },
+        "test device"
+      );
       expect(result).toBe(emailId);
 
       const [row] = await pgDb
@@ -349,10 +350,10 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
         .where(eq(userEmailsTable.id, emailId));
 
       await expect(
-        userService.sendVerificationCodeForEmail({
-          id: emailId,
-          user_id: userId,
-        })
+        emailService.sendVerifyEmailCode(
+          { id: emailId, user_id: userId },
+          "test device"
+        )
       ).rejects.toThrow();
     });
 
@@ -363,10 +364,10 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const emailId = await createEmail(userId, contactId);
 
       await expect(
-        userService.sendVerificationCodeForEmail({
-          id: emailId,
-          user_id: otherUserId,
-        })
+        emailService.sendVerifyEmailCode(
+          { id: emailId, user_id: otherUserId },
+          "test device"
+        )
       ).rejects.toThrow();
     });
 
@@ -374,10 +375,10 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
 
       await expect(
-        userService.sendVerificationCodeForEmail({
-          id: crypto.randomUUID(),
-          user_id: userId,
-        })
+        emailService.sendVerifyEmailCode(
+          { id: crypto.randomUUID(), user_id: userId },
+          "test device"
+        )
       ).rejects.toThrow();
     });
   });
@@ -664,10 +665,10 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
-      await userService.sendVerificationCodeForEmail({
-        id: emailId,
-        user_id: userId,
-      });
+      await emailService.sendVerifyEmailCode(
+        { id: emailId, user_id: userId },
+        "test device"
+      );
 
       const [row] = await pgDb
         .select()
@@ -694,10 +695,10 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
-      await userService.sendVerificationCodeForEmail({
-        id: emailId,
-        user_id: userId,
-      });
+      await emailService.sendVerifyEmailCode(
+        { id: emailId, user_id: userId },
+        "test device"
+      );
       const [row] = await pgDb
         .select()
         .from(userEmailsTable)
@@ -722,10 +723,10 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
-      await userService.sendVerificationCodeForEmail({
-        id: emailId,
-        user_id: userId,
-      });
+      await emailService.sendVerifyEmailCode(
+        { id: emailId, user_id: userId },
+        "test device"
+      );
 
       await expect(
         userService.verifyContactEmail({
@@ -740,10 +741,10 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
-      await userService.sendVerificationCodeForEmail({
-        id: emailId,
-        user_id: userId,
-      });
+      await emailService.sendVerifyEmailCode(
+        { id: emailId, user_id: userId },
+        "test device"
+      );
       const [row] = await pgDb
         .select()
         .from(userEmailsTable)

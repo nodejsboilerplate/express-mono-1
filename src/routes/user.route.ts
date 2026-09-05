@@ -66,7 +66,7 @@ router
   .post(
     authMiddlware,
     asyncHandler(
-      userController.sendVerificationCodeForEmailHandler.bind(userController)
+      userController.sendEmailVerifyCodeHandler.bind(userController)
     )
   );
 

@@ -175,31 +175,10 @@ export class UserService {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
     }
 
+    // TODO: Write verification code sender for phone
     return phone.id;
   }
 
-  async sendVerificationCodeForEmail(
-    payload: UserIdWithContextIdInputType
-  ): Promise<string> {
-    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const verify_code = generateVerificationCode();
-    const verify_expiry = getVerifyExpiry();
-
-    const email = await userRepository.SetEmailVerifyCode(
-      verify_code,
-      verify_expiry,
-      parse_payload.id,
-      parse_payload.user_id
-    );
-
-    if (!email) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
-    }
-
-    return email.id;
-  }
 
   // ---------------------------------------------------------
   // Verifications

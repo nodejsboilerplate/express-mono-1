@@ -16,9 +16,11 @@ import type {
 } from "@/zod";
 
 import { ApiResponse } from "@/libs";
-import { UserService } from "@/services";
+import { EmailService, UserService } from "@/services";
 
 const userService = new UserService();
+const emailService = new EmailService
+
 export class UserController {
   // ---------------------------------------------------------
   // Create
@@ -120,15 +122,15 @@ export class UserController {
     );
   }
 
-  async sendVerificationCodeForEmailHandler(
+  async sendEmailVerifyCodeHandler(
     req: Request,
     res: Response
   ): Promise<Response> {
     const { id } = req.params as Pick<UserIdWithContextIdInputType, "id">;
-    const result = await userService.sendVerificationCodeForEmail({
+    const result = await emailService.sendVerifyEmailCode({
       id,
       user_id: req.auth_user.id,
-    });
+    }, req?.headers["user-agent"] ?? "Unknown device" );
 
     return res.status(200).json(
       new ApiResponse(200, "Verification code sent successfully.", {

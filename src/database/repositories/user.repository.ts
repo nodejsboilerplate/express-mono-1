@@ -196,7 +196,7 @@ export class UserRepository {
           eq(userEmailsTable.is_verified, false)
         )
       )
-      .returning({ id: userEmailsTable.id });
+      .returning({ email: userEmailsTable.email, id: userEmailsTable.id });
 
     return updatedEmail;
   }
