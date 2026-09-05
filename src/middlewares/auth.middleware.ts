@@ -60,6 +60,7 @@ export const authMiddlware = async (
      * If we reach here, the Access Token is missing or invalid.
      */
     if (!refreshToken) {
+      console.log("problem here");
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
     }
 
@@ -67,6 +68,7 @@ export const authMiddlware = async (
     try {
       decoded = authService.getDataFromRefreshToken(refreshToken);
     } catch (err) {
+      console.log("problem here");
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
     }
 
@@ -79,14 +81,18 @@ export const authMiddlware = async (
 
     // Redis Lookup
     const get_cached_data = await authRedis.getCachedLoginData(decoded.id);
-
-    if (!get_cached_data) {
+    const parse_data = JSON.parse(
+      String(get_cached_data)
+    ) as UserBasicInfoDataType;
+    console.log("parse data", parse_data);
+    if (!parse_data) {
       const user =
         await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
           decoded.id
         );
 
       if (!user?.id) {
+        console.log("problem here");
         throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
       }
 
@@ -103,17 +109,19 @@ export const authMiddlware = async (
       });
 
       temp_user = tokenData;
+      console.log("here is cache mahin", get_cached_data);
     } else {
       temp_user = {
-        id: get_cached_data.id,
-        username: get_cached_data.username,
-        email: get_cached_data.email,
-        role: get_cached_data.role,
-        is_verified: get_cached_data.is_verified,
+        id: parse_data.id,
+        username: parse_data.username,
+        email: parse_data.email,
+        role: parse_data.role,
+        is_verified: parse_data.is_verified,
       };
     }
 
     if (!temp_user.id) {
+      console.log("problem here definitely");
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
     }
 
@@ -130,7 +138,7 @@ export const authMiddlware = async (
     );
 
     req.auth_user = {
-      id: decoded.id,
+      id: temp_user.id,
       email: temp_user.email,
       role: temp_user.role,
       is_verified: temp_user.is_verified,

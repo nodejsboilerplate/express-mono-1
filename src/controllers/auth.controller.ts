@@ -1,11 +1,17 @@
+import { UserRepository } from "@/database/repositories";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
+import { AuthRedis } from "@/redis";
 import {
   AuthService,
   CookieService,
   EmailService,
   GoogleService,
 } from "@/services";
+import type {
+  UserBasicInfoDataType,
+  UserProfileDataByLoginType,
+} from "@/types";
 import type {
   CreateUserWithProfileInputType,
   EmailZType,
@@ -18,6 +24,8 @@ import type { Request, Response } from "express";
 const authService = new AuthService();
 const googleService = new GoogleService();
 const emailService = new EmailService();
+const userRepository = new UserRepository();
+const authRedis = new AuthRedis();
 
 export class AuthController {
   async signupUserHandler(req: Request, res: Response): Promise<Response> {
@@ -148,6 +156,34 @@ export class AuthController {
   }
 
   async authUserBasicDataProvider(req: Request, res: Response) {
-    const user = req.auth_user;
+    const { id, role, ...user } = req.auth_user;
+
+    let temp_profile: UserProfileDataByLoginType;
+
+    const get_cached_data = await authRedis.getCachedLoginData(id);
+    const parse_data = JSON.parse(
+      String(get_cached_data)
+    ) as UserBasicInfoDataType;
+
+    if (!parse_data) {
+      const existedUser =
+        await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(id);
+      if (!existedUser?.id) {
+        throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
+      }
+
+      temp_profile = existedUser.profile!;
+    } else {
+      temp_profile = {
+        avatar: parse_data.avatar,
+        first_name: parse_data.first_name,
+        last_name: parse_data.last_name,
+        nickname: parse_data.nickname,
+      };
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "OK", { ...user, ...temp_profile }));
   }
 }

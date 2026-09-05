@@ -39,4 +39,11 @@ router
     asyncHandler(authController.verifySignupCodeHandler.bind(authController))
   );
 
+router
+  .route("/me")
+  .get(
+    authMiddlware,
+    asyncHandler(authController.authUserBasicDataProvider.bind(authController))
+  );
+
 export default router;
