@@ -1,4 +1,4 @@
-import { prepareGetUserLoginDataForCache } from "@/database/prepared-statements";
+import { UserRepository } from "@/database/repositories";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
 import { AuthRedis } from "@/redis";
@@ -10,6 +10,7 @@ import type { NextFunction, Response, Request } from "express";
 
 const authService = new AuthService();
 const authRedis = new AuthRedis();
+const userRepository = new UserRepository()
 
 /**
  * Middleware to enforce authentication and manage token rotation.
@@ -76,13 +77,7 @@ export const authMiddlware = async (
     const get_cached_data = await authRedis.getCachedLoginData(decoded.id);
 
     if (!get_cached_data) {
-      const [result] = await executePreparedStatement(
-        prepareGetUserLoginDataForCache,
-        {
-          id: decoded.id,
-          role: decoded.role,
-        }
-      );
+      const result = await userRepository.GetUserLoginDataForCache(decoded.id, decoded.role)
 
       await authRedis.cacheUserLoginData(
         result?.id as string,

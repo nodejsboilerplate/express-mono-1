@@ -9,7 +9,7 @@ import {
   usersTable,
 } from "../schemas";
 import { pgDb } from "@/libs/db.connect";
-import { and, eq, getColumns, getTableColumns } from "drizzle-orm";
+import { and, eq, getColumns, getTableColumns, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import type {
   CreateUserAddressInputType,
@@ -27,6 +27,7 @@ import type {
   UserCoreZType,
 } from "@/zod";
 import type { UserProfileSelectType, UserSelectType } from "../type";
+import { createPrepareStatement, executePreparedStatement } from "@/utils";
 
 export class UserRepository {
   async CreateNewUserAndProfile(data: CreateUserWithProfileInputType) {
@@ -175,6 +176,26 @@ export class UserRepository {
       .returning({ id: userPhonesTable.id });
 
     return updatedPhone;
+  }
+
+  async GetUserLoginDataForCache(id: string, role: UserSelectType["role"]) {
+    const prepared = pgDb.query.usersTable
+      .findFirst({
+        columns: {
+          email: true,
+          id: true,
+          is_verified: true,
+          role: true,
+          username: true,
+        },
+        where: {
+          id: { eq: sql.placeholder("id") },
+          role: { eq: sql.placeholder("role") },
+        },
+      })
+      .prepare("prepareGetUserLoginDataForCache");
+    const result = await prepared.execute({ id, role });
+    return result;
   }
 
   async SetEmailVerifyCode(
