@@ -9,7 +9,7 @@ import {
   usersTable,
 } from "../schemas";
 import { pgDb } from "@/libs/db.connect";
-import { and, eq, getColumns, getTableColumns, sql } from "drizzle-orm";
+import { and, eq, getColumns, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import type {
   CreateUserAddressInputType,
@@ -18,16 +18,13 @@ import type {
   CreateUserPhoneInputType,
   CreateUserWithProfileByProviderInputType,
   CreateUserWithProfileInputType,
-  EmailZType,
   UpdateAddressInputType,
   UpdateContactInputType,
   UpdateEmailInputType,
   UpdatePhoneInputType,
   UpdateProfileInputType,
-  UserCoreZType,
 } from "@/zod";
-import type { UserProfileSelectType, UserSelectType } from "../type";
-import { createPrepareStatement, executePreparedStatement } from "@/utils";
+import type {  UserSelectType } from "../type";
 
 export class UserRepository {
   async CreateNewUserAndProfile(data: CreateUserWithProfileInputType) {

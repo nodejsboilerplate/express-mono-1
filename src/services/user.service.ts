@@ -1,5 +1,4 @@
 import { UserRepository } from "@/database/repositories";
-import type { UserProfileSelectType, UserSelectType } from "@/database/type";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
 import {
@@ -16,16 +15,13 @@ import type {
   CreateUserPhoneInputType,
   CreateUserWithProfileByProviderInputType,
   CreateUserWithProfileInputType,
-  EmailZType,
   IdZType,
   UpdateAddressInputType,
   UpdateContactInputType,
   UpdateEmailInputType,
   UpdatePhoneInputType,
   UpdateProfileInputType,
-  UserCoreZType,
   UserIdWithContextIdInputType,
-  UserZSchema,
   VerifyCodeWithUserIdInput,
 } from "@/zod";
 

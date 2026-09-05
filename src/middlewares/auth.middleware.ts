@@ -5,7 +5,6 @@ import { AuthRedis } from "@/redis";
 import { AuthService } from "@/services";
 import { CookieService } from "@/services/cookie.service";
 import type { AccessTokenPayload } from "@/types";
-import { asyncHandler, executePreparedStatement } from "@/utils";
 import type { NextFunction, Response, Request } from "express";
 
 const authService = new AuthService();

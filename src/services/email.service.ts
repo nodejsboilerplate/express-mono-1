@@ -12,7 +12,6 @@ import { ApiError } from "@/libs";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import type {
   UserIdWithContextIdInputType,
-  VerifyCodeWithUserIdInput,
 } from "@/zod";
 
 const userRepository = new UserRepository();

@@ -12,16 +12,12 @@ import type {
   RefreshTokenPayload,
 } from "@/types";
 import type {
-  CreateUserWithProfileByProviderInputType,
   CreateUserWithProfileInputType,
-  IdZType,
   LoginUserInputType,
   VerifyCodeInputType,
 } from "@/zod";
 import { UserInputValidators } from "@/validators/inputs";
 import {
-  generateVerificationCode,
-  getVerifyExpiry,
   isZodError,
   validationError,
 } from "@/utils";
