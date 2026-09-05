@@ -19,7 +19,7 @@ import { ApiResponse } from "@/libs";
 import { EmailService, UserService } from "@/services";
 
 const userService = new UserService();
-const emailService = new EmailService
+const emailService = new EmailService();
 
 export class UserController {
   // ---------------------------------------------------------
@@ -127,10 +127,13 @@ export class UserController {
     res: Response
   ): Promise<Response> {
     const { id } = req.params as Pick<UserIdWithContextIdInputType, "id">;
-    const result = await emailService.sendVerifyEmailCode({
-      id,
-      user_id: req.auth_user.id,
-    }, req?.headers["user-agent"] ?? "Unknown device" );
+    const result = await emailService.sendVerifyEmailCode(
+      {
+        id,
+        user_id: req.auth_user.id,
+      },
+      req?.headers["user-agent"] ?? "Unknown device"
+    );
 
     return res.status(200).json(
       new ApiResponse(200, "Verification code sent successfully.", {

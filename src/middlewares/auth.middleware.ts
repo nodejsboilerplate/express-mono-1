@@ -10,7 +10,7 @@ import type { NextFunction, Response, Request } from "express";
 
 const authService = new AuthService();
 const authRedis = new AuthRedis();
-const userRepository = new UserRepository()
+const userRepository = new UserRepository();
 
 /**
  * Middleware to enforce authentication and manage token rotation.
@@ -77,7 +77,10 @@ export const authMiddlware = async (
     const get_cached_data = await authRedis.getCachedLoginData(decoded.id);
 
     if (!get_cached_data) {
-      const result = await userRepository.GetUserLoginDataForCache(decoded.id, decoded.role)
+      const result = await userRepository.GetUserLoginDataForCache(
+        decoded.id,
+        decoded.role
+      );
 
       await authRedis.cacheUserLoginData(
         result?.id as string,

@@ -4,7 +4,7 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "lib": ["ES2024", "dom", "DOM.Iterable"],
-    "outDir": "dist",
+    "outDir": "dist"
   },
   "include": ["src"]
 }
