@@ -16,6 +16,7 @@ import type {
   CreateUserContactInputType,
   CreateUserEmailInputType,
   CreateUserPhoneInputType,
+  CreateUserWithProfileByProviderInputType,
   CreateUserWithProfileInputType,
   EmailZType,
   UpdateAddressInputType,
@@ -25,7 +26,7 @@ import type {
   UpdateProfileInputType,
   UserCoreZType,
 } from "@/zod";
-import type { UserSelectType } from "../type";
+import type { UserProfileSelectType, UserSelectType } from "../type";
 
 export class UserRepository {
   async CreateNewUserAndProfile(data: CreateUserWithProfileInputType) {
@@ -70,6 +71,48 @@ export class UserRepository {
       }
 
       return { user: user, profileId: createdUserProfie.id };
+    });
+
+    return result;
+  }
+
+  async CreateNewUserAndProfileByProvider(
+    data: CreateUserWithProfileByProviderInputType
+  ) {
+    const { user: user_payload, profile: profile_payload } = data;
+    const result = await pgDb.transaction(async (tx) => {
+      const { password, ...userWithoutPass } = await getColumns(usersTable);
+      const [user] = await tx
+        .insert(usersTable)
+        .values(user_payload)
+        .returning(userWithoutPass);
+
+      if (!user?.id) {
+        throw new ApiError(
+          500,
+          getSystemCustomErrorMsgByKey("USER_CREATION_FAILED")
+        );
+      }
+
+      const [createdUserProfie] = await tx
+        .insert(userProfilesTable)
+        .values({
+          ...profile_payload,
+          user_id: user.id,
+          date_of_birth: profile_payload.date_of_birth
+            ? profile_payload.date_of_birth.toISOString().split("T")[0]
+            : undefined,
+        })
+        .returning({ id: userProfilesTable.id });
+
+      if (!createdUserProfie?.id) {
+        throw new ApiError(
+          500,
+          getSystemCustomErrorMsgByKey("PROFILE_CREATION_FAILED")
+        );
+      }
+
+      return { ...user, profileId: createdUserProfie.id };
     });
 
     return result;
@@ -190,7 +233,18 @@ export class UserRepository {
     return email;
   }
 
-  async GetUserCoreBasicDetailsByEmail(data: EmailZType) {
+  async GetUserIdByEmail(email: string) {
+    return await pgDb.query.usersTable.findFirst({
+      columns: {
+        id: true,
+      },
+      where: {
+        email: { eq: email },
+      },
+    });
+  }
+
+  async GetAuthUserProfileById(id: string) {
     return await pgDb.query.usersTable.findFirst({
       columns: {
         id: true,
@@ -199,9 +253,26 @@ export class UserRepository {
         role: true,
         created_at: true,
         updated_at: true,
+        is_verified: true,
+        provider: true,
       },
       where: {
-        email: { eq: data },
+        id: { eq: id },
+      },
+      with: {
+        profile: {
+          columns: {
+            first_name: true,
+            last_name: true,
+            avatar: true,
+            cover_img: true,
+            nickname: true,
+            created_at: true,
+            date_of_birth: true,
+            gender: true,
+            updated_at: true,
+          },
+        },
       },
     });
   }

@@ -1,8 +1,19 @@
 {
-  "name": "emails",
+  "name": "@repo/emails",
   "version": "1.0.0",
   "description": "",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
+    "build:package": "tsdown",
     "build": "email build --dir src",
     "dev": "email dev --dir src -p 3001",
     "export": "email export --dir src",

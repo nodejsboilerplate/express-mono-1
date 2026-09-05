@@ -1,5 +1,5 @@
 import { UserRepository } from "@/database/repositories";
-import type { UserSelectType } from "@/database/type";
+import type { UserProfileSelectType, UserSelectType } from "@/database/type";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
 import {
@@ -8,12 +8,13 @@ import {
   isZodError,
   validationError,
 } from "@/utils";
-import { userInputValidators } from "@/validators/inputs";
+import { UserInputValidators } from "@/validators/inputs";
 import type {
   CreateUserAddressInputType,
   CreateUserContactInputType,
   CreateUserEmailInputType,
   CreateUserPhoneInputType,
+  CreateUserWithProfileByProviderInputType,
   CreateUserWithProfileInputType,
   EmailZType,
   IdZType,
@@ -29,6 +30,7 @@ import type {
 } from "@/zod";
 
 const userRepository = new UserRepository();
+const userInputValidators = new UserInputValidators()
 
 export class UserService {
   // ---------------------------------------------------------
@@ -40,7 +42,7 @@ export class UserService {
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
-    const existedUser = await userRepository.GetUserCoreBasicDetailsByEmail(
+    const existedUser = await userRepository.GetUserIdByEmail(
       parse_payload.user.email
     );
     if (existedUser?.id) {
@@ -51,6 +53,28 @@ export class UserService {
     }
 
     const result = await userRepository.CreateNewUserAndProfile(parse_payload);
+    return result;
+  }
+
+  async createUserWithProfileByProvider(
+    payload: CreateUserWithProfileByProviderInputType
+  ) {
+    const parse_payload =
+      userInputValidators.createUserWithProfileByProviderInput(payload);
+
+    if (isZodError(parse_payload)) throw validationError(parse_payload);
+
+    const existedUser =
+      await userRepository.GetUserDataForLoginByEmailOrUsername(
+        parse_payload.user.email
+      );
+
+    if (existedUser?.id) {
+      return existedUser;
+    }
+
+    const result =
+      await userRepository.CreateNewUserAndProfileByProvider(parse_payload);
     return result;
   }
 
@@ -293,13 +317,12 @@ export class UserService {
     return result;
   }
 
-  async getUser(payload: EmailZType) {
-    const parse_payload = userInputValidators.emailInput(payload);
+  async getUserProfile(id: string) {
+    const parse_id = userInputValidators.idInput(id);
 
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
+    if (isZodError(parse_id)) throw validationError(parse_id);
 
-    const result =
-      await userRepository.GetUserCoreBasicDetailsByEmail(parse_payload);
+    const result = await userRepository.GetAuthUserProfileById(parse_id);
 
     if (!result) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));

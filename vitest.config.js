@@ -13,6 +13,9 @@ export default defineConfig({
       {
         name: "apis/user",
         description: "Tests written for user apis.",
+      }, {
+        name: "apis/auth",
+        description: "Tests written for user apis.",
       },
       {
         name: "services/user",
@@ -21,7 +24,11 @@ export default defineConfig({
       {
         name: "services/auth",
         description: "Tests written for auth services.",
+      },      {
+        name: "services/google",
+        description: "Tests written for auth services.",
       },
+      
     ],
   },
 });

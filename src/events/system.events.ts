@@ -27,6 +27,7 @@ enum SYSTEM_CUSTOM_ERROR_EVENTS {
   USER_CREATION_FAILED = "USER_CREATION_FAILED",
   USER_UPDATE_FAILED = "USER_UPDATE_FAILED",
   USER_DELETE_FAILED = "USER_DELETE_FAILED",
+  SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE",
 
   PROFILE_CREATION_FAILED = "PROFILE_CREATION_FAILED",
   PROFILE_UPDATE_FAILED = "PROFILE_UPDATE_FAILED",
@@ -78,6 +79,7 @@ export const SystemCustomErrorCode: Record<SYSTEM_CUSTOM_ERROR_EVENTS, string> =
     USER_CREATION_FAILED: "50010",
     USER_UPDATE_FAILED: "50011",
     USER_DELETE_FAILED: "50012",
+    SERVICE_UNAVAILABLE: "50300",
 
     PROFILE_CREATION_FAILED: "50020",
     PROFILE_UPDATE_FAILED: "50021",
@@ -244,6 +246,11 @@ export const SystemCustomErrorMsgByCode: SystemCustomErrorMessageType = {
     message: "The webhook secret has not been configured on the server.",
     code: SystemCustomErrorCode.WEBHOOK_SECRET_NOT_CONFIGURED,
   },
+  [SystemCustomErrorCode.SERVICE_UNAVAILABLE]: {
+  title: "Service Unavailable",
+  message: "The service is temporarily unavailable. Please try again in a few moments.",
+  code: SystemCustomErrorCode.SERVICE_UNAVAILABLE,
+},
 
   // -- 500: profile --
   [SystemCustomErrorCode.PROFILE_CREATION_FAILED]: {

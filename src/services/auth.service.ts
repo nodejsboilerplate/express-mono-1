@@ -12,12 +12,13 @@ import type {
   RefreshTokenPayload,
 } from "@/types";
 import type {
+  CreateUserWithProfileByProviderInputType,
   CreateUserWithProfileInputType,
   IdZType,
   LoginUserInputType,
   VerifyCodeInputType,
 } from "@/zod";
-import { userInputValidators } from "@/validators/inputs";
+import { UserInputValidators } from "@/validators/inputs";
 import {
   generateVerificationCode,
   getVerifyExpiry,
@@ -30,10 +31,14 @@ import bcrypt from "bcryptjs";
 import { AuthRedis } from "@/redis";
 import { UserRepository } from "@/database/repositories";
 import { UserService } from "./user.service";
+import { EmailService } from "./email.service";
+
 
 const userRepository = new UserRepository();
 const userService = new UserService();
 const authRedis = new AuthRedis();
+const emailService = new EmailService()
+const userInputValidators = new UserInputValidators()
 
 export class AuthService {
   createTokens(payload: AccessTokenPayload): CookieNames {
@@ -83,7 +88,7 @@ export class AuthService {
       ) as RefreshTokenPayload;
       return decoded;
     } catch (error) {
-      throw new ApiError(400, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
+      throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
     }
   }
 
@@ -113,7 +118,7 @@ export class AuthService {
 
     const isPassMatched = await bcrypt.compare(
       parse_payload.password,
-      result.password
+      result.password as string
     );
     if (!isPassMatched) {
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
@@ -131,36 +136,10 @@ export class AuthService {
     };
   }
 
-  async sendSignupCode(email: string): Promise<string> {
-    const parse_email = userInputValidators.emailInput(email);
 
-    if (isZodError(parse_email)) throw validationError(parse_email);
 
-    const verify_code = generateVerificationCode();
-    const verify_expiry = getVerifyExpiry();
-
-    const user = await userRepository.SetVerifyCodeForSignup(
-      verify_code,
-      verify_expiry,
-      email
-    );
-
-    // Send email here
-
-    if (!user) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
-    }
-
-    return user.id;
-  }
-
-  async signupUser(req: Request, payload: CreateUserWithProfileInputType) {
-    const { accessToken, refreshToken } = this.getCookies(req);
-    if (refreshToken || accessToken)
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("USER_ALREADY_EXISTS")
-      );
+  async signupUser(payload: CreateUserWithProfileInputType, deviceInfo: string) {
+   
     const result = await userService.createUserWithProfile(payload);
     const { user } = result;
 
@@ -175,7 +154,7 @@ export class AuthService {
     const tokens = this.createTokens(data);
 
     await authRedis.cacheUserLoginData(user?.id as string, data);
-    await this.sendSignupCode(user.email);
+    await emailService.sendSignupCode(user.email, deviceInfo);
 
     return {
       tokens,

@@ -1,3 +1,4 @@
+import "dotenv/config"
 import { resendConfig } from "@/config";
 import { Resend, type WebhookEventPayload } from "resend";
 import type { Request } from "express";
@@ -7,11 +8,19 @@ import type { WebhookHeadersType } from "@/types";
 
 export class ResendService {
   static resend: Resend | null = null;
+  static TEAM_NAME: string = "My Team"
+  static APP_LOGO_URL: string = ""
+  static EMAIL_DOMAIN: string = process.env.EMAIL_DOMAIN ?? "fluctux.com"
+  static EMAIL_ADDRESS_FOR_AUTH: string = "auth"
 
   constructor() {
     if (!ResendService.resend) {
       ResendService.resend = new Resend(resendConfig.RESEND_API_KEY);
     }
+  }
+
+  static GetFullEmail(title: string, address:string) {
+    return `${title} <${address}@${this.EMAIL_DOMAIN}>`
   }
 
   getWebhookHeaders(req: Request): WebhookHeadersType {
@@ -65,4 +74,6 @@ export class ResendService {
 
     return result;
   }
+
+  
 }
