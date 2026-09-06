@@ -1,51 +1,8 @@
-import { UserRepository } from "@/database/repositories";
 import { ResendService } from "./resend.service";
 import { OtpVerificationEmail2 } from "@repo/emails";
-import {
-  generateVerificationCode,
-  getVerifyExpiry,
-  isZodError,
-  validationError,
-} from "@/utils";
-import { UserInputValidators } from "@/validators/inputs";
-import { ApiError } from "@/libs";
-import { getSystemCustomErrorMsgByKey } from "@/events";
-import type { UserIdWithContextIdInputType } from "@/zod";
-
-const userRepository = new UserRepository();
-const userInputValidators = new UserInputValidators();
 
 export class EmailService extends ResendService {
-  async sendSignupCode(email: string, deviceInfo: string) {
-    const parse_email = userInputValidators.emailInput(email);
-
-    if (isZodError(parse_email)) throw validationError(parse_email);
-
-    const verify_code = generateVerificationCode();
-    const verify_expiry = getVerifyExpiry();
-
-    const existedUser =
-      await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
-        parse_email
-      );
-
-    if (!existedUser?.id) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
-    }
-
-    if (existedUser.is_verified) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("USER_ALREADY_VERIFIED")
-      );
-    }
-
-    const user = await userRepository.SetVerifyCodeForCoreUser(
-      verify_code,
-      verify_expiry,
-      email
-    );
-
+  async sendSignupCode(email: string, verify_code: string, deviceInfo: string) {
     await EmailService.resend?.emails.send({
       from: EmailService.GetFullEmail(
         "Signup",
@@ -64,44 +21,9 @@ export class EmailService extends ResendService {
         teamName: EmailService.TEAM_NAME,
       }),
     });
-
-    return user?.id;
   }
 
-  async sendLoginCode(email: string, deviceInfo: string) {
-    const parse_email = userInputValidators.emailInput(email);
-
-    if (isZodError(parse_email)) throw validationError(parse_email);
-
-    const verify_code = generateVerificationCode();
-    const verify_expiry = getVerifyExpiry();
-
-    const existedUser =
-      await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
-        parse_email
-      );
-
-    if (!existedUser?.id) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
-    }
-
-    if (!existedUser.is_verified) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("USER_NOT_VERIFIED")
-      );
-    }
-
-    const user = await userRepository.SetVerifyCodeForCoreUser(
-      verify_code,
-      verify_expiry,
-      email
-    );
-
-    if (!user?.id) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
-    }
-
+  async sendLoginCode(email: string, verify_code: string, deviceInfo: string) {
     await EmailService.resend?.emails.send({
       from: EmailService.GetFullEmail(
         "Signup",
@@ -120,38 +42,20 @@ export class EmailService extends ResendService {
         teamName: EmailService.TEAM_NAME,
       }),
     });
-
-    return user.id;
   }
 
-  // For verifing contact individual emails
-  async sendVerifyContactEmailCode(
-    payload: UserIdWithContextIdInputType,
+  // For verifing contact's individual emails
+  async sendContactEmailVerificationCode(
+    email: string,
+    verify_code: string,
     deviceInfo: string
   ) {
-    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const verify_code = generateVerificationCode();
-    const verify_expiry = getVerifyExpiry();
-
-    const result = await userRepository.SetEmailVerifyCode(
-      verify_code,
-      verify_expiry,
-      parse_payload.id,
-      parse_payload.user_id
-    );
-
-    if (!result?.email) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
-    }
-
     await EmailService.resend?.emails.send({
       from: EmailService.GetFullEmail(
         "Email Verification",
         EmailService.EMAIL_ADDRESS_FOR_VERIFICATION
       ),
-      to: result.email,
+      to: email,
       subject: "Verify Your New Email",
       react: OtpVerificationEmail2({
         appLogoUrl: EmailService.APP_LOGO_URL,
@@ -164,7 +68,5 @@ export class EmailService extends ResendService {
         teamName: EmailService.TEAM_NAME,
       }),
     });
-
-    return result.id;
   }
 }

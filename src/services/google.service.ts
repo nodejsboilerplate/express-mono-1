@@ -7,13 +7,10 @@ import type { CreateUserWithProfileByProviderInputType } from "@/zod";
 import { AuthService } from "./auth.service";
 import { UserService } from "./user.service";
 import { AuthRedis } from "@/redis";
-import type { AccessTokenPayload, UserProfileDataByLoginType } from "@/types";
 import { finalLoginResponseUserData, generateRandomUsername } from "@/utils";
-import { EmailService } from "./email.service";
 
 const userService = new UserService();
 const authRedis = new AuthRedis();
-const emailService = new EmailService();
 
 export class GoogleService extends AuthService {
   private static CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -91,7 +88,6 @@ export class GoogleService extends AuthService {
       },
     };
 
-    console.log("Hello mahin: ", payload);
     const { profile, ...user } =
       await userService.createUserWithProfileByProvider(payload);
 
@@ -107,7 +103,7 @@ export class GoogleService extends AuthService {
     });
 
     if (!payload.user.is_verified) {
-      await emailService.sendSignupCode(user.email, deviceInfo);
+      await this.sendSignupVerificationEmail(user.email, deviceInfo);
     }
 
     return {

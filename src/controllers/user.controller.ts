@@ -4,8 +4,6 @@ import type {
   CreateUserContactInputType,
   CreateUserEmailInputType,
   CreateUserPhoneInputType,
-  CreateUserWithProfileInputType,
-  IdZType,
   UpdateAddressInputType,
   UpdateContactInputType,
   UpdateEmailInputType,
@@ -16,10 +14,9 @@ import type {
 } from "@/zod";
 
 import { ApiResponse } from "@/libs";
-import { EmailService, UserService } from "@/services";
+import { UserService } from "@/services";
 
 const userService = new UserService();
-const emailService = new EmailService(); // Seperate Domain
 
 export class UserController {
   // ---------------------------------------------------------
@@ -105,12 +102,12 @@ export class UserController {
     return res.status(200).json(new ApiResponse(200, "Ok", result));
   }
 
-  async sendVerificationCodeForPhoneHandler(
+  async sendContactPhoneVerificationHandler(
     req: Request,
     res: Response
   ): Promise<Response> {
     const { id } = req.params as Pick<UserIdWithContextIdInputType, "id">;
-    const result = await userService.sendVerificationCodeForPhone({
+    const result = await userService.sendContactPhoneVerificationEmail({
       id,
       user_id: req.auth_user.id,
     });
@@ -122,12 +119,12 @@ export class UserController {
     );
   }
 
-  async sendContactEmailVerifyCodeHandler(
+  async sendContactEmailVerificationHandler(
     req: Request,
     res: Response
   ): Promise<Response> {
     const { id } = req.params as Pick<UserIdWithContextIdInputType, "id">;
-    const result = await emailService.sendVerifyContactEmailCode(
+    const result = await userService.sendContactEmailVerificationEmail(
       {
         id,
         user_id: req.auth_user.id,

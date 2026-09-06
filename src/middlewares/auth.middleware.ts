@@ -4,11 +4,7 @@ import { ApiError } from "@/libs";
 import { AuthRedis } from "@/redis";
 import { AuthService } from "@/services";
 import { CookieService } from "@/services/cookie.service";
-import type {
-  AccessTokenPayload,
-  UserBasicInfoDataType,
-  UserProfileDataByLoginType,
-} from "@/types";
+import type { AccessTokenPayload, UserBasicInfoDataType } from "@/types";
 import { finalLoginResponseUserData } from "@/utils";
 import type { NextFunction, Response, Request } from "express";
 
@@ -36,15 +32,14 @@ export const authMiddlware = async (
   try {
     const { accessToken, refreshToken } = authService.getCookies(req);
 
-    // console.log("cookies are: ", accessToken, refreshToken);
-
     /**
      * Fast-Path (Access Token)
      * If a valid Access Token exists, we trust the signed payload to avoid DB/Redis latency.
      */
-    if (accessToken) {
+    if (accessToken && refreshToken) {
       try {
         const decode_data = authService.getDataFromAccessToken(accessToken);
+        authService.getDataFromRefreshToken(refreshToken);
 
         if (decode_data?.id) {
           req.auth_user = decode_data;
@@ -60,7 +55,6 @@ export const authMiddlware = async (
      * If we reach here, the Access Token is missing or invalid.
      */
     if (!refreshToken) {
-      console.log("problem here");
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
     }
 
@@ -68,15 +62,9 @@ export const authMiddlware = async (
     try {
       decoded = authService.getDataFromRefreshToken(refreshToken);
     } catch (err) {
-      console.log("problem here");
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
     }
 
-    /**
-     * User Validation Layer
-     * To ensure the user hasn't been banned or had their role changed,
-     * we verify identity against our storage layers.
-     */
     let temp_user: AccessTokenPayload;
 
     // Redis Lookup
@@ -84,7 +72,7 @@ export const authMiddlware = async (
     const parse_data = JSON.parse(
       String(get_cached_data)
     ) as UserBasicInfoDataType;
-    console.log("parse data", parse_data);
+
     if (!parse_data) {
       const user =
         await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
@@ -92,7 +80,6 @@ export const authMiddlware = async (
         );
 
       if (!user?.id) {
-        console.log("problem here");
         throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
       }
 
@@ -109,7 +96,6 @@ export const authMiddlware = async (
       });
 
       temp_user = tokenData;
-      console.log("here is cache mahin", get_cached_data);
     } else {
       temp_user = {
         id: parse_data.id,
@@ -121,7 +107,6 @@ export const authMiddlware = async (
     }
 
     if (!temp_user.id) {
-      console.log("problem here definitely");
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
     }
 
@@ -145,7 +130,6 @@ export const authMiddlware = async (
       username: temp_user.username,
     };
 
-    console.log("Token refreshed", req.auth_user);
     return next();
   } catch (error) {
     throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);

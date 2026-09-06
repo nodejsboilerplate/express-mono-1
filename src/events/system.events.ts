@@ -9,6 +9,7 @@ enum SYSTEM_CUSTOM_ERROR_EVENTS {
   VERIFICATION_CODE_EXPIRED = "VERIFICATION_CODE_EXPIRED",
   WEBHOOK_HEADERS_MISSING = "WEBHOOK_HEADERS_MISSING",
   USER_NOT_VERIFIED = "USER_NOT_VERIFIED",
+  INVALID_PHONE_NUMBER = "INVALID_PHONE_NUMBER",
 
   // -- 404: not found, one per resource --
   USER_NOT_FOUND = "USER_NOT_FOUND",
@@ -65,6 +66,7 @@ export const SystemCustomErrorCode: Record<SYSTEM_CUSTOM_ERROR_EVENTS, string> =
     WEBHOOK_HEADERS_MISSING: "40004",
     WEBHOOK_SIGNATURE_INVALID: "40005",
     USER_NOT_VERIFIED: "40006",
+    INVALID_PHONE_NUMBER: "40007",
 
     USER_NOT_FOUND: "40401",
     PROFILE_NOT_FOUND: "40402",
@@ -159,6 +161,11 @@ export const SystemCustomErrorMsgByCode: SystemCustomErrorMessageType = {
     title: "Code Expired",
     message: "The verification code has expired. Please request a new one.",
     code: SystemCustomErrorCode.VERIFICATION_CODE_EXPIRED,
+  },
+  [SystemCustomErrorCode.INVALID_PHONE_NUMBER]: {
+    title: "Invalid Phone Number",
+    message: "The phone number provided is not valid.",
+    code: SystemCustomErrorCode.INVALID_PHONE_NUMBER,
   },
 
   [SystemCustomErrorCode.WEBHOOK_HEADERS_MISSING]: {

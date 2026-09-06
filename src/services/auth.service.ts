@@ -10,8 +10,6 @@ import type {
   AccessTokenPayload,
   CookieNames,
   RefreshTokenPayload,
-  UserBasicInfoDataType,
-  UserProfileDataByLoginType,
 } from "@/types";
 import type {
   CreateUserWithProfileInputType,
@@ -21,6 +19,8 @@ import type {
 import { UserInputValidators } from "@/validators/inputs";
 import {
   finalLoginResponseUserData,
+  generateVerificationCode,
+  getVerifyExpiry,
   isZodError,
   validationError,
 } from "@/utils";
@@ -125,7 +125,7 @@ export class AuthService {
         throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
       }
     } else {
-      await emailService.sendLoginCode(result.email, deviceInfo ?? "");
+      await this.sendLoginVerificationEmail(result.email, deviceInfo ?? "");
     }
 
     const { password, profile, ...rest } = result;
@@ -166,12 +166,94 @@ export class AuthService {
       ...tokenData,
       ...profileData,
     });
-    await emailService.sendSignupCode(user.email, deviceInfo);
+    await this.sendSignupVerificationEmail(user.email, deviceInfo);
 
     return {
       tokens,
       user_id: user.id,
     };
+  }
+
+  async sendLoginVerificationEmail(email: string, deviceInfo: string) {
+    const parse_email = userInputValidators.emailInput(email);
+
+    if (isZodError(parse_email)) throw validationError(parse_email);
+
+    const verify_code = generateVerificationCode();
+    const verify_expiry = getVerifyExpiry();
+
+    const existedUser =
+      await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
+        parse_email
+      );
+
+    if (!existedUser?.id) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
+    }
+
+    if (!existedUser.is_verified) {
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("USER_NOT_VERIFIED")
+      );
+    }
+
+    const user = await userRepository.SetVerifyCodeForCoreUser(
+      verify_code,
+      verify_expiry,
+      email
+    );
+
+    if (!user?.id) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
+    }
+
+    await emailService.sendLoginCode(
+      existedUser.email,
+      verify_code,
+      deviceInfo
+    );
+  }
+
+  async sendSignupVerificationEmail(email: string, deviceInfo: string) {
+    const parse_email = userInputValidators.emailInput(email);
+
+    if (isZodError(parse_email)) throw validationError(parse_email);
+
+    const verify_code = generateVerificationCode();
+    const verify_expiry = getVerifyExpiry();
+
+    const existedUser =
+      await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
+        parse_email
+      );
+
+    if (!existedUser?.id) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
+    }
+
+    if (existedUser.is_verified) {
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("USER_ALREADY_VERIFIED")
+      );
+    }
+
+    const user = await userRepository.SetVerifyCodeForCoreUser(
+      verify_code,
+      verify_expiry,
+      email
+    );
+
+    if (!user?.id) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
+    }
+
+    await emailService.sendSignupCode(
+      existedUser.email,
+      verify_code,
+      deviceInfo
+    );
   }
 
   async verifySignupCode(payload: VerifyCodeInputType): Promise<string> {

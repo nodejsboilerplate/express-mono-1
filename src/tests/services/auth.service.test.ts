@@ -1,397 +1,502 @@
-import { describe, expect, test, vi, beforeEach } from "vitest";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
-import { AuthService, UserService } from "@/services";
-import { authConfig } from "@/config";
-import { UserRepository } from "@/database/repositories";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { AuthService } from "@/services";
 
-const { cacheUserLoginDataMock } = vi.hoisted(() => ({
-  cacheUserLoginDataMock: vi.fn().mockResolvedValue(true),
+// ---------------------------------------------------------
+// Hoisted shared mock fns (so module-level singletons inside
+// auth.service.ts share the same vi.fn() instances we control)
+// ---------------------------------------------------------
+const mocks = vi.hoisted(() => ({
+  jwtSign: vi.fn(),
+  jwtVerify: vi.fn(),
+  bcryptCompare: vi.fn(),
+  bcryptHash: vi.fn(),
+  getUserDataForLogin: vi.fn(),
+  setVerifyCodeForCoreUser: vi.fn(),
+  getUserVerifyDetails: vi.fn(),
+  updateUserVerifyDetails: vi.fn(),
+  createUserWithProfile: vi.fn(),
+  sendLoginCode: vi.fn(),
+  sendSignupCode: vi.fn(),
+  cacheUserLoginData: vi.fn(),
+  isZodError: vi.fn(),
+  validationError: vi.fn(),
+  finalLoginResponseUserData: vi.fn(),
+  generateVerificationCode: vi.fn(),
+  getVerifyExpiry: vi.fn(),
 }));
-vi.mock("@/redis", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/redis")>();
-  return {
-    ...actual,
-    AuthRedis: class {
-      cacheUserLoginData = cacheUserLoginDataMock;
-    },
-  };
-});
 
-const { sendSignupCodeMock } = vi.hoisted(() => ({
-  sendSignupCodeMock: vi.fn().mockResolvedValue("mock-user-id"),
+vi.mock("jsonwebtoken", () => ({
+  default: { sign: mocks.jwtSign, verify: mocks.jwtVerify },
 }));
-vi.mock("@/services/email.service", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/services/email.service")>();
-  return {
-    ...actual,
-    EmailService: class {
-      sendSignupCode = sendSignupCodeMock;
-    },
-  };
-});
 
-const authService = new AuthService();
+vi.mock("bcryptjs", () => ({
+  default: { compare: mocks.bcryptCompare, hash: mocks.bcryptHash },
+}));
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+vi.mock("@/config", () => ({
+  authConfig: {
+    JWT_ACCESS_TOKEN_SECRET: "access-secret",
+    JWT_REFRESH_TOKEN_SECRET: "refresh-secret",
+  },
+}));
 
-function mockUserRecord(overrides: Partial<any> = {}) {
-  return {
-    id: crypto.randomUUID(),
-    email: `test-${crypto.randomUUID()}@example.com`,
-    username: "mockuser",
-    role: "USER" as const,
-    is_verified: true,
-    password: "hashed-password",
-    ...overrides,
-  };
-}
+vi.mock("./cookie.service", () => ({
+  ACCESS_TOKEN_EXPIRY_SEC: 900,
+  REFRESH_TOKEN_EXPIRY_SEC: 604800,
+  CookieService: {
+    ACCESS_TOKEN: { name: "access_token", cookie: {} },
+    REFRESH_TOKEN: { name: "refresh_token", cookie: {} },
+  },
+}));
 
-describe("AuthService Test", { tags: ["services/auth"] }, () => {
-  describe("AuthService.createTokens / renewAccessToken / renewRefreshToken", () => {
-    test("createTokens returns a signed access and refresh token", () => {
-      const payload = {
-        id: crypto.randomUUID(),
-        email: "test@example.com",
-        username: "tester",
-        role: "USER" as const,
-        is_verified: true,
-      };
+vi.mock("@/events", () => ({
+  getSystemCustomErrorMsgByKey: (key: string) => key,
+}));
 
-      const { accessToken, refreshToken } = authService.createTokens(payload);
+vi.mock("@/libs", () => ({
+  ApiError: class ApiError extends Error {
+    status: number;
+    constructor(status: number, message: string) {
+      super(message);
+      this.status = status;
+    }
+  },
+}));
 
-      const decodedAccess = jwt.verify(
-        accessToken,
-        authConfig.JWT_ACCESS_TOKEN_SECRET
-      ) as any;
-      const decodedRefresh = jwt.verify(
-        refreshToken,
-        authConfig.JWT_REFRESH_TOKEN_SECRET
-      ) as any;
+vi.mock("@/utils", () => ({
+  finalLoginResponseUserData: mocks.finalLoginResponseUserData,
+  generateVerificationCode: mocks.generateVerificationCode,
+  getVerifyExpiry: mocks.getVerifyExpiry,
+  isZodError: mocks.isZodError,
+  validationError: mocks.validationError,
+}));
 
-      expect(decodedAccess.id).toBe(payload.id);
-      expect(decodedAccess.email).toBe(payload.email);
-      expect(decodedRefresh.id).toBe(payload.id);
-      expect(decodedRefresh.role).toBe(payload.role);
-    });
+vi.mock("@/validators/inputs", () => ({
+  UserInputValidators: class {
+    loginUserInput(p: unknown) {
+      return p;
+    }
+    emailInput(p: unknown) {
+      return p;
+    }
+    verifyCodeInput(p: unknown) {
+      return p;
+    }
+  },
+}));
 
-    test("renewAccessToken issues a fresh access token", () => {
-      const payload = {
-        id: crypto.randomUUID(),
-        email: "test@example.com",
-        username: "tester",
-        role: "USER" as const,
-        is_verified: true,
-      };
+vi.mock("@/redis", () => ({
+  AuthRedis: class {
+    cacheUserLoginData = mocks.cacheUserLoginData;
+  },
+}));
 
-      const token = authService.renewAccessToken(payload);
-      const decoded = jwt.verify(
-        token,
-        authConfig.JWT_ACCESS_TOKEN_SECRET
-      ) as any;
+vi.mock("@/database/repositories", () => ({
+  UserRepository: class {
+    GetUserDataForLoginByEmailOrUsernameOrId = mocks.getUserDataForLogin;
+    SetVerifyCodeForCoreUser = mocks.setVerifyCodeForCoreUser;
+    GetUserVerifyDetails = mocks.getUserVerifyDetails;
+    UpdateUserVerifyDetails = mocks.updateUserVerifyDetails;
+  },
+}));
 
-      expect(decoded.id).toBe(payload.id);
-    });
+vi.mock("./user.service", () => ({
+  UserService: class {
+    createUserWithProfile = mocks.createUserWithProfile;
+  },
+}));
 
-    test("renewRefreshToken issues a fresh refresh token containing only the id", () => {
-      const payload = { id: crypto.randomUUID(), role: "USER" as const };
+vi.mock("./email.service", () => ({
+  EmailService: class {
+    sendLoginCode = mocks.sendLoginCode;
+    sendSignupCode = mocks.sendSignupCode;
+  },
+}));
 
-      const token = authService.renewRefreshToken(payload as any);
-      const decoded = jwt.verify(
-        token,
-        authConfig.JWT_REFRESH_TOKEN_SECRET
-      ) as any;
+const ApiErrorLike = (status: number, message: string) => {
+  const e: any = new Error(message);
+  e.status = status;
+  return e;
+};
 
-      expect(decoded.id).toBe(payload.id);
-    });
+describe("AuthService", () => {
+  let authService: AuthService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.isZodError.mockReturnValue(false);
+    authService = new AuthService();
   });
 
-  describe("AuthService.getDataFromAccessToken", () => {
-    test("returns decoded payload for a valid token", () => {
-      const payload = {
-        id: crypto.randomUUID(),
-        email: "test@example.com",
-        username: "tester",
-        role: "USER" as const,
-        is_verified: true,
-      };
-      const { accessToken } = authService.createTokens(payload);
+  // -------------------------------------------------------
+  describe("createTokens", () => {
+    it("signs access + refresh tokens with correct secrets/expiry", () => {
+      mocks.jwtSign
+        .mockReturnValueOnce("access.jwt")
+        .mockReturnValueOnce("refresh.jwt");
 
-      const decoded = authService.getDataFromAccessToken(accessToken);
+      const payload = { id: "u1", role: "USER" } as any;
+      const tokens = authService.createTokens(payload);
 
-      expect(decoded?.id).toBe(payload.id);
-    });
-
-    test("returns null for an invalid token", () => {
-      const decoded = authService.getDataFromAccessToken("not-a-real-token");
-      expect(decoded).toBeNull();
-    });
-  });
-
-  describe("AuthService.getDataFromRefreshToken", () => {
-    test("returns decoded payload for a valid refresh token", () => {
-      const payload = {
-        id: crypto.randomUUID(),
-        email: "test@example.com",
-        username: "tester",
-        role: "USER" as const,
-        is_verified: true,
-      };
-      const { refreshToken } = authService.createTokens(payload);
-
-      const decoded = authService.getDataFromRefreshToken(refreshToken);
-
-      expect(decoded.id).toBe(payload.id);
-    });
-
-    test("throws 401 for an invalid refresh token", () => {
-      expect(() =>
-        authService.getDataFromRefreshToken("not-a-real-token")
-      ).toThrow();
-    });
-  });
-
-  describe("AuthService.loginUser", () => {
-    test("throws when the identifier/password payload is invalid", async () => {
-      await expect(
-        authService.loginUser({ identifier: "", password: "" } as any)
-      ).rejects.toThrow();
-    });
-
-    test("throws 404 when no user is found for the identifier", async () => {
-      vi.spyOn(
-        UserRepository.prototype,
-        "GetUserDataForLoginByEmailOrUsernameOrId"
-      ).mockResolvedValue(null as any);
-
-      await expect(
-        authService.loginUser({
-          identifier: "nouser@example.com",
-          password: "password123",
-        })
-      ).rejects.toThrow();
-    });
-
-    test("throws 401 when the password does not match", async () => {
-      const user = mockUserRecord();
-      vi.spyOn(
-        UserRepository.prototype,
-        "GetUserDataForLoginByEmailOrUsernameOrId"
-      ).mockResolvedValue(user as any);
-      vi.spyOn(bcrypt, "compare").mockResolvedValue(false as never);
-
-      await expect(
-        authService.loginUser({
-          identifier: user.email,
-          password: "wrong-password",
-        })
-      ).rejects.toThrow();
-    });
-
-    test("returns tokens and caches login data on successful login", async () => {
-      const user = mockUserRecord();
-      vi.spyOn(
-        UserRepository.prototype,
-        "GetUserDataForLoginByEmailOrUsernameOrId"
-      ).mockResolvedValue(user as any);
-      vi.spyOn(bcrypt, "compare").mockResolvedValue(true as never);
-
-      const result = await authService.loginUser({
-        identifier: user.email,
-        password: "correct-password",
+      expect(mocks.jwtSign).toHaveBeenNthCalledWith(
+        1,
+        payload,
+        "access-secret",
+        expect.objectContaining({ expiresIn: 900 })
+      );
+      expect(mocks.jwtSign).toHaveBeenNthCalledWith(
+        2,
+        { id: "u1", role: "USER" },
+        "refresh-secret",
+        expect.objectContaining({ expiresIn: 604800 })
+      );
+      expect(tokens).toEqual({
+        accessToken: "access.jwt",
+        refreshToken: "refresh.jwt",
       });
+    });
+  });
 
-      expect(typeof result.accessToken).toBe("string");
-      expect(typeof result.refreshToken).toBe("string");
+  describe("renewAccessToken", () => {
+    it("signs a new access token", () => {
+      mocks.jwtSign.mockReturnValueOnce("new.access");
+      const result = authService.renewAccessToken({ id: "u1" } as any);
+      expect(mocks.jwtSign).toHaveBeenCalledWith(
+        { id: "u1" },
+        "access-secret",
+        expect.objectContaining({ expiresIn: 900 })
+      );
+      expect(result).toBe("new.access");
+    });
+  });
 
-      const decoded = jwt.verify(
-        result.accessToken,
-        authConfig.JWT_ACCESS_TOKEN_SECRET
-      ) as any;
-      expect(decoded.id).toBe(user.id);
-      expect(decoded.email).toBe(user.email);
+  describe("renewRefreshToken", () => {
+    it("signs a new refresh token with only the id", () => {
+      mocks.jwtSign.mockReturnValueOnce("new.refresh");
+      const result = authService.renewRefreshToken({ id: "u1" } as any);
+      expect(mocks.jwtSign).toHaveBeenCalledWith(
+        { id: "u1" },
+        "refresh-secret",
+        expect.objectContaining({ expiresIn: 604800 })
+      );
+      expect(result).toBe("new.refresh");
+    });
+  });
 
-      expect(cacheUserLoginDataMock).toHaveBeenCalledTimes(1);
-      // the cached payload should not include the password
-      expect(cacheUserLoginDataMock).toHaveBeenCalledWith(
-        user.id,
-        expect.not.objectContaining({ password: expect.anything() })
+  describe("getDataFromAccessToken", () => {
+    it("returns decoded payload on success", () => {
+      const decoded = { id: "u1", role: "USER" };
+      mocks.jwtVerify.mockReturnValueOnce(decoded);
+      const result = authService.getDataFromAccessToken("tok");
+      expect(mocks.jwtVerify).toHaveBeenCalledWith("tok", "access-secret");
+      expect(result).toEqual(decoded);
+    });
+
+    it("returns null when jwt.verify throws", () => {
+      mocks.jwtVerify.mockImplementationOnce(() => {
+        throw new Error("bad");
+      });
+      expect(authService.getDataFromAccessToken("bad-tok")).toBeNull();
+    });
+  });
+
+  describe("getDataFromRefreshToken", () => {
+    it("returns decoded payload on success", () => {
+      const decoded = { id: "u1" };
+      mocks.jwtVerify.mockReturnValueOnce(decoded);
+      expect(authService.getDataFromRefreshToken("tok")).toEqual(decoded);
+    });
+
+    it("throws 401 ApiError when jwt.verify throws", () => {
+      mocks.jwtVerify.mockImplementationOnce(() => {
+        throw new Error("bad");
+      });
+      expect(() => authService.getDataFromRefreshToken("bad")).toThrowError(
+        expect.objectContaining({ status: 401 })
       );
     });
   });
 
-  describe("AuthService.signupUser", () => {
-    test("creates a user, caches login data, sends a signup code, and returns tokens", async () => {
-      const createdUser = {
-        id: crypto.randomUUID(),
-        email: `test-${crypto.randomUUID()}@example.com`,
-        username: "newuser",
-        role: "USER" as const,
-        is_verified: false,
-      };
+  describe("getCookies", () => {
+    it("extracts tokens from request cookies", () => {
+      const req = {
+        cookies: { access_token: "acc", refresh_token: "ref" },
+      } as any;
+      expect(authService.getCookies(req)).toEqual({
+        accessToken: "acc",
+        refreshToken: "ref",
+      });
+    });
 
-      vi.spyOn(
-        UserService.prototype,
-        "createUserWithProfile"
-      ).mockResolvedValue({
-        user: createdUser,
-      } as any);
+    it("returns undefined when cookies absent", () => {
+      const req = { cookies: {} } as any;
+      expect(authService.getCookies(req)).toEqual({
+        accessToken: undefined,
+        refreshToken: undefined,
+      });
+    });
+  });
+
+  // -------------------------------------------------------
+  describe("loginUser", () => {
+    const payload = { identifier: "user@test.com", password: "secret123" };
+
+    it("throws validation error on invalid payload", async () => {
+      mocks.isZodError.mockReturnValueOnce(true);
+      mocks.validationError.mockReturnValueOnce(
+        ApiErrorLike(400, "VALIDATION_ERROR")
+      );
+      await expect(authService.loginUser(payload as any)).rejects.toThrow(
+        "VALIDATION_ERROR"
+      );
+    });
+
+    it("throws 404 when user not found", async () => {
+      mocks.getUserDataForLogin.mockResolvedValueOnce(undefined);
+      await expect(authService.loginUser(payload as any)).rejects.toThrow(
+        "USER_NOT_FOUND"
+      );
+    });
+
+    it("throws 401 on password mismatch", async () => {
+      mocks.getUserDataForLogin.mockResolvedValueOnce({
+        id: "u1",
+        email: "user@test.com",
+        password: "hashed",
+        profile: {},
+      });
+      mocks.bcryptCompare.mockResolvedValueOnce(false);
+      await expect(authService.loginUser(payload as any)).rejects.toThrow(
+        "UNAUTHORIZED"
+      );
+    });
+
+    it("logs in successfully, caches data, and returns tokens", async () => {
+      mocks.getUserDataForLogin.mockResolvedValueOnce({
+        id: "u1",
+        email: "user@test.com",
+        password: "hashed",
+        profile: { first_name: "A" },
+      });
+      mocks.bcryptCompare.mockResolvedValueOnce(true);
+      mocks.finalLoginResponseUserData.mockReturnValueOnce({
+        tokenData: { id: "u1", role: "USER" },
+        profileData: { first_name: "A" },
+      });
+      mocks.jwtSign
+        .mockReturnValueOnce("access.jwt")
+        .mockReturnValueOnce("refresh.jwt");
+      mocks.cacheUserLoginData.mockResolvedValueOnce(true);
+
+      const result = await authService.loginUser(payload as any);
+
+      expect(mocks.cacheUserLoginData).toHaveBeenCalledWith(
+        "u1",
+        expect.objectContaining({ id: "u1", role: "USER", first_name: "A" })
+      );
+      expect(result).toEqual({
+        accessToken: "access.jwt",
+        refreshToken: "refresh.jwt",
+      });
+    });
+
+    it("sends a login verification email when no password provided (passwordless flow)", async () => {
+      const passwordless = { identifier: "user@test.com" };
+      mocks.getUserDataForLogin
+        .mockResolvedValueOnce({
+          id: "u1",
+          email: "user@test.com",
+          profile: {},
+          is_verified: true,
+        })
+        .mockResolvedValueOnce({
+          id: "u1",
+          email: "user@test.com",
+          is_verified: true,
+        });
+      mocks.finalLoginResponseUserData.mockReturnValueOnce({
+        tokenData: { id: "u1" },
+        profileData: {},
+      });
+      mocks.jwtSign.mockReturnValue("tok");
+      mocks.setVerifyCodeForCoreUser.mockResolvedValueOnce({ id: "u1" });
+
+      await authService.loginUser(passwordless as any);
+
+      expect(mocks.sendLoginCode).toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------
+  describe("signupUser", () => {
+    it("creates the user, caches login data, sends verification email, and returns tokens", async () => {
+      mocks.createUserWithProfile.mockResolvedValueOnce({
+        user: { id: "u1", email: "new@test.com", is_verified: false },
+        profile: { first_name: "New" },
+      });
+      mocks.finalLoginResponseUserData.mockReturnValueOnce({
+        tokenData: { id: "u1" },
+        profileData: { first_name: "New" },
+      });
+      mocks.jwtSign
+        .mockReturnValueOnce("access.jwt")
+        .mockReturnValueOnce("refresh.jwt");
+      mocks.getUserDataForLogin.mockResolvedValueOnce({
+        id: "u1",
+        email: "new@test.com",
+        is_verified: false,
+      });
+      mocks.setVerifyCodeForCoreUser.mockResolvedValueOnce({ id: "u1" });
 
       const result = await authService.signupUser(
-        {
-          email: createdUser.email,
-          username: createdUser.username,
-          password: "password123",
-        } as any,
-        "Chrome on macOS"
+        { user: { email: "new@test.com" }, profile: {} } as any,
+        "test-device"
       );
 
-      expect(result.user_id).toBe(createdUser.id);
-      expect(typeof result.tokens.accessToken).toBe("string");
-      expect(typeof result.tokens.refreshToken).toBe("string");
+      expect(mocks.cacheUserLoginData).toHaveBeenCalled();
+      expect(mocks.sendSignupCode).toHaveBeenCalled();
+      expect(result).toEqual({
+        tokens: { accessToken: "access.jwt", refreshToken: "refresh.jwt" },
+        user_id: "u1",
+      });
+    });
+  });
 
-      const decoded = jwt.verify(
-        result.tokens.accessToken,
-        authConfig.JWT_ACCESS_TOKEN_SECRET
-      ) as any;
-      expect(decoded.id).toBe(createdUser.id);
-      expect(decoded.email).toBe(createdUser.email);
+  // -------------------------------------------------------
+  describe("sendLoginVerificationEmail", () => {
+    it("throws validation error for invalid email", async () => {
+      mocks.isZodError.mockReturnValueOnce(true);
+      mocks.validationError.mockReturnValueOnce(
+        ApiErrorLike(400, "INVALID_EMAIL")
+      );
+      await expect(
+        authService.sendLoginVerificationEmail("bad", "d")
+      ).rejects.toThrow("INVALID_EMAIL");
+    });
 
-      expect(cacheUserLoginDataMock).toHaveBeenCalledTimes(1);
-      expect(sendSignupCodeMock).toHaveBeenCalledTimes(1);
-      expect(sendSignupCodeMock).toHaveBeenCalledWith(
-        createdUser.email,
-        "Chrome on macOS"
+    it("throws 404 when user not found", async () => {
+      mocks.getUserDataForLogin.mockResolvedValueOnce(undefined);
+      await expect(
+        authService.sendLoginVerificationEmail("a@b.com", "d")
+      ).rejects.toThrow("USER_NOT_FOUND");
+    });
+
+    it("throws 400 when user not verified", async () => {
+      mocks.getUserDataForLogin.mockResolvedValueOnce({
+        id: "u1",
+        is_verified: false,
+        email: "a@b.com",
+      });
+      await expect(
+        authService.sendLoginVerificationEmail("a@b.com", "d")
+      ).rejects.toThrow("USER_NOT_VERIFIED");
+    });
+
+    it("sends the login code on success", async () => {
+      mocks.getUserDataForLogin.mockResolvedValueOnce({
+        id: "u1",
+        is_verified: true,
+        email: "a@b.com",
+      });
+      mocks.setVerifyCodeForCoreUser.mockResolvedValueOnce({ id: "u1" });
+
+      await authService.sendLoginVerificationEmail("a@b.com", "device-x");
+
+      expect(mocks.sendLoginCode).toHaveBeenCalledWith(
+        "a@b.com",
+        expect.any(String),
+        "device-x"
       );
     });
   });
 
-  describe("AuthService.verifySignupCode", () => {
-    test("throws when the payload is invalid", async () => {
-      await expect(
-        authService.verifySignupCode({ id: "", verify_code: "" } as any)
-      ).rejects.toThrow();
-    });
-
-    test("throws 404 when the user is not found", async () => {
-      vi.spyOn(
-        UserRepository.prototype,
-        "GetUserVerifyDetails"
-      ).mockResolvedValue(null as any);
-
-      await expect(
-        authService.verifySignupCode({
-          id: crypto.randomUUID(),
-          verify_code: "123456",
-        })
-      ).rejects.toThrow();
-    });
-
-    test("throws 400 when the user is already verified", async () => {
-      vi.spyOn(
-        UserRepository.prototype,
-        "GetUserVerifyDetails"
-      ).mockResolvedValue({
-        id: crypto.randomUUID(),
+  // -------------------------------------------------------
+  describe("sendSignupVerificationEmail", () => {
+    it("throws 400 when user is already verified", async () => {
+      mocks.getUserDataForLogin.mockResolvedValueOnce({
+        id: "u1",
         is_verified: true,
-      } as any);
-
+        email: "a@b.com",
+      });
       await expect(
-        authService.verifySignupCode({
-          id: crypto.randomUUID(),
-          verify_code: "123456",
-        })
-      ).rejects.toThrow();
+        authService.sendSignupVerificationEmail("a@b.com", "d")
+      ).rejects.toThrow("USER_ALREADY_VERIFIED");
     });
 
-    test("throws 400 when the verify code does not match", async () => {
-      vi.spyOn(
-        UserRepository.prototype,
-        "GetUserVerifyDetails"
-      ).mockResolvedValue({
-        id: crypto.randomUUID(),
+    it("sends the signup code on success", async () => {
+      mocks.getUserDataForLogin.mockResolvedValueOnce({
+        id: "u1",
         is_verified: false,
-        verify_code: "111111",
-        verify_expiry: new Date(Date.now() + 60_000),
-      } as any);
+        email: "a@b.com",
+      });
+      mocks.setVerifyCodeForCoreUser.mockResolvedValueOnce({ id: "u1" });
 
+      await authService.sendSignupVerificationEmail("a@b.com", "device-x");
+
+      expect(mocks.sendSignupCode).toHaveBeenCalledWith(
+        "a@b.com",
+        expect.any(String),
+        "device-x"
+      );
+    });
+  });
+
+  // -------------------------------------------------------
+  describe("verifySignupCode", () => {
+    const payload = { id: "u1", verify_code: "123456" };
+
+    it("throws 404 when user not found", async () => {
+      mocks.getUserVerifyDetails.mockResolvedValueOnce(undefined);
       await expect(
-        authService.verifySignupCode({
-          id: crypto.randomUUID(),
-          verify_code: "999999",
-        })
-      ).rejects.toThrow();
+        authService.verifySignupCode(payload as any)
+      ).rejects.toThrow("USER_NOT_FOUND");
     });
 
-    test("throws 400 when the verify code has expired", async () => {
-      vi.spyOn(
-        UserRepository.prototype,
-        "GetUserVerifyDetails"
-      ).mockResolvedValue({
-        id: crypto.randomUUID(),
+    it("throws 400 when already verified", async () => {
+      mocks.getUserVerifyDetails.mockResolvedValueOnce({
+        id: "u1",
+        is_verified: true,
+      });
+      await expect(
+        authService.verifySignupCode(payload as any)
+      ).rejects.toThrow("USER_ALREADY_VERIFIED");
+    });
+
+    it("throws 400 on invalid verification code", async () => {
+      mocks.getUserVerifyDetails.mockResolvedValueOnce({
+        id: "u1",
+        is_verified: false,
+        verify_code: "000000",
+        verify_expiry: new Date(Date.now() + 60_000),
+      });
+      await expect(
+        authService.verifySignupCode(payload as any)
+      ).rejects.toThrow("INVALID_VERIFICATION_CODE");
+    });
+
+    it("throws 400 on expired verification code", async () => {
+      mocks.getUserVerifyDetails.mockResolvedValueOnce({
+        id: "u1",
         is_verified: false,
         verify_code: "123456",
         verify_expiry: new Date(Date.now() - 60_000),
-      } as any);
-
-      await expect(
-        authService.verifySignupCode({
-          id: crypto.randomUUID(),
-          verify_code: "123456",
-        })
-      ).rejects.toThrow();
-    });
-
-    test("verifies the user and returns their id on success", async () => {
-      const userId = crypto.randomUUID();
-      vi.spyOn(
-        UserRepository.prototype,
-        "GetUserVerifyDetails"
-      ).mockResolvedValue({
-        id: userId,
-        is_verified: false,
-        verify_code: "123456",
-        verify_expiry: new Date(Date.now() + 60_000),
-      } as any);
-      vi.spyOn(
-        UserRepository.prototype,
-        "UpdateUserVerifyDetails"
-      ).mockResolvedValue({
-        id: userId,
-      } as any);
-
-      const result = await authService.verifySignupCode({
-        id: userId,
-        verify_code: "123456",
       });
-
-      expect(result).toBe(userId);
+      await expect(
+        authService.verifySignupCode(payload as any)
+      ).rejects.toThrow("VERIFICATION_CODE_EXPIRED");
     });
 
-    test("throws 500 if the verify update fails", async () => {
-      vi.spyOn(
-        UserRepository.prototype,
-        "GetUserVerifyDetails"
-      ).mockResolvedValue({
-        id: crypto.randomUUID(),
+    it("verifies successfully and returns the user id", async () => {
+      mocks.getUserVerifyDetails.mockResolvedValueOnce({
+        id: "u1",
         is_verified: false,
         verify_code: "123456",
         verify_expiry: new Date(Date.now() + 60_000),
-      } as any);
-      vi.spyOn(
-        UserRepository.prototype,
-        "UpdateUserVerifyDetails"
-      ).mockResolvedValue(null as any);
+      });
+      mocks.updateUserVerifyDetails.mockResolvedValueOnce({ id: "u1" });
 
-      await expect(
-        authService.verifySignupCode({
-          id: crypto.randomUUID(),
-          verify_code: "123456",
-        })
-      ).rejects.toThrow();
+      const result = await authService.verifySignupCode(payload as any);
+      expect(result).toBe("u1");
     });
   });
 });

@@ -14,7 +14,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio --verbose",
     "db:push": "drizzle-kit push",
-    "db:reset": "tsx ./src/libs/reset.db.ts",
+    "db:seed": "tsx ./src/database/seeds/index.ts",
     "test": "vitest",
     "check:types": "node ./node_modules/typescript-7/bin/tsc --noEmit",
     "clean": "rm -rf node_modules && echo 'Cleanup complete!'",
@@ -31,6 +31,7 @@
     "@commitlint/prompt-cli": "^21.2.2",
     "@commitlint/types": "^21.2.0",
     "@eslint/js": "^10.0.1",
+    "@faker-js/faker": "^10.6.0",
     "@testcontainers/postgresql": "^12.1.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
@@ -81,6 +82,7 @@
     "request-ip": "^3.3.0",
     "resend": "^6.24.0",
     "tsdown": "^0.22.14",
+    "twilio": "^6.1.0",
     "uuid": "^14.0.2",
     "zod": "^4.4.3"
   }
