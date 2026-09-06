@@ -13,34 +13,6 @@ on:
 env:
   TARGET_BRANCH: ${{ github.ref_name }}
 
-  # Application
-  PORT: 3000
-
-  # Database
-  DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-  # Redis
-  REDIS_USERNAME: ${{ secrets.REDIS_USERNAME }}
-  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
-  REDIS_HOST: ${{ secrets.REDIS_HOST }}
-  REDIS_PORT: ${{ secrets.REDIS_PORT }}
-
-  # JWT
-  JWT_ACCESS_TOKEN_SECRET: ${{ secrets.JWT_ACCESS_TOKEN_SECRET }}
-  JWT_REFRESH_TOKEN_SECRET: ${{ secrets.JWT_REFRESH_TOKEN_SECRET }}
-
-  # Resend
-  RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-
-  # Google OAuth
-  GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-  GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-  GOOGLE_AUTH_REDIRECT_URI: ${{ vars.GOOGLE_AUTH_REDIRECT_URI }}
-
-  # Twilio
-  TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-  TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-
   # Docker
   DOCKER_ACCESS_TOKEN: ${{ secrets.DOCKER_ACCESS_TOKEN }}
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
