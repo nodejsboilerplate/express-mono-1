@@ -2,9 +2,8 @@
   "$schema": "https://typedoc.org/schema.json",
   "includeVersion": true,
   "out": "typedoc",
-  "name": "My App - Technical Reference",
+  "name": "Server - Technical Reference",
   "externalPattern": ["**/node_modules/**"],
-
   "exclude": [
     "**/node_modules/**",
     "**/typedoc/**",
