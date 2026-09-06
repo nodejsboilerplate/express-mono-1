@@ -14,12 +14,11 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio --verbose",
     "db:push": "drizzle-kit push",
-    "db:reset": "tsx ./src/libs/reset.db.ts",
+    "db:seed": "tsx ./src/database/seeds/index.ts",
     "test": "vitest",
     "check:types": "node ./node_modules/typescript-7/bin/tsc --noEmit",
     "clean": "rm -rf node_modules && echo 'Cleanup complete!'",
-    "prepare": "husky",
-    "twilio:test": "tsx ./src/services/phone.message.service.ts"
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
