@@ -41,6 +41,7 @@ services:
 networks:
   myapp:
     driver: bridge
+    name: myapp 
 
 volumes:
   myapp_pgData:
