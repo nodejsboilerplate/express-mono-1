@@ -102,42 +102,6 @@ const prepareGetAuthUserProfileById = pgDb.query.usersTable
   })
   .prepare("GetAuthUserProfileById");
 
-const prepareGetUserDataForLoginByEmailOrUsernameOrId = pgDb.query.usersTable
-  .findFirst({
-    columns: {
-      id: true,
-      email: true,
-      password: true,
-      username: true,
-      role: true,
-      is_verified: true,
-    },
-    with: {
-      profile: {
-        columns: {
-          avatar: true,
-          first_name: true,
-          last_name: true,
-          nickname: true,
-        },
-      },
-    },
-    where: {
-      OR: [
-        {
-          email: { eq: sql.placeholder("data") },
-        },
-        {
-          username: { eq: sql.placeholder("data") },
-        },
-        ...(isUUID(sql.placeholder("data"))
-          ? [{ id: { eq: sql.placeholder("data") } }]
-          : []),
-      ],
-    },
-  })
-  .prepare("GetUserDataForLoginByEmailOrUsernameOrId");
-
 const prepareGetUserVerifyDetails = pgDb.query.usersTable
   .findFirst({
     where: {
@@ -313,11 +277,37 @@ export class UserRepository {
   }
 
   async GetUserDataForLoginByEmailOrUsernameOrId(data: string) {
-    const result =
-      await prepareGetUserDataForLoginByEmailOrUsernameOrId.execute({
-        data,
-      });
-
+    const result = await pgDb.query.usersTable.findFirst({
+      columns: {
+        id: true,
+        email: true,
+        password: true,
+        username: true,
+        role: true,
+        is_verified: true,
+      },
+      with: {
+        profile: {
+          columns: {
+            avatar: true,
+            first_name: true,
+            last_name: true,
+            nickname: true,
+          },
+        },
+      },
+      where: {
+        OR: [
+          {
+            email: { eq: data },
+          },
+          {
+            username: { eq: data },
+          },
+          ...(isUUID(data) ? [{ id: { eq: data } }] : []),
+        ],
+      },
+    });
     return result;
   }
 

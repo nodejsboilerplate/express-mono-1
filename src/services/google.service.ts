@@ -88,7 +88,6 @@ export class GoogleService extends AuthService {
       },
     };
 
-    console.log("Hello mahin: ", payload);
     const { profile, ...user } =
       await userService.createUserWithProfileByProvider(payload);
 
