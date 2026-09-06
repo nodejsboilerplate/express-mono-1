@@ -1,5 +1,5 @@
 import request from "supertest";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi, beforeAll, afterAll } from "vitest";
 import { eq } from "drizzle-orm";
 
 import {
@@ -12,9 +12,26 @@ import {
 } from "@/database";
 import { pgDb } from "@/libs/db.connect";
 import { app } from "@/server";
+import { TwilioService } from "@/services/twilio.service";
 
 const BASE = "/api/v1/users";
 const AUTH_BASE = "/api/v1/auth";
+
+beforeAll(() => {
+  vi.spyOn(
+    TwilioService.prototype as any,
+    "lookupWithCallerNameAndLineTypeIntelligence"
+  ).mockResolvedValue({ valid: true } as any);
+
+  vi.spyOn(TwilioService.prototype as any, "createMessage").mockResolvedValue({
+    sid: "SMxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    status: "queued",
+  } as any);
+});
+
+afterAll(() => {
+  vi.restoreAllMocks();
+});
 
 function validSignupPayload(
   overrides: { user?: Partial<any>; profile?: Partial<any> } = {}

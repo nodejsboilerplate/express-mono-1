@@ -10,8 +10,6 @@ import type {
   AccessTokenPayload,
   CookieNames,
   RefreshTokenPayload,
-  UserBasicInfoDataType,
-  UserProfileDataByLoginType,
 } from "@/types";
 import type {
   CreateUserWithProfileInputType,

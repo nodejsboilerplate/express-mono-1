@@ -125,7 +125,7 @@ export class EmailService extends ResendService {
   }
 
   // For verifing contact individual emails
-  async sendVerifyContactEmailCode(
+  async sendContactEmailVerification(
     payload: UserIdWithContextIdInputType,
     deviceInfo: string
   ) {

@@ -24,10 +24,140 @@ import type {
   UpdatePhoneInputType,
   UpdateProfileInputType,
 } from "@/zod";
-import type { UserProfileSelectType, UserSelectType } from "../type";
 import { validate as isUUID } from "uuid";
 
+// ---------------------------------------------------------
+// Prepared Statements
+// ---------------------------------------------------------
+
+const prepareGetContactPhoneVerifyDetails = pgDb.query.userPhonesTable
+  .findFirst({
+    columns: {
+      id: true,
+      is_verified: true,
+      verify_code: true,
+      verify_expiry: true,
+    },
+    where: {
+      id: { eq: sql.placeholder("phone_id") },
+    },
+  })
+  .prepare("GetContactPhoneVerifyDetails");
+
+const prepareGetContactEmailVerifyDetails = pgDb.query.userEmailsTable
+  .findFirst({
+    columns: {
+      id: true,
+      is_verified: true,
+      verify_code: true,
+      verify_expiry: true,
+    },
+    where: {
+      id: { eq: sql.placeholder("email_table_id") },
+    },
+  })
+  .prepare("GetContactEmailVerifyDetails");
+
+const prepareGetUserIdByEmail = pgDb.query.usersTable
+  .findFirst({
+    columns: {
+      id: true,
+    },
+    where: {
+      email: { eq: sql.placeholder("email") },
+    },
+  })
+  .prepare("GetUserIdByEmail");
+
+const prepareGetAuthUserProfileById = pgDb.query.usersTable
+  .findFirst({
+    columns: {
+      id: true,
+      email: true,
+      username: true,
+      role: true,
+      created_at: true,
+      updated_at: true,
+      is_verified: true,
+      provider: true,
+    },
+    where: {
+      id: { eq: sql.placeholder("id") },
+    },
+    with: {
+      profile: {
+        columns: {
+          first_name: true,
+          last_name: true,
+          avatar: true,
+          cover_img: true,
+          nickname: true,
+          created_at: true,
+          date_of_birth: true,
+          gender: true,
+          updated_at: true,
+        },
+      },
+    },
+  })
+  .prepare("GetAuthUserProfileById");
+
+const prepareGetUserDataForLoginByEmailOrUsernameOrId = pgDb.query.usersTable
+  .findFirst({
+    columns: {
+      id: true,
+      email: true,
+      password: true,
+      username: true,
+      role: true,
+      is_verified: true,
+    },
+    with: {
+      profile: {
+        columns: {
+          avatar: true,
+          first_name: true,
+          last_name: true,
+          nickname: true,
+        },
+      },
+    },
+    where: {
+      OR: [
+        {
+          email: { eq: sql.placeholder("data") },
+        },
+        {
+          username: { eq: sql.placeholder("data") },
+        },
+        ...(isUUID(sql.placeholder("data"))
+          ? [{ id: { eq: sql.placeholder("data") } }]
+          : []),
+      ],
+    },
+  })
+  .prepare("GetUserDataForLoginByEmailOrUsernameOrId");
+
+const prepareGetUserVerifyDetails = pgDb.query.usersTable
+  .findFirst({
+    where: {
+      id: {
+        eq: sql.placeholder("user_id"),
+      },
+    },
+    columns: {
+      id: true,
+      is_verified: true,
+      verify_code: true,
+      verify_expiry: true,
+    },
+  })
+  .prepare("GetUserVerifyDetails");
+
 export class UserRepository {
+  // ---------------------------------------------------------
+  // Create
+  // ---------------------------------------------------------
   async CreateNewUserAndProfile(data: CreateUserWithProfileInputType) {
     const { user: user_payload, profile: profile_payload } = data;
     const result = await pgDb.transaction(async (tx) => {
@@ -152,129 +282,56 @@ export class UserRepository {
     return newEmail;
   }
 
-  async SetPhoneVerifyCode(
-    code: string,
-    expiry: Date,
-    phone_table_id: string,
-    user_id: string
-  ) {
-    const [updatedPhone] = await pgDb
-      .update(userPhonesTable)
-      .set({
-        verify_code: code,
-        verify_expiry: expiry,
-      })
-      .where(
-        and(
-          eq(userPhonesTable.id, phone_table_id),
-          eq(userPhonesTable.user_id, user_id),
-          eq(userPhonesTable.is_verified, false)
-        )
-      )
-      .returning({ id: userPhonesTable.id });
-
-    return updatedPhone;
-  }
-
-  async SetEmailVerifyCode(
-    code: string,
-    expiry: Date,
-    email_table_id: string,
-    user_id: string
-  ) {
-    const [updatedEmail] = await pgDb
-      .update(userEmailsTable)
-      .set({
-        verify_code: code,
-        verify_expiry: expiry,
-      })
-      .where(
-        and(
-          eq(userEmailsTable.id, email_table_id),
-          eq(userEmailsTable.user_id, user_id),
-          eq(userEmailsTable.is_verified, false)
-        )
-      )
-      .returning({ email: userEmailsTable.email, id: userEmailsTable.id });
-
-    return updatedEmail;
-  }
+  // ---------------------------------------------------------
+  // Read
+  // ---------------------------------------------------------
 
   async GetContactPhoneVerifyDetails(phone_id: string) {
-    const phone = await pgDb.query.userPhonesTable.findFirst({
-      where: {
-        id: { eq: phone_id },
-      },
-      columns: {
-        id: true,
-        is_verified: true,
-        verify_code: true,
-        verify_expiry: true,
-      },
+    const phone = await prepareGetContactPhoneVerifyDetails.execute({
+      phone_id,
     });
-
     return phone;
   }
 
   async GetContactEmailVerifyDetails(email_table_id: string) {
-    const email = await pgDb.query.userEmailsTable.findFirst({
-      where: {
-        id: { eq: email_table_id },
-      },
-      columns: {
-        id: true,
-        is_verified: true,
-        verify_code: true,
-        verify_expiry: true,
-      },
+    const email = await prepareGetContactEmailVerifyDetails.execute({
+      email_table_id,
     });
-
     return email;
   }
 
   async GetUserIdByEmail(email: string) {
-    return await pgDb.query.usersTable.findFirst({
-      columns: {
-        id: true,
-      },
-      where: {
-        email: { eq: email },
-      },
+    return await prepareGetUserIdByEmail.execute({
+      email,
     });
   }
 
   async GetAuthUserProfileById(id: string) {
-    return await pgDb.query.usersTable.findFirst({
-      columns: {
-        id: true,
-        email: true,
-        username: true,
-        role: true,
-        created_at: true,
-        updated_at: true,
-        is_verified: true,
-        provider: true,
-      },
-      where: {
-        id: { eq: id },
-      },
-      with: {
-        profile: {
-          columns: {
-            first_name: true,
-            last_name: true,
-            avatar: true,
-            cover_img: true,
-            nickname: true,
-            created_at: true,
-            date_of_birth: true,
-            gender: true,
-            updated_at: true,
-          },
-        },
-      },
+    return await prepareGetAuthUserProfileById.execute({
+      id,
     });
   }
+
+  async GetUserDataForLoginByEmailOrUsernameOrId(data: string) {
+    const result =
+      await prepareGetUserDataForLoginByEmailOrUsernameOrId.execute({
+        data,
+      });
+
+    return result;
+  }
+
+  async GetUserVerifyDetails(user_id: string) {
+    const user = await prepareGetUserVerifyDetails.execute({
+      user_id,
+    });
+
+    return user;
+  }
+
+  // ---------------------------------------------------------
+  // Update
+  // ---------------------------------------------------------
 
   async UpdateUserProfile(data: UpdateProfileInputType) {
     const { date_of_birth, user_id, id, ...updateData } = data;
@@ -308,6 +365,22 @@ export class UserRepository {
       .returning({ id: userContactsTable.id });
 
     return updatedContact;
+  }
+
+  async UpdateUserVerifyDetails(user_id: string) {
+    const [verifiedUser] = await pgDb
+      .update(usersTable)
+      .set({
+        is_verified: true,
+        verify_code: null,
+        verify_expiry: null,
+      })
+      .where(eq(usersTable.id, user_id))
+      .returning({
+        id: usersTable.id,
+      });
+
+    return verifiedUser;
   }
 
   async UpdateContactPhone(data: UpdatePhoneInputType) {
@@ -352,6 +425,62 @@ export class UserRepository {
       .returning({ id: userAddressesTable.id });
     return updatedAddress;
   }
+
+  async SetPhoneVerifyCode(
+    code: string,
+    expiry: Date,
+    phone_table_id: string,
+    user_id: string
+  ) {
+    const [updatedPhone] = await pgDb
+      .update(userPhonesTable)
+      .set({
+        verify_code: code,
+        verify_expiry: expiry,
+      })
+      .where(
+        and(
+          eq(userPhonesTable.id, phone_table_id),
+          eq(userPhonesTable.user_id, user_id),
+          eq(userPhonesTable.is_verified, false)
+        )
+      )
+      .returning({
+        id: userPhonesTable.id,
+        phone: userPhonesTable.phone,
+        phone_code: userPhonesTable.phone_code,
+      });
+
+    return updatedPhone;
+  }
+
+  async SetEmailVerifyCode(
+    code: string,
+    expiry: Date,
+    email_table_id: string,
+    user_id: string
+  ) {
+    const [updatedEmail] = await pgDb
+      .update(userEmailsTable)
+      .set({
+        verify_code: code,
+        verify_expiry: expiry,
+      })
+      .where(
+        and(
+          eq(userEmailsTable.id, email_table_id),
+          eq(userEmailsTable.user_id, user_id),
+          eq(userEmailsTable.is_verified, false)
+        )
+      )
+      .returning({ email: userEmailsTable.email, id: userEmailsTable.id });
+
+    return updatedEmail;
+  }
+
+  // ---------------------------------------------------------
+  // Delete
+  // ---------------------------------------------------------
 
   async DeleteUserById(id: string) {
     const [deletedUser] = await pgDb
@@ -418,42 +547,6 @@ export class UserRepository {
     return deletedAddress;
   }
 
-  async GetUserDataForLoginByEmailOrUsernameOrId(data: string) {
-    const result = await pgDb.query.usersTable.findFirst({
-      columns: {
-        id: true,
-        email: true,
-        password: true,
-        username: true,
-        role: true,
-        is_verified: true,
-      },
-      with: {
-        profile: {
-          columns: {
-            avatar: true,
-            first_name: true,
-            last_name: true,
-            nickname: true,
-          },
-        },
-      },
-      where: {
-        OR: [
-          {
-            email: { eq: data },
-          },
-          {
-            username: { eq: data },
-          },
-          ...(isUUID(data) ? [{ id: { eq: data } }] : []),
-        ],
-      },
-    });
-
-    return result;
-  }
-
   async SetVerifyCodeForCoreUser(code: string, expiry: Date, email: string) {
     const [user] = await pgDb
       .update(usersTable)
@@ -467,39 +560,5 @@ export class UserRepository {
       });
 
     return user;
-  }
-
-  async GetUserVerifyDetails(user_id: string) {
-    const user = await pgDb.query.usersTable.findFirst({
-      where: {
-        id: {
-          eq: user_id,
-        },
-      },
-      columns: {
-        id: true,
-        is_verified: true,
-        verify_code: true,
-        verify_expiry: true,
-      },
-    });
-
-    return user;
-  }
-
-  async UpdateUserVerifyDetails(user_id: string) {
-    const [verifiedUser] = await pgDb
-      .update(usersTable)
-      .set({
-        is_verified: true,
-        verify_code: null,
-        verify_expiry: null,
-      })
-      .where(eq(usersTable.id, user_id))
-      .returning({
-        id: usersTable.id,
-      });
-
-    return verifiedUser;
   }
 }

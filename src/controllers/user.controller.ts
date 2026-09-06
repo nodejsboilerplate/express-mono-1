@@ -17,9 +17,11 @@ import type {
 
 import { ApiResponse } from "@/libs";
 import { EmailService, UserService } from "@/services";
+import { PhoneMessagingService } from "@/services/phone.message.service";
 
 const userService = new UserService();
-const emailService = new EmailService(); // Seperate Domain
+const emailService = new EmailService(); // Seperate Domain B
+const phoneService = new PhoneMessagingService(); // Seperate Domain B
 
 export class UserController {
   // ---------------------------------------------------------
@@ -105,12 +107,12 @@ export class UserController {
     return res.status(200).json(new ApiResponse(200, "Ok", result));
   }
 
-  async sendVerificationCodeForPhoneHandler(
+  async sendContactPhoneVerificationHandler(
     req: Request,
     res: Response
   ): Promise<Response> {
     const { id } = req.params as Pick<UserIdWithContextIdInputType, "id">;
-    const result = await userService.sendVerificationCodeForPhone({
+    const result = await phoneService.sendContactPhoneVerification({
       id,
       user_id: req.auth_user.id,
     });
@@ -122,12 +124,12 @@ export class UserController {
     );
   }
 
-  async sendContactEmailVerifyCodeHandler(
+  async sendContactEmailVerificationHandler(
     req: Request,
     res: Response
   ): Promise<Response> {
     const { id } = req.params as Pick<UserIdWithContextIdInputType, "id">;
-    const result = await emailService.sendVerifyContactEmailCode(
+    const result = await emailService.sendContactEmailVerification(
       {
         id,
         user_id: req.auth_user.id,

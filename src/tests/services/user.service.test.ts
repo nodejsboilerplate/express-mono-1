@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi, beforeAll, afterAll } from "vitest";
 import { pgDb } from "@/libs/db.connect";
 import {
   usersTable,
@@ -11,9 +11,28 @@ import {
 import { eq } from "drizzle-orm";
 import { Socials } from "@/constants";
 import { EmailService, UserService } from "@/services";
+import { PhoneMessagingService } from "@/services/phone.message.service";
+import { TwilioService } from "@/services/twilio.service";
 
 const userService = new UserService();
 const emailService = new EmailService();
+const phoneService = new PhoneMessagingService();
+
+beforeAll(() => {
+  vi.spyOn(
+    TwilioService.prototype as any,
+    "lookupWithCallerNameAndLineTypeIntelligence"
+  ).mockResolvedValue({ valid: true } as any);
+
+  vi.spyOn(TwilioService.prototype as any, "createMessage").mockResolvedValue({
+    sid: "SMxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    status: "queued",
+  } as any);
+});
+
+afterAll(() => {
+  vi.restoreAllMocks();
+});
 
 function validUserWithProfilePayload(
   overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
@@ -259,16 +278,18 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
   // ---------------------------------------------------------------
 
   describe("UserService.sendVerificationCodeForPhone", () => {
-    test("sets a verification code on an unverified phone and returns its id", async () => {
+    test("sets a verification code on an unverified phone and sends it", async () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const phoneId = await createPhone(userId, contactId);
 
-      const result = await userService.sendVerificationCodeForPhone({
+      const result = await phoneService.sendContactPhoneVerification({
         id: phoneId,
         user_id: userId,
       });
-      expect(result).toBe(phoneId);
+
+      expect(result.lookupRespose.valid).toBe(true);
+      expect(result.messageResponse).toBeTruthy();
 
       const [row] = await pgDb
         .select()
@@ -289,7 +310,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
         .where(eq(userPhonesTable.id, phoneId));
 
       await expect(
-        userService.sendVerificationCodeForPhone({
+        phoneService.sendContactPhoneVerification({
           id: phoneId,
           user_id: userId,
         })
@@ -303,7 +324,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const phoneId = await createPhone(userId, contactId);
 
       await expect(
-        userService.sendVerificationCodeForPhone({
+        phoneService.sendContactPhoneVerification({
           id: phoneId,
           user_id: otherUserId,
         })
@@ -314,7 +335,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
 
       await expect(
-        userService.sendVerificationCodeForPhone({
+        phoneService.sendContactPhoneVerification({
           id: crypto.randomUUID(),
           user_id: userId,
         })
@@ -322,13 +343,13 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
     });
   });
 
-  describe("EmailService.sendVerifyContactEmailCode", () => {
+  describe("EmailService.sendContactEmailVerification", () => {
     test("sets a verification code on an unverified email and returns its id", async () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
 
-      const result = await emailService.sendVerifyContactEmailCode(
+      const result = await emailService.sendContactEmailVerification(
         { id: emailId, user_id: userId },
         "test device"
       );
@@ -353,7 +374,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
         .where(eq(userEmailsTable.id, emailId));
 
       await expect(
-        emailService.sendVerifyContactEmailCode(
+        emailService.sendContactEmailVerification(
           { id: emailId, user_id: userId },
           "test device"
         )
@@ -367,7 +388,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const emailId = await createEmail(userId, contactId);
 
       await expect(
-        emailService.sendVerifyContactEmailCode(
+        emailService.sendContactEmailVerification(
           { id: emailId, user_id: otherUserId },
           "test device"
         )
@@ -378,7 +399,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
 
       await expect(
-        emailService.sendVerifyContactEmailCode(
+        emailService.sendContactEmailVerification(
           { id: crypto.randomUUID(), user_id: userId },
           "test device"
         )
@@ -551,7 +572,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const phoneId = await createPhone(userId, contactId);
-      await userService.sendVerificationCodeForPhone({
+      await phoneService.sendContactPhoneVerification({
         id: phoneId,
         user_id: userId,
       });
@@ -581,7 +602,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const phoneId = await createPhone(userId, contactId);
-      await userService.sendVerificationCodeForPhone({
+      await phoneService.sendContactPhoneVerification({
         id: phoneId,
         user_id: userId,
       });
@@ -609,7 +630,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const phoneId = await createPhone(userId, contactId);
-      await userService.sendVerificationCodeForPhone({
+      await phoneService.sendContactPhoneVerification({
         id: phoneId,
         user_id: userId,
       });
@@ -627,7 +648,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const phoneId = await createPhone(userId, contactId);
-      await userService.sendVerificationCodeForPhone({
+      await phoneService.sendContactPhoneVerification({
         id: phoneId,
         user_id: userId,
       });
@@ -668,7 +689,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
-      await emailService.sendVerifyContactEmailCode(
+      await emailService.sendContactEmailVerification(
         { id: emailId, user_id: userId },
         "test device"
       );
@@ -698,7 +719,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
-      await emailService.sendVerifyContactEmailCode(
+      await emailService.sendContactEmailVerification(
         { id: emailId, user_id: userId },
         "test device"
       );
@@ -726,7 +747,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
-      await emailService.sendVerifyContactEmailCode(
+      await emailService.sendContactEmailVerification(
         { id: emailId, user_id: userId },
         "test device"
       );
@@ -744,7 +765,7 @@ describe("User Service Test", { tags: ["services/user"] }, () => {
       const { userId } = await createUser();
       const contactId = await createContact(userId);
       const emailId = await createEmail(userId, contactId);
-      await emailService.sendVerifyContactEmailCode(
+      await emailService.sendContactEmailVerification(
         { id: emailId, user_id: userId },
         "test device"
       );

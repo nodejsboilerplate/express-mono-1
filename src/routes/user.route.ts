@@ -57,7 +57,7 @@ router
   .post(
     authMiddlware,
     asyncHandler(
-      userController.sendVerificationCodeForPhoneHandler.bind(userController)
+      userController.sendContactPhoneVerificationHandler.bind(userController)
     )
   );
 
@@ -66,7 +66,7 @@ router
   .post(
     authMiddlware,
     asyncHandler(
-      userController.sendContactEmailVerifyCodeHandler.bind(userController)
+      userController.sendContactEmailVerificationHandler.bind(userController)
     )
   );
 
