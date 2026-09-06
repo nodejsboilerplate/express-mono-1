@@ -5,6 +5,9 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
+    env: {
+      NODE_ENV: "test",
+    },
     include: ["src/tests/**/*.test.ts"],
     environment: "node",
     globals: true,

@@ -1,6 +1,6 @@
 {
   "name": "express-mono-1",
-  "version": "1.0.0",
+  "version": "26.0.0",
   "description": "",
   "main": "./dist/index.js",
   "scripts": {
@@ -32,7 +32,6 @@
     "@commitlint/types": "^21.2.0",
     "@eslint/js": "^10.0.1",
     "@faker-js/faker": "^10.6.0",
-    "@testcontainers/postgresql": "^12.1.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
