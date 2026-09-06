@@ -68,11 +68,6 @@ export const authMiddlware = async (
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
     }
 
-    /**
-     * User Validation Layer
-     * To ensure the user hasn't been banned or had their role changed,
-     * we verify identity against our storage layers.
-     */
     let temp_user: AccessTokenPayload;
 
     // Redis Lookup
