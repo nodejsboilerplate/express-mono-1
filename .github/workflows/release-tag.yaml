@@ -1,4 +1,4 @@
-# This Version Release is for Temporary Taging in Github. later implement this in deploy.yaml conf 
+# This Version Release is for Temporary Taging in Github. later implement this in deploy.yaml conf
 name: Tag New Version
 
 on:
@@ -11,7 +11,7 @@ jobs:
     name: "Tagging New Version On Github"
     runs-on: ubuntu-latest
     permissions:
-      contents: write 
+      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -44,7 +44,3 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git tag -a "v${{steps.tag-version.outputs.new_version}}" -m "Release v${{steps.tag-version.outputs.new_version}}"
           git push origin "v${{steps.tag-version.outputs.new_version}}"
-
-
-          
-          

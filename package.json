@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx --watch ./src/index.ts",
     "build": "tsdown",
-    "format": "prettier --write \"**/*.{ts,md,json,js}\"",
+    "format": "prettier --write \"**/*.{ts,md,json,js,yaml}\"",
     "gen:docs": "typedoc",
     "check:lint": "eslint . --cache --cache-location node_modules/.cache/eslint/ --max-warnings 1000",
     "fix:lint": "eslint . --cache --cache-location node_modules/.cache/eslint/ --fix --max-warnings=1000",
