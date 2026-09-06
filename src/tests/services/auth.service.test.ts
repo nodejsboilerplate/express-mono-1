@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { AuthService } from "@/services";
+import jwt from "jsonwebtoken";
+import { AuthService } from "@/services/auth.service";
 
 // ---------------------------------------------------------
 // Hoisted shared mock fns (so module-level singletons inside
@@ -38,9 +39,17 @@ vi.mock("@/config", () => ({
     JWT_ACCESS_TOKEN_SECRET: "access-secret",
     JWT_REFRESH_TOKEN_SECRET: "refresh-secret",
   },
+  resendConfig: {
+    RESEND_API_KEY: "test-api-key",
+    RESEND_WEBHOOK_SECRET: "test-webhook-secret",
+  },
+  baseConfig: {
+    DATABASE_URL: "postgres://test:test@localhost:5432/test",
+    NODE_ENV: "test",
+  },
 }));
 
-vi.mock("./cookie.service", () => ({
+vi.mock("@/services/cookie.service", () => ({
   ACCESS_TOKEN_EXPIRY_SEC: 900,
   REFRESH_TOKEN_EXPIRY_SEC: 604800,
   CookieService: {
@@ -100,13 +109,13 @@ vi.mock("@/database/repositories", () => ({
   },
 }));
 
-vi.mock("./user.service", () => ({
+vi.mock("@/services/user.service", () => ({
   UserService: class {
     createUserWithProfile = mocks.createUserWithProfile;
   },
 }));
 
-vi.mock("./email.service", () => ({
+vi.mock("@/services/email.service", () => ({
   EmailService: class {
     sendLoginCode = mocks.sendLoginCode;
     sendSignupCode = mocks.sendSignupCode;
@@ -125,6 +134,7 @@ describe("AuthService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.isZodError.mockReturnValue(false);
+    mocks.generateVerificationCode.mockReturnValue("123456");
     authService = new AuthService();
   });
 

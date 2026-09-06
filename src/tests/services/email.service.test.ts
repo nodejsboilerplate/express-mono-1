@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { EmailService } from "@/services";
+import { EmailService } from "@/services/email.service";
 
 // ---------------------------------------------------------
 // Hoisted shared mock fns
@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   otpVerificationEmail2: vi.fn((props: unknown) => ({ __reactMarkup: props })),
 }));
 
-vi.mock("./resend.service", () => ({
+vi.mock("@/services/resend.service", () => ({
   ResendService: class {
     static resend = { emails: { send: mocks.send } };
     static TEAM_NAME = "My Team";

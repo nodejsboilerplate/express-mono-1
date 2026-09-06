@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { UserService } from "@/services";
+import { UserService } from "@/services/user.service";
 
 // ---------------------------------------------------------
 // Hoisted shared mock fns
@@ -135,13 +135,13 @@ vi.mock("@/database/repositories", () => ({
   },
 }));
 
-vi.mock("./phone.message.service", () => ({
+vi.mock("@/services/phone.message.service", () => ({
   PhoneMessagingService: class {
     sendContactPhoneVerification = mocks.sendContactPhoneVerification;
   },
 }));
 
-vi.mock("./email.service", () => ({
+vi.mock("@/services/email.service", () => ({
   EmailService: class {
     sendContactEmailVerificationCode = mocks.sendContactEmailVerificationCode;
   },
@@ -159,6 +159,7 @@ describe("UserService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.isZodError.mockReturnValue(false);
+    mocks.generateVerificationCode.mockReturnValue("123456");
     userService = new UserService();
   });
 

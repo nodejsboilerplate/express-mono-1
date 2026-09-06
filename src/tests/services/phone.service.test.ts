@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { PhoneMessagingService } from "@/services";
+import { PhoneMessagingService } from "@/services/phone.message.service";
 
 // ---------------------------------------------------------
 // Hoisted shared mock fns
@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   createMessage: vi.fn(),
 }));
 
-vi.mock("./twilio.service", () => ({
+vi.mock("@/services/twilio.service", () => ({
   TwilioService: class {
     lookupWithCallerNameAndLineTypeIntelligence =
       mocks.lookupWithCallerNameAndLineTypeIntelligence;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ResendService } from "@/services";
+import { ResendService } from "@/services/resend.service";
 
 // ---------------------------------------------------------
 // Hoisted shared mock fns / mutable config
@@ -22,9 +22,13 @@ vi.mock("resend", () => ({
   },
 }));
 
-vi.mock("@/config", () => ({
-  resendConfig: mocks.resendConfig,
-}));
+vi.mock("@/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/config")>();
+  return {
+    ...actual,
+    resendConfig: mocks.resendConfig,
+  };
+});
 
 vi.mock("@/events", () => ({
   getSystemCustomErrorMsgByKey: (key: string) => key,

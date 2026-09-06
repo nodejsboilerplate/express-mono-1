@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GoogleService } from "@/services";
+import { GoogleService } from "@/services/google.service";
 
 // ---------------------------------------------------------
 // Hoisted shared mock fns
@@ -55,7 +55,7 @@ vi.mock("@/redis", () => ({
   },
 }));
 
-vi.mock("./user.service", () => ({
+vi.mock("@/services/user.service", () => ({
   UserService: class {
     createUserWithProfileByProvider = mocks.createUserWithProfileByProvider;
   },
@@ -63,7 +63,7 @@ vi.mock("./user.service", () => ({
 
 // GoogleService extends AuthService — mock the base class so login() only
 // exercises GoogleService's own logic, not AuthService internals.
-vi.mock("./auth.service", () => ({
+vi.mock("@/services/auth.service", () => ({
   AuthService: class {
     getCookies = mocks.getCookies;
     createTokens = mocks.createTokens;
