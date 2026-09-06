@@ -4,8 +4,6 @@ import type {
   CreateUserContactInputType,
   CreateUserEmailInputType,
   CreateUserPhoneInputType,
-  CreateUserWithProfileInputType,
-  IdZType,
   UpdateAddressInputType,
   UpdateContactInputType,
   UpdateEmailInputType,
@@ -16,12 +14,9 @@ import type {
 } from "@/zod";
 
 import { ApiResponse } from "@/libs";
-import { EmailService, UserService } from "@/services";
-import { PhoneMessagingService } from "@/services/phone.message.service";
+import { UserService } from "@/services";
 
 const userService = new UserService();
-const emailService = new EmailService(); // Seperate Domain B
-const phoneService = new PhoneMessagingService(); // Seperate Domain B
 
 export class UserController {
   // ---------------------------------------------------------
@@ -112,7 +107,7 @@ export class UserController {
     res: Response
   ): Promise<Response> {
     const { id } = req.params as Pick<UserIdWithContextIdInputType, "id">;
-    const result = await phoneService.sendContactPhoneVerification({
+    const result = await userService.sendContactPhoneVerificationEmail({
       id,
       user_id: req.auth_user.id,
     });
@@ -129,7 +124,7 @@ export class UserController {
     res: Response
   ): Promise<Response> {
     const { id } = req.params as Pick<UserIdWithContextIdInputType, "id">;
-    const result = await emailService.sendContactEmailVerification(
+    const result = await userService.sendContactEmailVerificationEmail(
       {
         id,
         user_id: req.auth_user.id,

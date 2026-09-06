@@ -2,20 +2,13 @@ import { UserRepository } from "@/database/repositories";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
 import { AuthRedis } from "@/redis";
-import {
-  AuthService,
-  CookieService,
-  EmailService,
-  GoogleService,
-} from "@/services";
+import { AuthService, CookieService, GoogleService } from "@/services";
 import type {
   UserBasicInfoDataType,
   UserProfileDataByLoginType,
 } from "@/types";
 import type {
   CreateUserWithProfileInputType,
-  EmailZType,
-  IdZType,
   LoginUserInputType,
   VerifyCodeInputType,
 } from "@/zod";
@@ -23,7 +16,6 @@ import type { Request, Response } from "express";
 
 const authService = new AuthService();
 const googleService = new GoogleService();
-const emailService = new EmailService(); // Seperate Domain
 const userRepository = new UserRepository();
 const authRedis = new AuthRedis();
 
@@ -96,7 +88,7 @@ export class AuthController {
     req: Request,
     res: Response
   ): Promise<Response> {
-    const result = await emailService.sendSignupCode(
+    const result = await authService.sendSignupVerificationEmail(
       req.auth_user.email,
       req?.headers["user-agent"] ?? "Unknown device"
     );
@@ -116,6 +108,13 @@ export class AuthController {
       VerifyCodeInputType,
       "verify_code"
     >;
+
+    if (req.auth_user.is_verified) {
+      throw new ApiError(
+        400,
+        getSystemCustomErrorMsgByKey("USER_ALREADY_VERIFIED")
+      );
+    }
 
     const result = await authService.verifySignupCode({
       verify_code,

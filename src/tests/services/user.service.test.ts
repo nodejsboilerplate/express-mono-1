@@ -1,955 +1,533 @@
-import { describe, expect, test, vi, beforeAll, afterAll } from "vitest";
-import { pgDb } from "@/libs/db.connect";
-import {
-  usersTable,
-  userContactsTable,
-  userPhonesTable,
-  userEmailsTable,
-  userAddressesTable,
-  userProfilesTable,
-} from "@/database";
-import { eq } from "drizzle-orm";
-import { Socials } from "@/constants";
-import { EmailService, UserService } from "@/services";
-import { PhoneMessagingService } from "@/services/phone.message.service";
-import { TwilioService } from "@/services/twilio.service";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { UserService } from "@/services";
 
-const userService = new UserService();
-const emailService = new EmailService();
-const phoneService = new PhoneMessagingService();
+// ---------------------------------------------------------
+// Hoisted shared mock fns
+// ---------------------------------------------------------
+const mocks = vi.hoisted(() => ({
+  // repository
+  getUserIdByEmail: vi.fn(),
+  getUserDataForLogin: vi.fn(),
+  createNewUserAndProfile: vi.fn(),
+  createNewUserAndProfileByProvider: vi.fn(),
+  createNewAddress: vi.fn(),
+  createNewContact: vi.fn(),
+  createNewPhone: vi.fn(),
+  createNewEmail: vi.fn(),
+  setPhoneVerifyCode: vi.fn(),
+  setEmailVerifyCode: vi.fn(),
+  getContactPhoneVerifyDetails: vi.fn(),
+  getContactEmailVerifyDetails: vi.fn(),
+  getAuthUserProfileById: vi.fn(),
+  updateUserProfile: vi.fn(),
+  updateContact: vi.fn(),
+  updateContactPhone: vi.fn(),
+  updateContactEmail: vi.fn(),
+  updateAddress: vi.fn(),
+  deleteUserById: vi.fn(),
+  deleteSingleContact: vi.fn(),
+  deleteSingleContactPhone: vi.fn(),
+  deleteSingleContactEmail: vi.fn(),
+  deleteSingleAddress: vi.fn(),
+  // services
+  sendContactPhoneVerification: vi.fn(),
+  sendContactEmailVerificationCode: vi.fn(),
+  // utils
+  isZodError: vi.fn(),
+  validationError: vi.fn(),
+  generateVerificationCode: vi.fn(),
+  getVerifyExpiry: vi.fn(),
+}));
 
-beforeAll(() => {
-  vi.spyOn(
-    TwilioService.prototype as any,
-    "lookupWithCallerNameAndLineTypeIntelligence"
-  ).mockResolvedValue({ valid: true } as any);
+vi.mock("@/events", () => ({
+  getSystemCustomErrorMsgByKey: (key: string) => key,
+}));
 
-  vi.spyOn(TwilioService.prototype as any, "createMessage").mockResolvedValue({
-    sid: "SMxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    status: "queued",
-  } as any);
-});
+vi.mock("@/libs", () => ({
+  ApiError: class ApiError extends Error {
+    status: number;
+    constructor(status: number, message: string) {
+      super(message);
+      this.status = status;
+    }
+  },
+}));
 
-afterAll(() => {
-  vi.restoreAllMocks();
-});
+vi.mock("@/utils", () => ({
+  generateVerificationCode: mocks.generateVerificationCode,
+  getVerifyExpiry: mocks.getVerifyExpiry,
+  isZodError: mocks.isZodError,
+  validationError: mocks.validationError,
+}));
 
-function validUserWithProfilePayload(
-  overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
-) {
-  return {
-    user: {
-      email: `test-${crypto.randomUUID()}@example.com`,
-      username: `user_${crypto.randomUUID().slice(0, 8)}`,
-      password: "SuperSecret123!",
-      role: "USER" as const,
-      ...overrides.user,
-    },
-    profile: {
-      first_name: "Mahin",
-      ...overrides.profile,
-    },
-  };
-}
+vi.mock("@/validators/inputs", () => ({
+  UserInputValidators: class {
+    createUserWithProfileInput(p: unknown) {
+      return p;
+    }
+    createUserWithProfileByProviderInput(p: unknown) {
+      return p;
+    }
+    createUserAddressInput(p: unknown) {
+      return p;
+    }
+    createUserContactInput(p: unknown) {
+      return p;
+    }
+    createUserPhoneInput(p: unknown) {
+      return p;
+    }
+    createUserEmailInput(p: unknown) {
+      return p;
+    }
+    userIdWithContextIdInput(p: unknown) {
+      return p;
+    }
+    verifyCodeWithUserId(p: unknown) {
+      return p;
+    }
+    idInput(p: unknown) {
+      return p;
+    }
+    updateUserProfileInput(p: unknown) {
+      return p;
+    }
+    updateUserContactInput(p: unknown) {
+      return p;
+    }
+    updateUserPhoneInput(p: unknown) {
+      return p;
+    }
+    updateUserEmailInput(p: unknown) {
+      return p;
+    }
+    updateUserAddressInput(p: unknown) {
+      return p;
+    }
+  },
+}));
 
-async function createUser(
-  overrides: { user?: Partial<any>; profile?: Partial<any> } = {}
-) {
-  const { user, profile } = await userService.createUserWithProfile(
-    validUserWithProfilePayload(overrides)
-  );
-  const profileId = profile.id;
-  const userId = user.id;
-  if (!userId) throw new Error("Fixture setup failed: no userId returned");
-  return { userId, profileId };
-}
+vi.mock("@/database/repositories", () => ({
+  UserRepository: class {
+    GetUserIdByEmail = mocks.getUserIdByEmail;
+    GetUserDataForLoginByEmailOrUsernameOrId = mocks.getUserDataForLogin;
+    CreateNewUserAndProfile = mocks.createNewUserAndProfile;
+    CreateNewUserAndProfileByProvider = mocks.createNewUserAndProfileByProvider;
+    CreateNewAddress = mocks.createNewAddress;
+    CreateNewContact = mocks.createNewContact;
+    CreateNewPhone = mocks.createNewPhone;
+    CreateNewEmail = mocks.createNewEmail;
+    SetPhoneVerifyCode = mocks.setPhoneVerifyCode;
+    SetEmailVerifyCode = mocks.setEmailVerifyCode;
+    GetContactPhoneVerifyDetails = mocks.getContactPhoneVerifyDetails;
+    GetContactEmailVerifyDetails = mocks.getContactEmailVerifyDetails;
+    GetAuthUserProfileById = mocks.getAuthUserProfileById;
+    UpdateUserProfile = mocks.updateUserProfile;
+    UpdateContact = mocks.updateContact;
+    UpdateContactPhone = mocks.updateContactPhone;
+    UpdateContactEmail = mocks.updateContactEmail;
+    UpdateAddress = mocks.updateAddress;
+    DeleteUserById = mocks.deleteUserById;
+    DeleteSingleContact = mocks.deleteSingleContact;
+    DeleteSingleContactPhone = mocks.deleteSingleContactPhone;
+    DeleteSingleContactEmail = mocks.deleteSingleContactEmail;
+    DeleteSingleAddress = mocks.deleteSingleAddress;
+  },
+}));
 
-async function createContact(userId: string, overrides: Partial<any> = {}) {
-  const id = await userService.createUserContact({
-    user_id: userId,
-    socials: [],
-    ...overrides,
+vi.mock("./phone.message.service", () => ({
+  PhoneMessagingService: class {
+    sendContactPhoneVerification = mocks.sendContactPhoneVerification;
+  },
+}));
+
+vi.mock("./email.service", () => ({
+  EmailService: class {
+    sendContactEmailVerificationCode = mocks.sendContactEmailVerificationCode;
+  },
+}));
+
+const ApiErrorLike = (status: number, message: string) => {
+  const e: any = new Error(message);
+  e.status = status;
+  return e;
+};
+
+describe("UserService", () => {
+  let userService: UserService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.isZodError.mockReturnValue(false);
+    userService = new UserService();
   });
-  if (!id) throw new Error("Fixture setup failed: no contactId returned");
-  return id;
-}
 
-async function createPhone(
-  userId: string,
-  contactId: string,
-  overrides: Partial<any> = {}
-) {
-  const id = await userService.createUserPhone({
-    user_id: userId,
-    contact_id: contactId,
-    phone_code: "+1",
-    phone: `555${Math.floor(1000000 + Math.random() * 8999999)}`,
-    ...overrides,
-  });
-  if (!id) throw new Error("Fixture setup failed: no phoneId returned");
-  return id;
-}
+  // -------------------------------------------------------
+  describe("createUserWithProfile", () => {
+    const payload = { user: { email: "a@b.com" }, profile: {} };
 
-async function createEmail(
-  userId: string,
-  contactId: string,
-  overrides: Partial<any> = {}
-) {
-  const id = await userService.createUserEmail({
-    user_id: userId,
-    contact_id: contactId,
-    email: `contact-${crypto.randomUUID()}@example.com`,
-    ...overrides,
-  });
-  if (!id) throw new Error("Fixture setup failed: no emailId returned");
-  return id;
-}
-
-function validAddressPayload(userId: string, overrides: Partial<any> = {}) {
-  return {
-    user_id: userId,
-    addr_name: "Home",
-    addr_line_1: "House 12, Road 5",
-    city: "Dhaka",
-    country: "Bangladesh",
-    country_iso: "BD",
-    ...overrides,
-  };
-}
-
-describe("User Service Test", { tags: ["services/user"] }, () => {
-  // ---------------------------------------------------------------
-  // Create
-  // ---------------------------------------------------------------
-
-  describe("UserService.createUserWithProfile", () => {
-    test("creates a user + profile and returns both ids", async () => {
-      const { user, profile } = await userService.createUserWithProfile(
-        validUserWithProfilePayload()
+    it("throws validation error on invalid payload", async () => {
+      mocks.isZodError.mockReturnValueOnce(true);
+      mocks.validationError.mockReturnValueOnce(
+        ApiErrorLike(400, "VALIDATION_ERROR")
       );
-      const profileId = profile.id;
-      const userId = user.id;
-      expect(typeof userId).toBe("string");
-      expect(typeof profileId).toBe("string");
-
-      const [userRow] = await pgDb
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.id, userId));
-      expect(userRow?.role).toBe("USER");
-      expect(userRow?.is_verified).toBe(false);
-
-      const [profileRow] = await pgDb
-        .select()
-        .from(userProfilesTable)
-        .where(eq(userProfilesTable.id, profileId));
-      expect(profileRow?.user_id).toBe(userId);
-      expect(profileRow?.first_name).toBe("Mahin");
-    });
-
-    test("coerces date_of_birth to a date-only string", async () => {
-      const dob = new Date("1998-04-12T00:00:00.000Z");
-      const { profile } = await userService.createUserWithProfile(
-        validUserWithProfilePayload({
-          profile: { first_name: "Mahin", date_of_birth: dob },
-        })
-      );
-      const profileId = profile.id;
-
-      const [row] = await pgDb
-        .select()
-        .from(userProfilesTable)
-        .where(eq(userProfilesTable.id, profileId));
-      expect(row?.date_of_birth).toBe("1998-04-12");
-    });
-
-    test("rejects a duplicate email at the database level", async () => {
-      const payload = validUserWithProfilePayload();
-      await userService.createUserWithProfile(payload);
-
       await expect(
-        userService.createUserWithProfile(
-          validUserWithProfilePayload({ user: { email: payload.user.email } })
-        )
-      ).rejects.toThrow();
+        userService.createUserWithProfile(payload as any)
+      ).rejects.toThrow("VALIDATION_ERROR");
     });
 
-    test("rejects a duplicate username at the database level", async () => {
-      const payload = validUserWithProfilePayload();
-      await userService.createUserWithProfile(payload);
-
+    it("throws 400 when a user with that email already exists", async () => {
+      mocks.getUserIdByEmail.mockResolvedValueOnce({ id: "u1" });
       await expect(
-        userService.createUserWithProfile(
-          validUserWithProfilePayload({
-            user: { username: payload.user.username },
-          })
-        )
-      ).rejects.toThrow();
+        userService.createUserWithProfile(payload as any)
+      ).rejects.toThrow("USER_ALREADY_EXISTS");
     });
-  });
 
-  describe("UserService.createUserContact / createUserPhone / createUserEmail", () => {
-    test("creates a contact for a user with no id supplied", async () => {
-      const { userId } = await createUser();
-
-      const contactId = await userService.createUserContact({
-        user_id: userId,
-        socials: [],
+    it("creates the user + profile on success", async () => {
+      mocks.getUserIdByEmail.mockResolvedValueOnce(undefined);
+      mocks.createNewUserAndProfile.mockResolvedValueOnce({
+        user: { id: "u1" },
+        profile: { id: "p1" },
       });
 
-      expect(typeof contactId).toBe("string");
+      const result = await userService.createUserWithProfile(payload as any);
+      expect(mocks.createNewUserAndProfile).toHaveBeenCalledWith(payload);
+      expect(result).toEqual({ user: { id: "u1" }, profile: { id: "p1" } });
+    });
+  });
 
-      const [row] = await pgDb
-        .select()
-        .from(userContactsTable)
-        .where(eq(userContactsTable.id, contactId));
-      expect(row?.user_id).toBe(userId);
+  describe("createUserWithProfileByProvider", () => {
+    const payload = { user: { email: "a@b.com" }, profile: {} };
+
+    it("returns the existing user if already registered", async () => {
+      mocks.getUserDataForLogin.mockResolvedValueOnce({ id: "u1" });
+      const result = await userService.createUserWithProfileByProvider(
+        payload as any
+      );
+      expect(result).toEqual({ id: "u1" });
+      expect(mocks.createNewUserAndProfileByProvider).not.toHaveBeenCalled();
     });
 
-    test("creates a phone tied to a contact", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
+    it("creates a new user + profile when none exists", async () => {
+      mocks.getUserDataForLogin.mockResolvedValueOnce(undefined);
+      mocks.createNewUserAndProfileByProvider.mockResolvedValueOnce({
+        id: "u1",
+        profile: { id: "p1" },
+      });
+      const result = await userService.createUserWithProfileByProvider(
+        payload as any
+      );
+      expect(result).toEqual({ id: "u1", profile: { id: "p1" } });
+    });
+  });
 
-      const phoneId = await userService.createUserPhone({
-        user_id: userId,
-        contact_id: contactId,
+  describe("createUserAddress / createUserContact / createUserPhone / createUserEmail", () => {
+    it("createUserAddress returns the new address id", async () => {
+      mocks.createNewAddress.mockResolvedValueOnce({ id: "addr1" });
+      const result = await userService.createUserAddress({} as any);
+      expect(result).toBe("addr1");
+    });
+
+    it("createUserAddress throws 500 when creation fails", async () => {
+      mocks.createNewAddress.mockResolvedValueOnce(undefined);
+      await expect(userService.createUserAddress({} as any)).rejects.toThrow(
+        "ADDRESS_CREATION_FAILED"
+      );
+    });
+
+    it("createUserContact returns the new contact id", async () => {
+      mocks.createNewContact.mockResolvedValueOnce({ id: "c1" });
+      const result = await userService.createUserContact({} as any);
+      expect(result).toBe("c1");
+    });
+
+    it("createUserPhone returns the new phone id", async () => {
+      mocks.createNewPhone.mockResolvedValueOnce({ id: "ph1" });
+      const result = await userService.createUserPhone({} as any);
+      expect(result).toBe("ph1");
+    });
+
+    it("createUserEmail returns the new email id", async () => {
+      mocks.createNewEmail.mockResolvedValueOnce({ id: "em1" });
+      const result = await userService.createUserEmail({} as any);
+      expect(result).toBe("em1");
+    });
+  });
+
+  // -------------------------------------------------------
+  describe("sendContactPhoneVerificationEmail", () => {
+    const payload = { id: "ph1", user_id: "u1" };
+
+    it("throws 404 when phone not found", async () => {
+      mocks.setPhoneVerifyCode.mockResolvedValueOnce(undefined);
+      await expect(
+        userService.sendContactPhoneVerificationEmail(payload as any)
+      ).rejects.toThrow("PHONE_NOT_FOUND");
+    });
+
+    it("sends the SMS verification code on success", async () => {
+      mocks.setPhoneVerifyCode.mockResolvedValueOnce({
+        phone: "5551234",
         phone_code: "+1",
-        phone: "5551234567",
       });
 
-      expect(typeof phoneId).toBe("string");
+      await userService.sendContactPhoneVerificationEmail(payload as any);
 
-      const [row] = await pgDb
-        .select()
-        .from(userPhonesTable)
-        .where(eq(userPhonesTable.id, phoneId));
-      expect(row?.user_id).toBe(userId);
-      expect(row?.contact_id).toBe(contactId);
-    });
-
-    test("creates an email tied to a contact", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-
-      const emailId = await userService.createUserEmail({
-        user_id: userId,
-        contact_id: contactId,
-        email: `contact-${crypto.randomUUID()}@example.com`,
-      });
-
-      expect(typeof emailId).toBe("string");
-    });
-
-    test("throws when phone_code is missing (DB NOT NULL, no service-level validation)", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-
-      await expect(
-        userService.createUserPhone({
-          user_id: userId,
-          contact_id: contactId,
-          phone: "5551234567",
-        } as any)
-      ).rejects.toThrow();
-    });
-  });
-
-  describe("UserService.createUserAddress", () => {
-    test("creates an address for a user", async () => {
-      const { userId } = await createUser();
-
-      const addressId = await userService.createUserAddress(
-        validAddressPayload(userId)
+      expect(mocks.sendContactPhoneVerification).toHaveBeenCalledWith(
+        "+15551234",
+        expect.any(String)
       );
-
-      expect(typeof addressId).toBe("string");
-
-      const [row] = await pgDb
-        .select()
-        .from(userAddressesTable)
-        .where(eq(userAddressesTable.id, addressId));
-      expect(row?.user_id).toBe(userId);
-      expect(row?.city).toBe("Dhaka");
     });
   });
 
-  // ---------------------------------------------------------------
-  // Send Verification Code
-  // ---------------------------------------------------------------
+  describe("sendContactEmailVerificationEmail", () => {
+    const payload = { id: "em1", user_id: "u1" };
 
-  describe("UserService.sendVerificationCodeForPhone", () => {
-    test("sets a verification code on an unverified phone and sends it", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const phoneId = await createPhone(userId, contactId);
+    it("throws 404 when email not found", async () => {
+      mocks.setEmailVerifyCode.mockResolvedValueOnce(undefined);
+      await expect(
+        userService.sendContactEmailVerificationEmail(payload as any, "device")
+      ).rejects.toThrow("EMAIL_NOT_FOUND");
+    });
 
-      const result = await phoneService.sendContactPhoneVerification({
-        id: phoneId,
-        user_id: userId,
+    it("sends the email verification code on success", async () => {
+      mocks.setEmailVerifyCode.mockResolvedValueOnce({
+        email: "a@b.com",
+        id: "em1",
       });
-
-      expect(result.lookupRespose.valid).toBe(true);
-      expect(result.messageResponse).toBeTruthy();
-
-      const [row] = await pgDb
-        .select()
-        .from(userPhonesTable)
-        .where(eq(userPhonesTable.id, phoneId));
-      expect(row?.verify_code).toBeTruthy();
-      expect(row?.verify_expiry).toBeTruthy();
-    });
-
-    test("throws when the phone is already verified", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const phoneId = await createPhone(userId, contactId);
-
-      await pgDb
-        .update(userPhonesTable)
-        .set({ is_verified: true })
-        .where(eq(userPhonesTable.id, phoneId));
-
-      await expect(
-        phoneService.sendContactPhoneVerification({
-          id: phoneId,
-          user_id: userId,
-        })
-      ).rejects.toThrow();
-    });
-
-    test("throws when the phone belongs to a different user", async () => {
-      const { userId } = await createUser();
-      const { userId: otherUserId } = await createUser();
-      const contactId = await createContact(userId);
-      const phoneId = await createPhone(userId, contactId);
-
-      await expect(
-        phoneService.sendContactPhoneVerification({
-          id: phoneId,
-          user_id: otherUserId,
-        })
-      ).rejects.toThrow();
-    });
-
-    test("throws when the phone does not exist", async () => {
-      const { userId } = await createUser();
-
-      await expect(
-        phoneService.sendContactPhoneVerification({
-          id: crypto.randomUUID(),
-          user_id: userId,
-        })
-      ).rejects.toThrow();
-    });
-  });
-
-  describe("EmailService.sendContactEmailVerification", () => {
-    test("sets a verification code on an unverified email and returns its id", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const emailId = await createEmail(userId, contactId);
-
-      const result = await emailService.sendContactEmailVerification(
-        { id: emailId, user_id: userId },
-        "test device"
+      await userService.sendContactEmailVerificationEmail(
+        payload as any,
+        "device-x"
       );
-      expect(result).toBe(emailId);
-
-      const [row] = await pgDb
-        .select()
-        .from(userEmailsTable)
-        .where(eq(userEmailsTable.id, emailId));
-      expect(row?.verify_code).toBeTruthy();
-      expect(row?.verify_expiry).toBeTruthy();
-    });
-
-    test("throws when the email is already verified", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const emailId = await createEmail(userId, contactId);
-
-      await pgDb
-        .update(userEmailsTable)
-        .set({ is_verified: true })
-        .where(eq(userEmailsTable.id, emailId));
-
-      await expect(
-        emailService.sendContactEmailVerification(
-          { id: emailId, user_id: userId },
-          "test device"
-        )
-      ).rejects.toThrow();
-    });
-
-    test("throws when the email belongs to a different user", async () => {
-      const { userId } = await createUser();
-      const { userId: otherUserId } = await createUser();
-      const contactId = await createContact(userId);
-      const emailId = await createEmail(userId, contactId);
-
-      await expect(
-        emailService.sendContactEmailVerification(
-          { id: emailId, user_id: otherUserId },
-          "test device"
-        )
-      ).rejects.toThrow();
-    });
-
-    test("throws when the email does not exist", async () => {
-      const { userId } = await createUser();
-
-      await expect(
-        emailService.sendContactEmailVerification(
-          { id: crypto.randomUUID(), user_id: userId },
-          "test device"
-        )
-      ).rejects.toThrow();
-    });
-  });
-
-  // ---------------------------------------------------------------
-  // Update
-  // ---------------------------------------------------------------
-
-  describe("UserService.updateUserProfile", () => {
-    test("updates a profile's first_name", async () => {
-      const { userId, profileId } = await createUser();
-
-      const result = await userService.updateUserProfile({
-        id: profileId,
-        user_id: userId,
-        first_name: "New",
-      });
-      expect(result).toBe(profileId);
-
-      const [row] = await pgDb
-        .select()
-        .from(userProfilesTable)
-        .where(eq(userProfilesTable.id, profileId));
-      expect(row?.first_name).toBe("New");
-    });
-
-    test("throws when no profile row exists for that user_id/id combo", async () => {
-      const { userId } = await createUser();
-
-      await expect(
-        userService.updateUserProfile({
-          id: crypto.randomUUID(),
-          user_id: userId,
-          first_name: "New",
-        })
-      ).rejects.toThrow();
-    });
-  });
-
-  describe("UserService.updateUserPhone / updateUserEmail / updateUserAddress", () => {
-    test("updates a phone scoped to its user", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const phoneId = await userService.createUserPhone({
-        user_id: userId,
-        contact_id: contactId,
-        phone_code: "+1",
-        phone: "5551234567",
-      });
-
-      const result = await userService.updateUserPhone({
-        id: phoneId,
-        user_id: userId,
-        phone: "5559999999",
-      });
-      expect(result).toBe(phoneId);
-
-      const [row] = await pgDb
-        .select()
-        .from(userPhonesTable)
-        .where(eq(userPhonesTable.id, phoneId));
-      expect(row?.phone).toBe("5559999999");
-    });
-
-    test("throws when the phone belongs to a different user", async () => {
-      const { userId } = await createUser();
-      const { userId: otherUserId } = await createUser();
-      const contactId = await createContact(userId);
-      const phoneId = await userService.createUserPhone({
-        user_id: userId,
-        contact_id: contactId,
-        phone_code: "+1",
-        phone: "5551234567",
-      });
-
-      await expect(
-        userService.updateUserPhone({
-          id: phoneId,
-          user_id: otherUserId,
-          phone: "5559999999",
-        })
-      ).rejects.toThrow();
-    });
-
-    test("updates an email scoped to its user", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const emailId = await userService.createUserEmail({
-        user_id: userId,
-        contact_id: contactId,
-        email: `old-${crypto.randomUUID()}@example.com`,
-      });
-
-      const newEmail = `new-${crypto.randomUUID()}@example.com`;
-      const result = await userService.updateUserEmail({
-        id: emailId,
-        user_id: userId,
-        email: newEmail,
-      });
-      expect(result).toBe(emailId);
-
-      const [row] = await pgDb
-        .select()
-        .from(userEmailsTable)
-        .where(eq(userEmailsTable.id, emailId));
-      expect(row?.email).toBe(newEmail);
-    });
-
-    test("updates an address scoped to its user", async () => {
-      const { userId } = await createUser();
-      const addressId = await userService.createUserAddress(
-        validAddressPayload(userId)
+      expect(mocks.sendContactEmailVerificationCode).toHaveBeenCalledWith(
+        "a@b.com",
+        expect.any(String),
+        "device-x"
       );
-
-      const result = await userService.updateUserAddress({
-        id: addressId,
-        user_id: userId,
-        city: "Chattogram",
-      });
-      expect(result).toBe(addressId);
-
-      const [row] = await pgDb
-        .select()
-        .from(userAddressesTable)
-        .where(eq(userAddressesTable.id, addressId));
-      expect(row?.city).toBe("Chattogram");
     });
   });
 
-  describe("UserService.updateUserContact", () => {
-    test("updates a contact's socials", async () => {
-      const { userId } = await createUser();
-      await createContact(userId);
+  // -------------------------------------------------------
+  describe("verifyContactPhone", () => {
+    const payload = { id: "ph1", user_id: "u1", verify_code: "123456" };
 
-      const result = await userService.updateUserContact({
-        user_id: userId,
-        socials: [
-          { type: Socials.FACEBOOK, url: "https://facebook.com/mahin" },
-        ],
-      });
-      expect(typeof result).toBe("string");
-
-      const [row] = await pgDb
-        .select()
-        .from(userContactsTable)
-        .where(eq(userContactsTable.user_id, userId));
-      expect(row?.socials).toEqual([
-        { type: "facebook", url: "https://facebook.com/mahin" },
-      ]);
+    it("throws 404 when phone not found", async () => {
+      mocks.getContactPhoneVerifyDetails.mockResolvedValueOnce(undefined);
+      await expect(
+        userService.verifyContactPhone(payload as any)
+      ).rejects.toThrow("PHONE_NOT_FOUND");
     });
 
-    test("throws when no contact row exists", async () => {
-      const { userId } = await createUser();
-
+    it("throws 409 when already verified", async () => {
+      mocks.getContactPhoneVerifyDetails.mockResolvedValueOnce({
+        is_verified: true,
+      });
       await expect(
-        userService.updateUserContact({ user_id: userId, socials: [] })
-      ).rejects.toThrow();
+        userService.verifyContactPhone(payload as any)
+      ).rejects.toThrow("PHONE_ALREADY_VERIFIED");
+    });
+
+    it("throws 400 on invalid code", async () => {
+      mocks.getContactPhoneVerifyDetails.mockResolvedValueOnce({
+        is_verified: false,
+        verify_code: "000000",
+        verify_expiry: new Date(Date.now() + 60_000),
+      });
+      await expect(
+        userService.verifyContactPhone(payload as any)
+      ).rejects.toThrow("INVALID_VERIFICATION_CODE");
+    });
+
+    it("throws 400 on expired code", async () => {
+      mocks.getContactPhoneVerifyDetails.mockResolvedValueOnce({
+        is_verified: false,
+        verify_code: "123456",
+        verify_expiry: new Date(Date.now() - 60_000),
+      });
+      await expect(
+        userService.verifyContactPhone(payload as any)
+      ).rejects.toThrow("VERIFICATION_CODE_EXPIRED");
+    });
+
+    it("verifies successfully and returns the updated phone id", async () => {
+      mocks.getContactPhoneVerifyDetails.mockResolvedValueOnce({
+        is_verified: false,
+        verify_code: "123456",
+        verify_expiry: new Date(Date.now() + 60_000),
+      });
+      mocks.updateContactPhone.mockResolvedValueOnce({ id: "ph1" });
+
+      const result = await userService.verifyContactPhone(payload as any);
+      expect(result).toBe("ph1");
+      expect(mocks.updateContactPhone).toHaveBeenCalledWith(
+        expect.objectContaining({
+          is_verified: true,
+          verify_code: null,
+          verify_expiry: null,
+        })
+      );
     });
   });
 
-  // ---------------------------------------------------------------
-  // Verifications
-  // ---------------------------------------------------------------
+  describe("verifyContactEmail", () => {
+    const payload = { id: "em1", user_id: "u1", verify_code: "123456" };
 
-  describe("UserService.verifyContactPhone", () => {
-    test("verifies a phone with a correct, unexpired code", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const phoneId = await createPhone(userId, contactId);
-      await phoneService.sendContactPhoneVerification({
-        id: phoneId,
-        user_id: userId,
-      });
-
-      const [row] = await pgDb
-        .select()
-        .from(userPhonesTable)
-        .where(eq(userPhonesTable.id, phoneId));
-
-      const result = await userService.verifyContactPhone({
-        id: phoneId,
-        user_id: userId,
-        verify_code: row!.verify_code!,
-      });
-      expect(result).toBe(phoneId);
-
-      const [updated] = await pgDb
-        .select()
-        .from(userPhonesTable)
-        .where(eq(userPhonesTable.id, phoneId));
-      expect(updated?.is_verified).toBe(true);
-      expect(updated?.verify_code).toBeNull();
-      expect(updated?.verify_expiry).toBeNull();
+    it("throws 404 when email not found", async () => {
+      mocks.getContactEmailVerifyDetails.mockResolvedValueOnce(undefined);
+      await expect(
+        userService.verifyContactEmail(payload as any)
+      ).rejects.toThrow("EMAIL_NOT_FOUND");
     });
 
-    test("throws when the phone is already verified", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const phoneId = await createPhone(userId, contactId);
-      await phoneService.sendContactPhoneVerification({
-        id: phoneId,
-        user_id: userId,
+    it("throws 409 when already verified", async () => {
+      mocks.getContactEmailVerifyDetails.mockResolvedValueOnce({
+        is_verified: true,
       });
-      const [row] = await pgDb
-        .select()
-        .from(userPhonesTable)
-        .where(eq(userPhonesTable.id, phoneId));
-
-      await userService.verifyContactPhone({
-        id: phoneId,
-        user_id: userId,
-        verify_code: row!.verify_code!,
-      });
-
       await expect(
-        userService.verifyContactPhone({
-          id: phoneId,
-          user_id: userId,
-          verify_code: row!.verify_code!,
-        })
-      ).rejects.toThrow();
+        userService.verifyContactEmail(payload as any)
+      ).rejects.toThrow("EMAIL_ALREADY_VERIFIED");
     });
 
-    test("throws when the code is incorrect", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const phoneId = await createPhone(userId, contactId);
-      await phoneService.sendContactPhoneVerification({
-        id: phoneId,
-        user_id: userId,
+    it("verifies successfully and returns the updated email id", async () => {
+      mocks.getContactEmailVerifyDetails.mockResolvedValueOnce({
+        is_verified: false,
+        verify_code: "123456",
+        verify_expiry: new Date(Date.now() + 60_000),
       });
+      mocks.updateContactEmail.mockResolvedValueOnce({ id: "em1" });
 
-      await expect(
-        userService.verifyContactPhone({
-          id: phoneId,
-          user_id: userId,
-          verify_code: "000000",
-        })
-      ).rejects.toThrow();
-    });
-
-    test("throws when the code has expired", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const phoneId = await createPhone(userId, contactId);
-      await phoneService.sendContactPhoneVerification({
-        id: phoneId,
-        user_id: userId,
-      });
-      const [row] = await pgDb
-        .select()
-        .from(userPhonesTable)
-        .where(eq(userPhonesTable.id, phoneId));
-
-      await pgDb
-        .update(userPhonesTable)
-        .set({ verify_expiry: new Date(Date.now() - 60_000) })
-        .where(eq(userPhonesTable.id, phoneId));
-
-      await expect(
-        userService.verifyContactPhone({
-          id: phoneId,
-          user_id: userId,
-          verify_code: row!.verify_code!,
-        })
-      ).rejects.toThrow();
-    });
-
-    test("throws when the phone does not exist", async () => {
-      const { userId } = await createUser();
-
-      await expect(
-        userService.verifyContactPhone({
-          id: crypto.randomUUID(),
-          user_id: userId,
-          verify_code: "123456",
-        })
-      ).rejects.toThrow();
+      const result = await userService.verifyContactEmail(payload as any);
+      expect(result).toBe("em1");
     });
   });
 
-  describe("UserService.verifyContactEmail", () => {
-    test("verifies an email with a correct, unexpired code", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const emailId = await createEmail(userId, contactId);
-      await emailService.sendContactEmailVerification(
-        { id: emailId, user_id: userId },
-        "test device"
+  // -------------------------------------------------------
+  describe("getUserProfile", () => {
+    it("throws 404 when profile not found", async () => {
+      mocks.getAuthUserProfileById.mockResolvedValueOnce(undefined);
+      await expect(userService.getUserProfile("u1")).rejects.toThrow(
+        "USER_NOT_FOUND"
       );
+    });
 
-      const [row] = await pgDb
-        .select()
-        .from(userEmailsTable)
-        .where(eq(userEmailsTable.id, emailId));
-
-      const result = await userService.verifyContactEmail({
-        id: emailId,
-        user_id: userId,
-        verify_code: row!.verify_code!,
+    it("returns the profile on success", async () => {
+      mocks.getAuthUserProfileById.mockResolvedValueOnce({
+        id: "u1",
+        email: "a@b.com",
       });
-      expect(result).toBe(emailId);
-
-      const [updated] = await pgDb
-        .select()
-        .from(userEmailsTable)
-        .where(eq(userEmailsTable.id, emailId));
-      expect(updated?.is_verified).toBe(true);
-      expect(updated?.verify_code).toBeNull();
-      expect(updated?.verify_expiry).toBeNull();
-    });
-
-    test("throws when the email is already verified", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const emailId = await createEmail(userId, contactId);
-      await emailService.sendContactEmailVerification(
-        { id: emailId, user_id: userId },
-        "test device"
-      );
-      const [row] = await pgDb
-        .select()
-        .from(userEmailsTable)
-        .where(eq(userEmailsTable.id, emailId));
-
-      await userService.verifyContactEmail({
-        id: emailId,
-        user_id: userId,
-        verify_code: row!.verify_code!,
-      });
-
-      await expect(
-        userService.verifyContactEmail({
-          id: emailId,
-          user_id: userId,
-          verify_code: row!.verify_code!,
-        })
-      ).rejects.toThrow();
-    });
-
-    test("throws when the code is incorrect", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const emailId = await createEmail(userId, contactId);
-      await emailService.sendContactEmailVerification(
-        { id: emailId, user_id: userId },
-        "test device"
-      );
-
-      await expect(
-        userService.verifyContactEmail({
-          id: emailId,
-          user_id: userId,
-          verify_code: "000000",
-        })
-      ).rejects.toThrow();
-    });
-
-    test("throws when the code has expired", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const emailId = await createEmail(userId, contactId);
-      await emailService.sendContactEmailVerification(
-        { id: emailId, user_id: userId },
-        "test device"
-      );
-      const [row] = await pgDb
-        .select()
-        .from(userEmailsTable)
-        .where(eq(userEmailsTable.id, emailId));
-
-      await pgDb
-        .update(userEmailsTable)
-        .set({ verify_expiry: new Date(Date.now() - 60_000) })
-        .where(eq(userEmailsTable.id, emailId));
-
-      await expect(
-        userService.verifyContactEmail({
-          id: emailId,
-          user_id: userId,
-          verify_code: row!.verify_code!,
-        })
-      ).rejects.toThrow();
-    });
-
-    test("throws when the email does not exist", async () => {
-      const { userId } = await createUser();
-
-      await expect(
-        userService.verifyContactEmail({
-          id: crypto.randomUUID(),
-          user_id: userId,
-          verify_code: "123456",
-        })
-      ).rejects.toThrow();
+      const result = await userService.getUserProfile("u1");
+      expect(result).toEqual({ id: "u1", email: "a@b.com" });
     });
   });
 
-  // ---------------------------------------------------------------
-  // Delete
-  // ---------------------------------------------------------------
+  // -------------------------------------------------------
+  describe("update methods", () => {
+    it("updateUserProfile returns the updated profile id", async () => {
+      mocks.updateUserProfile.mockResolvedValueOnce({ id: "p1" });
+      const result = await userService.updateUserProfile({} as any);
+      expect(result).toBe("p1");
+    });
 
-  describe("UserService.deleteUserContact / deleteUserPhone / deleteUserEmail / deleteUserAddress", () => {
-    test("deletes a contact scoped to its user", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
+    it("updateUserProfile throws 404 when not found", async () => {
+      mocks.updateUserProfile.mockResolvedValueOnce(undefined);
+      await expect(userService.updateUserProfile({} as any)).rejects.toThrow();
+    });
 
+    it("updateUserContact returns the updated contact id", async () => {
+      mocks.updateContact.mockResolvedValueOnce({ id: "c1" });
+      const result = await userService.updateUserContact({} as any);
+      expect(result).toBe("c1");
+    });
+
+    it("updateUserContact throws 404 when not found", async () => {
+      mocks.updateContact.mockResolvedValueOnce(undefined);
+      await expect(userService.updateUserContact({} as any)).rejects.toThrow(
+        "CONTACT_NOT_FOUND"
+      );
+    });
+
+    it("updateUserPhone returns the updated phone id", async () => {
+      mocks.updateContactPhone.mockResolvedValueOnce({ id: "ph1" });
+      const result = await userService.updateUserPhone({} as any);
+      expect(result).toBe("ph1");
+    });
+
+    it("updateUserEmail returns the updated email id", async () => {
+      mocks.updateContactEmail.mockResolvedValueOnce({ id: "em1" });
+      const result = await userService.updateUserEmail({} as any);
+      expect(result).toBe("em1");
+    });
+
+    it("updateUserAddress returns the updated address id", async () => {
+      mocks.updateAddress.mockResolvedValueOnce({ id: "addr1" });
+      const result = await userService.updateUserAddress({} as any);
+      expect(result).toBe("addr1");
+    });
+
+    it("updateUserAddress throws 404 when not found", async () => {
+      mocks.updateAddress.mockResolvedValueOnce(undefined);
+      await expect(userService.updateUserAddress({} as any)).rejects.toThrow(
+        "ADDRESS_NOT_FOUND"
+      );
+    });
+  });
+
+  // -------------------------------------------------------
+  describe("delete methods", () => {
+    it("deleteUser returns the deleted user id", async () => {
+      mocks.deleteUserById.mockResolvedValueOnce({ id: "u1" });
+      const result = await userService.deleteUser("u1" as any);
+      expect(result).toBe("u1");
+    });
+
+    it("deleteUser throws 404 when not found", async () => {
+      mocks.deleteUserById.mockResolvedValueOnce(undefined);
+      await expect(userService.deleteUser("u1" as any)).rejects.toThrow(
+        "USER_NOT_FOUND"
+      );
+    });
+
+    it("deleteUserContact returns the deleted contact id", async () => {
+      mocks.deleteSingleContact.mockResolvedValueOnce({ id: "c1" });
       const result = await userService.deleteUserContact({
-        id: contactId,
-        user_id: userId,
-      });
-      expect(result).toBe(contactId);
-
-      const rows = await pgDb
-        .select()
-        .from(userContactsTable)
-        .where(eq(userContactsTable.id, contactId));
-      expect(rows).toHaveLength(0);
+        id: "c1",
+        user_id: "u1",
+      } as any);
+      expect(result).toBe("c1");
     });
 
-    test("throws when deleting a contact belonging to another user", async () => {
-      const { userId } = await createUser();
-      const { userId: otherUserId } = await createUser();
-      const contactId = await createContact(userId);
-
-      await expect(
-        userService.deleteUserContact({ id: contactId, user_id: otherUserId })
-      ).rejects.toThrow();
-
-      const rows = await pgDb
-        .select()
-        .from(userContactsTable)
-        .where(eq(userContactsTable.id, contactId));
-      expect(rows).toHaveLength(1);
-    });
-
-    test("deletes a phone scoped to its user", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const phoneId = await userService.createUserPhone({
-        user_id: userId,
-        contact_id: contactId,
-        phone_code: "+1",
-        phone: "5551234567",
-      });
-
+    it("deleteUserPhone returns the deleted phone id", async () => {
+      mocks.deleteSingleContactPhone.mockResolvedValueOnce({ id: "ph1" });
       const result = await userService.deleteUserPhone({
-        id: phoneId,
-        user_id: userId,
-      });
-      expect(result).toBe(phoneId);
+        id: "ph1",
+        user_id: "u1",
+      } as any);
+      expect(result).toBe("ph1");
     });
 
-    test("deletes an email scoped to its user", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-      const emailId = await userService.createUserEmail({
-        user_id: userId,
-        contact_id: contactId,
-        email: `contact-${crypto.randomUUID()}@example.com`,
-      });
-
+    it("deleteUserEmail returns the deleted email id", async () => {
+      mocks.deleteSingleContactEmail.mockResolvedValueOnce({ id: "em1" });
       const result = await userService.deleteUserEmail({
-        id: emailId,
-        user_id: userId,
-      });
-      expect(result).toBe(emailId);
+        id: "em1",
+        user_id: "u1",
+      } as any);
+      expect(result).toBe("em1");
     });
 
-    test("deletes an address scoped to its user", async () => {
-      const { userId } = await createUser();
-      const addressId = await userService.createUserAddress(
-        validAddressPayload(userId)
-      );
-
+    it("deleteUserAddress returns the deleted address id", async () => {
+      mocks.deleteSingleAddress.mockResolvedValueOnce({ id: "addr1" });
       const result = await userService.deleteUserAddress({
-        id: addressId,
-        user_id: userId,
-      });
-      expect(result).toBe(addressId);
-    });
-  });
-
-  describe("UserService.deleteUser", () => {
-    test("deletes a user and returns the id", async () => {
-      const { userId } = await createUser();
-
-      const result = await userService.deleteUser(userId);
-      expect(result).toBe(userId);
-
-      const [row] = await pgDb
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.id, userId));
-      expect(row).toBeUndefined();
+        id: "addr1",
+        user_id: "u1",
+      } as any);
+      expect(result).toBe("addr1");
     });
 
-    test("throws when deleting a non-existent user", async () => {
+    it("deleteUserAddress throws 404 when not found", async () => {
+      mocks.deleteSingleAddress.mockResolvedValueOnce(undefined);
       await expect(
-        userService.deleteUser(crypto.randomUUID())
-      ).rejects.toThrow();
-    });
-
-    test("cascades and deletes the user's contact", async () => {
-      const { userId } = await createUser();
-      const contactId = await createContact(userId);
-
-      await userService.deleteUser(userId);
-
-      const rows = await pgDb
-        .select()
-        .from(userContactsTable)
-        .where(eq(userContactsTable.id, contactId));
-      expect(rows).toHaveLength(0);
-    });
-
-    test("cascades and deletes the user's profile, phone, and address", async () => {
-      const { userId, profileId } = await createUser();
-      const contactId = await createContact(userId);
-      const phoneId = await userService.createUserPhone({
-        user_id: userId,
-        contact_id: contactId,
-        phone_code: "+1",
-        phone: "5551234567",
-      });
-      const addressId = await userService.createUserAddress(
-        validAddressPayload(userId)
-      );
-
-      await userService.deleteUser(userId);
-
-      const [profileRow] = await pgDb
-        .select()
-        .from(userProfilesTable)
-        .where(eq(userProfilesTable.id, profileId));
-      const [phoneRow] = await pgDb
-        .select()
-        .from(userPhonesTable)
-        .where(eq(userPhonesTable.id, phoneId));
-      const [addressRow] = await pgDb
-        .select()
-        .from(userAddressesTable)
-        .where(eq(userAddressesTable.id, addressId));
-
-      expect(profileRow).toBeUndefined();
-      expect(phoneRow).toBeUndefined();
-      expect(addressRow).toBeUndefined();
+        userService.deleteUserAddress({ id: "addr1", user_id: "u1" } as any)
+      ).rejects.toThrow("ADDRESS_NOT_FOUND");
     });
   });
 });

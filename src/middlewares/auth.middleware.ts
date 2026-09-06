@@ -4,11 +4,7 @@ import { ApiError } from "@/libs";
 import { AuthRedis } from "@/redis";
 import { AuthService } from "@/services";
 import { CookieService } from "@/services/cookie.service";
-import type {
-  AccessTokenPayload,
-  UserBasicInfoDataType,
-  UserProfileDataByLoginType,
-} from "@/types";
+import type { AccessTokenPayload, UserBasicInfoDataType } from "@/types";
 import { finalLoginResponseUserData } from "@/utils";
 import type { NextFunction, Response, Request } from "express";
 

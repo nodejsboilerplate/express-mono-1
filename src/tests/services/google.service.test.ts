@@ -1,193 +1,236 @@
-import { describe, expect, test, vi, beforeEach } from "vitest";
-import jwt from "jsonwebtoken";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GoogleService } from "@/services";
-import { authConfig } from "@/config";
-import { UserService } from "@/services/user.service";
 
-const { cacheUserLoginDataMock } = vi.hoisted(() => ({
-  cacheUserLoginDataMock: vi.fn().mockResolvedValue(true),
+// ---------------------------------------------------------
+// Hoisted shared mock fns
+// ---------------------------------------------------------
+const mocks = vi.hoisted(() => ({
+  generateAuthUrl: vi.fn(),
+  getToken: vi.fn(),
+  verifyIdToken: vi.fn(),
+  createUserWithProfileByProvider: vi.fn(),
+  cacheUserLoginData: vi.fn(),
+  finalLoginResponseUserData: vi.fn(),
+  generateRandomUsername: vi.fn(),
+  createTokens: vi.fn(),
+  sendSignupVerificationEmail: vi.fn(),
+  getCookies: vi.fn(),
 }));
-vi.mock("@/redis", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/redis")>();
-  return {
-    ...actual,
-    AuthRedis: class {
-      cacheUserLoginData = cacheUserLoginDataMock;
-    },
-  };
-});
 
-const { sendSignupCodeMock } = vi.hoisted(() => ({
-  sendSignupCodeMock: vi.fn().mockResolvedValue("mock-user-id"),
+vi.mock("googleapis", () => ({
+  google: {
+    auth: {
+      OAuth2: class {
+        generateAuthUrl = mocks.generateAuthUrl;
+        getToken = mocks.getToken;
+        verifyIdToken = mocks.verifyIdToken;
+        constructor(_opts: unknown) {}
+      },
+    },
+  },
 }));
-vi.mock("@/services/email.service", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/services/email.service")>();
-  return {
-    ...actual,
-    EmailService: class {
-      sendSignupCode = sendSignupCodeMock;
-    },
-  };
-});
 
-vi.mock("@/utils", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/utils")>();
-  return {
-    ...actual,
-    generateRandomUsername: vi.fn(() => "MockUser1234567"),
-  };
-});
+vi.mock("@/events", () => ({
+  getSystemCustomErrorMsgByKey: (key: string) => key,
+}));
 
-const googleService = new GoogleService();
+vi.mock("@/libs", () => ({
+  ApiError: class ApiError extends Error {
+    status: number;
+    constructor(status: number, message: string) {
+      super(message);
+      this.status = status;
+    }
+  },
+}));
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+vi.mock("@/utils", () => ({
+  finalLoginResponseUserData: mocks.finalLoginResponseUserData,
+  generateRandomUsername: mocks.generateRandomUsername,
+}));
 
-function mockGoogleProfile(overrides: Partial<any> = {}) {
-  return {
-    email: `test-${crypto.randomUUID()}@example.com`,
-    email_verified: true,
-    name: "Mahin",
-    picture: "https://example.com/avatar.png",
-    ...overrides,
-  };
-}
+vi.mock("@/redis", () => ({
+  AuthRedis: class {
+    cacheUserLoginData = mocks.cacheUserLoginData;
+  },
+}));
 
-describe("GoogleService Test", { tags: ["services/google"] }, () => {
-  describe("GoogleService.generateAuthUrlForLogin", () => {
-    test("returns a Google OAuth consent URL", () => {
+vi.mock("./user.service", () => ({
+  UserService: class {
+    createUserWithProfileByProvider = mocks.createUserWithProfileByProvider;
+  },
+}));
+
+// GoogleService extends AuthService — mock the base class so login() only
+// exercises GoogleService's own logic, not AuthService internals.
+vi.mock("./auth.service", () => ({
+  AuthService: class {
+    getCookies = mocks.getCookies;
+    createTokens = mocks.createTokens;
+    sendSignupVerificationEmail = mocks.sendSignupVerificationEmail;
+  },
+}));
+
+const ApiErrorLike = (status: number, message: string) => {
+  const e: any = new Error(message);
+  e.status = status;
+  return e;
+};
+
+describe("GoogleService", () => {
+  let googleService: GoogleService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    googleService = new GoogleService();
+  });
+
+  // -------------------------------------------------------
+  describe("generateAuthUrlForLogin", () => {
+    it("generates a Google OAuth consent URL with offline access + profile/email scopes", () => {
+      mocks.generateAuthUrl.mockReturnValueOnce(
+        "https://accounts.google.com/consent"
+      );
+
       const url = googleService.generateAuthUrlForLogin();
-      expect(typeof url).toBe("string");
-      expect(url).toContain("https://");
+
+      expect(mocks.generateAuthUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          access_type: "offline",
+          prompt: "consent",
+          scope: expect.arrayContaining([
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "https://www.googleapis.com/auth/userinfo.email",
+          ]),
+        })
+      );
+      expect(url).toBe("https://accounts.google.com/consent");
     });
   });
 
-  describe("GoogleService.login", () => {
-    test("throws 401 when no code is provided", async () => {
-      await expect(googleService.login("", "test-device")).rejects.toThrow();
+  // -------------------------------------------------------
+  describe("getIdTokensByAuthCode", () => {
+    it("exchanges an auth code for an id token", async () => {
+      mocks.getToken.mockResolvedValueOnce({ tokens: { id_token: "id.jwt" } });
+
+      const result = await googleService.getIdTokensByAuthCode("auth-code");
+
+      expect(mocks.getToken).toHaveBeenCalledWith("auth-code");
+      expect(result).toEqual({ idToken: "id.jwt" });
     });
+  });
 
-    test("throws 503 when no idToken is returned from Google", async () => {
-      vi.spyOn(googleService, "getIdTokensByAuthCode").mockResolvedValue({
-        idToken: null as any,
-      });
+  // -------------------------------------------------------
+  describe("getUserProfileByIdToken", () => {
+    it("returns the decoded token payload", async () => {
+      const payload = { email: "a@b.com", name: "A B", picture: "pic.png" };
+      mocks.verifyIdToken.mockResolvedValueOnce({ getPayload: () => payload });
 
-      await expect(
-        googleService.login("some-auth-code", "test-device")
-      ).rejects.toThrow();
+      const result = await googleService.getUserProfileByIdToken("id.jwt");
+
+      expect(mocks.verifyIdToken).toHaveBeenCalledWith({ idToken: "id.jwt" });
+      expect(result).toEqual(payload);
     });
+  });
 
-    test("creates a new user, caches login data, and returns tokens for a verified email", async () => {
-      const profile = mockGoogleProfile({ email_verified: true });
-
-      vi.spyOn(googleService, "getIdTokensByAuthCode").mockResolvedValue({
-        idToken: "mock-id-token",
-      });
-      vi.spyOn(googleService, "getUserProfileByIdToken").mockResolvedValue(
-        profile as any
-      );
-
-      const createdUser = {
-        id: crypto.randomUUID(),
-        email: profile.email,
-        username: "MockUser1234567",
-        role: "USER" as const,
-        is_verified: true,
-      };
-      vi.spyOn(
-        UserService.prototype,
-        "createUserWithProfileByProvider"
-      ).mockResolvedValue(createdUser as any);
-
-      const result = await googleService.login(
-        "valid-auth-code",
-        "Chrome on macOS"
-      );
-
-      expect(result.user_id).toBe(createdUser.id);
-      expect(typeof result.tokens.accessToken).toBe("string");
-      expect(typeof result.tokens.refreshToken).toBe("string");
-
-      const decoded = jwt.verify(
-        result.tokens.accessToken,
-        authConfig.JWT_ACCESS_TOKEN_SECRET
-      ) as any;
-      expect(decoded.id).toBe(createdUser.id);
-      expect(decoded.email).toBe(profile.email);
-      expect(decoded.role).toBe("USER");
-
-      expect(cacheUserLoginDataMock).toHaveBeenCalledTimes(1);
-      expect(cacheUserLoginDataMock).toHaveBeenCalledWith(
-        createdUser.id,
-        expect.objectContaining({ id: createdUser.id, email: profile.email })
-      );
-
-      // is_verified is true, so no signup code should be sent
-      expect(sendSignupCodeMock).not.toHaveBeenCalled();
-    });
-
-    test("sends a signup code with device info when the Google email is not verified", async () => {
-      const profile = mockGoogleProfile({ email_verified: false });
-
-      vi.spyOn(googleService, "getIdTokensByAuthCode").mockResolvedValue({
-        idToken: "mock-id-token",
-      });
-      vi.spyOn(googleService, "getUserProfileByIdToken").mockResolvedValue(
-        profile as any
-      );
-
-      const createdUser = {
-        id: crypto.randomUUID(),
-        email: profile.email,
-        username: "MockUser1234567",
-        role: "USER" as const,
-        is_verified: false,
-      };
-      vi.spyOn(
-        UserService.prototype,
-        "createUserWithProfileByProvider"
-      ).mockResolvedValue(createdUser as any);
-
-      await googleService.login("valid-auth-code", "Chrome on macOS");
-
-      expect(sendSignupCodeMock).toHaveBeenCalledTimes(1);
-      expect(sendSignupCodeMock).toHaveBeenCalledWith(
-        profile.email,
-        "Chrome on macOS"
+  // -------------------------------------------------------
+  describe("login", () => {
+    it("throws 401 when no code is provided", async () => {
+      await expect(googleService.login("", "device")).rejects.toThrow(
+        "UNAUTHORIZED"
       );
     });
 
-    test("returns existing user's tokens on repeat login (no duplicate creation)", async () => {
-      const profile = mockGoogleProfile({ email_verified: true });
+    it("throws 503 when no id token is returned from Google", async () => {
+      mocks.getToken.mockResolvedValueOnce({ tokens: {} });
+      await expect(googleService.login("code", "device")).rejects.toThrow(
+        "SERVICE_UNAVAILABLE"
+      );
+    });
 
-      vi.spyOn(googleService, "getIdTokensByAuthCode").mockResolvedValue({
-        idToken: "mock-id-token",
+    it("creates/links the user, caches login data, and returns tokens for a verified Google account", async () => {
+      mocks.getToken.mockResolvedValueOnce({ tokens: { id_token: "id.jwt" } });
+      mocks.verifyIdToken.mockResolvedValueOnce({
+        getPayload: () => ({
+          email: "a@b.com",
+          email_verified: true,
+          name: "A B",
+          picture: "pic.png",
+        }),
       });
-      vi.spyOn(googleService, "getUserProfileByIdToken").mockResolvedValue(
-        profile as any
+      mocks.generateRandomUsername.mockReturnValueOnce("random_user_1");
+      mocks.createUserWithProfileByProvider.mockResolvedValueOnce({
+        id: "u1",
+        email: "a@b.com",
+        profile: { id: "p1", first_name: "A B" },
+      });
+      mocks.finalLoginResponseUserData.mockReturnValueOnce({
+        tokenData: { id: "u1" },
+        profileData: { first_name: "A B" },
+      });
+      mocks.createTokens.mockReturnValueOnce({
+        accessToken: "access.jwt",
+        refreshToken: "refresh.jwt",
+      });
+
+      const result = await googleService.login("code", "device-x");
+
+      expect(mocks.createUserWithProfileByProvider).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user: expect.objectContaining({
+            email: "a@b.com",
+            username: "random_user_1",
+            role: "USER",
+            is_verified: true,
+          }),
+          profile: expect.objectContaining({
+            first_name: "A B",
+            avatar: "pic.png",
+          }),
+        })
       );
-
-      const existingUser = {
-        id: crypto.randomUUID(),
-        email: profile.email,
-        username: "existing_user",
-        role: "USER" as const,
-        is_verified: true,
-      };
-
-      const createSpy = vi
-        .spyOn(UserService.prototype, "createUserWithProfileByProvider")
-        .mockResolvedValue(existingUser as any);
-
-      const result = await googleService.login(
-        "valid-auth-code",
-        "Chrome on macOS"
+      expect(mocks.cacheUserLoginData).toHaveBeenCalledWith(
+        "u1",
+        expect.objectContaining({ id: "u1", first_name: "A B" })
       );
+      expect(mocks.sendSignupVerificationEmail).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        tokens: { accessToken: "access.jwt", refreshToken: "refresh.jwt" },
+        user_id: "u1",
+      });
+    });
 
-      expect(createSpy).toHaveBeenCalledTimes(1);
-      expect(result.user_id).toBe(existingUser.id);
+    it("sends a signup verification email when the Google account email is unverified", async () => {
+      mocks.getToken.mockResolvedValueOnce({ tokens: { id_token: "id.jwt" } });
+      mocks.verifyIdToken.mockResolvedValueOnce({
+        getPayload: () => ({
+          email: "unverified@b.com",
+          email_verified: false,
+          name: "New User",
+          picture: "pic.png",
+        }),
+      });
+      mocks.generateRandomUsername.mockReturnValueOnce("random_user_2");
+      mocks.createUserWithProfileByProvider.mockResolvedValueOnce({
+        id: "u2",
+        email: "unverified@b.com",
+        profile: { id: "p2" },
+      });
+      mocks.finalLoginResponseUserData.mockReturnValueOnce({
+        tokenData: { id: "u2" },
+        profileData: {},
+      });
+      mocks.createTokens.mockReturnValueOnce({
+        accessToken: "access2.jwt",
+        refreshToken: "refresh2.jwt",
+      });
+
+      await googleService.login("code", "device-x");
+
+      expect(mocks.sendSignupVerificationEmail).toHaveBeenCalledWith(
+        "unverified@b.com",
+        "device-x"
+      );
     });
   });
 });

@@ -24,9 +24,13 @@ import type {
   UserIdWithContextIdInputType,
   VerifyCodeWithUserIdInput,
 } from "@/zod";
+import { PhoneMessagingService } from "./phone.message.service";
+import { EmailService } from "./email.service";
 
 const userRepository = new UserRepository();
 const userInputValidators = new UserInputValidators();
+const phoneService = new PhoneMessagingService();
+const emailService = new EmailService();
 
 export class UserService {
   // ---------------------------------------------------------
@@ -150,6 +154,65 @@ export class UserService {
   // ---------------------------------------------------------
   // Verifications
   // ---------------------------------------------------------
+
+  async sendContactPhoneVerificationEmail(
+    payload: UserIdWithContextIdInputType
+  ) {
+    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
+
+    if (isZodError(parse_payload)) throw validationError(parse_payload);
+
+    const verify_code = generateVerificationCode();
+    const verify_expiry = getVerifyExpiry();
+
+    // Here you throw error based on `.is_verified` instead of returning not found error
+    // As `SetPhoneVerifyCode` is working with only if `.is_verified` is false
+    // So if `.is_verified` is true it will throw not found error
+    // You can throw phone already verified error by using `GetContactPhoneVerifyDetails` repository
+
+    const result = await userRepository.SetPhoneVerifyCode(
+      verify_code,
+      verify_expiry,
+      parse_payload.id,
+      parse_payload.user_id
+    );
+
+    if (!result?.phone) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
+    }
+
+    const phone = result.phone_code + result.phone;
+
+    await phoneService.sendContactPhoneVerification(phone, verify_code);
+  }
+
+  async sendContactEmailVerificationEmail(
+    payload: UserIdWithContextIdInputType,
+    deviceInfo: string
+  ) {
+    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
+    if (isZodError(parse_payload)) throw validationError(parse_payload);
+
+    const verify_code = generateVerificationCode();
+    const verify_expiry = getVerifyExpiry();
+
+    const result = await userRepository.SetEmailVerifyCode(
+      verify_code,
+      verify_expiry,
+      parse_payload.id,
+      parse_payload.user_id
+    );
+
+    if (!result?.email) {
+      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
+    }
+
+    await emailService.sendContactEmailVerificationCode(
+      result.email,
+      verify_code,
+      deviceInfo
+    );
+  }
 
   async verifyContactPhone(
     payload: VerifyCodeWithUserIdInput
