@@ -87,6 +87,8 @@ services:
       - nebula
     ports:
       - 3005:3000
+    volumes:
+      - grafana-oss-storage:/var/lib/grafana
   grafana_loki:
     image: grafana/loki
     container_name: nebula-loki
@@ -104,3 +106,4 @@ volumes:
   nebula_pgData:
   nebula_redis:
   nebula_redisinsight:
+  grafana-oss-storage:
