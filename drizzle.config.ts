@@ -1,4 +1,13 @@
-import "dotenv/config";
+import { baseConfig } from "@/config";
+import dotenv from "dotenv";
+
+// Run NODE_ENV=production pnpm db:migrate
+// When you are previewing production via docker-compose
+dotenv.config({
+  path:
+    baseConfig.NODE_ENV === "production" ? "./.env.production.local" : "./.env",
+});
+
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({

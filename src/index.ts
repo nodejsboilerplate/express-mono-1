@@ -26,9 +26,7 @@ collectDefaultMetrics({ register });
 const server = new ExpressServer();
 const app = server.GetApp();
 
-if (process.env.NODE_ENV === "development") {
-  app.use(requestLogger());
-}
+app.use(requestLogger());
 
 /* -------------------------------------------------------------------------- */
 /*                                 Rate Limiter                               */
@@ -52,7 +50,7 @@ app.use(limiter);
 /*                                   Routes                                   */
 /* -------------------------------------------------------------------------- */
 app.use("/api", routers);
-app.use("/health", async (_, res) => {
+app.get("/health", async (_, res) => {
   return res.status(200).json(new ApiResponse(200, "OK"));
 });
 
