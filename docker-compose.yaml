@@ -1,49 +1,96 @@
-name: My App
+name: Nebula
 
 services:
+  server:
+    depends_on:
+      - "redis"
+      - "redis_insight"
+      - "postgres"
+    build:
+      context: .
+      dockerfile: ./Dockerfile.dev
+    container_name: nebula-server
+    env_file:
+      - ./.env.production.local
+    ports:
+      - 3000:3000
+    networks:
+      - nebula
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+          ignore:
+            - node_modules/
+
+        - action: rebuild
+          path: package.json
+
+        - action: restart
+          path: ./.env
+
   postgres:
     image: postgres:latest
-    container_name: myapp-postgres
+    container_name: nebula-postgres
     ports:
       - 5432:5432
     networks:
-      - myapp
+      - nebula
     volumes:
-      - myapp_pgData:/var/lib/postgresql/MAJOR/docker
+      - nebula_pgData:/var/lib/postgresql/MAJOR/docker
     environment:
       - POSTGRES_PASSWORD=postgres
   redis:
     image: redis:latest
-    container_name: myapp-redis-server
+    container_name: nebula-redis-server
     ports:
       - 6379:6379
     networks:
-      - myapp
+      - nebula
     volumes:
-      - myapp_redis:/data
+      - nebula_redis:/data
   redis_insight:
     depends_on:
       - "redis"
     image: redis/redisinsight:latest
-    container_name: myapp-redisinsight
+    container_name: nebula-redisinsight
     volumes:
-      - myapp_redisinsight:/data
+      - nebula_redisinsight:/data
     ports:
       - 5540:5540
     networks:
-      - myapp
+      - nebula
     environment:
-      - RI_REDIS_HOST_0=myapp-redis-server
+      - RI_REDIS_HOST_0=nebula-redis-server
       - RI_REDIS_PORT_0=6379
       - RI_REDIS_USERNAME_0=default
       - RI_REDIS_PASSWORD_0=default
+  prometheus:
+    depends_on:
+      - "server"
+    image: prom/prometheus
+    container_name: prometheus-server
+    networks:
+      - nebula
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+  grafana:
+    depends_on:
+      - "prometheus"
+    image: grafana/grafana-oss
+    container_name: grafana
+    ports:
+      - 3005:3000
 
 networks:
-  myapp:
+  nebula:
     driver: bridge
-    name: myapp
+    name: nebula
 
 volumes:
-  myapp_pgData:
-  myapp_redis:
-  myapp_redisinsight:
+  nebula_pgData:
+  nebula_redis:
+  nebula_redisinsight:

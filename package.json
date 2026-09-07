@@ -1,5 +1,5 @@
 {
-  "name": "express-mono-1",
+  "name": "Nebula",
   "version": "26.0.0",
   "description": "",
   "main": "./dist/index.js",
@@ -39,6 +39,7 @@
     "@types/node": "^26.2.0",
     "@types/pg": "^8.23.1",
     "@types/request-ip": "^0.0.41",
+    "@types/response-time": "^2.3.9",
     "@types/supertest": "^7.2.1",
     "commitizen": "^4.3.2",
     "commitlint-plugin-tense": "^1.0.10",
@@ -63,6 +64,7 @@
     "vitest": "^4.1.11"
   },
   "dependencies": {
+    "@prometheus-io/client": "^0.16.1",
     "@repo/emails": "workspace:*",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
@@ -81,6 +83,7 @@
     "redis": "^6.2.1",
     "request-ip": "^3.3.0",
     "resend": "^6.24.0",
+    "response-time": "^2.3.4",
     "tsdown": "^0.22.14",
     "twilio": "^6.1.0",
     "uuid": "^14.0.2",
