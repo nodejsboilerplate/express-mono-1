@@ -1,0 +1,1260 @@
+openapi: 3.1.0
+
+info:
+  title: Server - Auth & User Service API
+  summary: Authentication, account, and profile management API for the Server.
+  description: >-
+    Auth/User microservice for Server: signup/login
+    with JWT access+refresh cookies, Google OAuth, OTP-based email/phone verification
+    (Resend + Twilio), Redis-cached session data, and profile/contact/address CRUD.
+
+
+    NOTE ON INFERENCE: Several details below (exact error `code`/`title`/`message`
+    text, the full value sets for `role`, `provider`, `gender`, and social-link
+    `type` enums, and the production server URL) are not present in the reviewed
+    source and are marked "inferred" — confirm against the real `events`/`zod`
+    modules before treating them as a contract.
+  contact:
+    name: Mahin
+  license:
+    name: UNLICENSED
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:{port}/api/v1
+    description: Development server
+    variables:
+      port:
+        default: "3000"
+  - url: https://your-production-domain.example.com/api/v1
+    description: Production server (placeholder — inferred, confirm real deployment URL)
+
+components:
+  securitySchemes:
+    accessToken:
+      type: apiKey
+      in: cookie
+      name: accessToken
+      description: >-
+        Access token cookie (httpOnly=false, sameSite=lax). Expires in 5 minutes;
+        silently renewed via the refresh-token cookie by authMiddlware.
+    refreshToken:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+      description: Refresh token cookie (httpOnly=false, sameSite=lax). Expires in 30 days.
+
+  parameters:
+    ContactId:
+      name: id
+      in: path
+      required: true
+      description: A user_contacts row id.
+      schema: { type: string, format: uuid }
+      example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    PhoneId:
+      name: id
+      in: path
+      required: true
+      description: A user_phones row id.
+      schema: { type: string, format: uuid }
+      example: "6f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c"
+    EmailId:
+      name: id
+      in: path
+      required: true
+      description: A user_emails row id.
+      schema: { type: string, format: uuid }
+      example: "8c2d3e4f-5a6b-7c8d-9e0f-1a2b3c4d5e6f"
+    AddressId:
+      name: id
+      in: path
+      required: true
+      description: A user_addresses row id.
+      schema: { type: string, format: uuid }
+      example: "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+
+  schemas:
+    Error:
+      type: object
+      required: [title, message, code, status, success, errors]
+      properties:
+        title: { type: string, example: "Unauthorized" }
+        message:
+          {
+            type: string,
+            example: "Your session has expired or is invalid. Please log in again.",
+          }
+        code:
+          {
+            type: string,
+            example: "40100",
+            description: "Inferred format — confirm against events module.",
+          }
+        status: { type: integer, example: 401 }
+        success: { type: boolean, example: false }
+        errors: { type: array, items: {} }
+        stack:
+          type: string
+          description: Only present when NODE_ENV=development.
+
+    ApiResponse:
+      type: object
+      required: [status, message, data, success, title]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data: { nullable: true }
+        success: { type: boolean }
+        title: { type: string }
+
+    Role:
+      type: string
+      description: Inferred enum values — confirm USER_ROLES constant.
+      enum: [USER, ADMIN]
+    Provider:
+      type: string
+      description: Inferred enum values — confirm USER_ACCOUNT_PROVIDERS constant.
+      enum: [MANUAL, GOOGLE]
+    Gender:
+      type: string
+      description: Inferred enum values — confirm USER_GENDERS constant.
+      enum: [MALE, FEMALE, OTHER]
+    SocialType:
+      type: string
+      description: Inferred enum values — confirm Socials constant.
+      enum: [FACEBOOK, TWITTER, INSTAGRAM, LINKEDIN, YOUTUBE]
+
+    SocialLink:
+      type: object
+      required: [type, url]
+      properties:
+        type: { $ref: "#/components/schemas/SocialType" }
+        url:
+          {
+            type: string,
+            format: uri,
+            example: "https://instagram.com/rahim.uddin",
+          }
+
+    UserProfile:
+      type: object
+      properties:
+        first_name: { type: string, maxLength: 100, example: "Rahim" }
+        last_name:
+          { type: string, maxLength: 100, nullable: true, example: "Uddin" }
+        avatar:
+          {
+            type: string,
+            format: uri,
+            nullable: true,
+            example: "https://cdn.example.com/avatars/rahim.png",
+          }
+        cover_img:
+          {
+            type: string,
+            format: uri,
+            nullable: true,
+            example: "https://cdn.example.com/covers/rahim.png",
+          }
+        nickname:
+          { type: string, maxLength: 100, nullable: true, example: "Ray" }
+        date_of_birth:
+          { type: string, format: date, nullable: true, example: "1995-04-12" }
+        gender:
+          { allOf: [{ $ref: "#/components/schemas/Gender" }], nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    UserProfileResponse:
+      type: object
+      description: Response body of GET /users/profile.
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            example: "b1e6c2a0-1f2d-4a3b-9c5e-7d8f9a0b1c2d",
+          }
+        email: { type: string, format: email, example: "rahim@example.com" }
+        username: { type: string, example: "rahim_uddin" }
+        role: { $ref: "#/components/schemas/Role" }
+        provider: { $ref: "#/components/schemas/Provider" }
+        is_verified: { type: boolean, example: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        profile: { $ref: "#/components/schemas/UserProfile" }
+
+    AuthMeResponse:
+      type: object
+      description: >-
+        Response body of GET /auth/me. NOTE: the current controller destructures
+        `id` and `role` off req.auth_user and discards them before merging the
+        rest with the cached/DB profile fields — so `id`/`role` are NOT present
+        in this response as currently implemented (likely worth revisiting).
+      properties:
+        email: { type: string, format: email, example: "rahim@example.com" }
+        username: { type: string, example: "rahim_uddin" }
+        is_verified: { type: boolean, example: true }
+        avatar: { type: string, format: uri, nullable: true }
+        first_name: { type: string, example: "Rahim" }
+        last_name: { type: string, nullable: true, example: "Uddin" }
+        nickname: { type: string, nullable: true, example: "Ray" }
+
+    CreateUserWithProfilePayload:
+      type: object
+      required: [user, profile]
+      properties:
+        user:
+          type: object
+          required: [email, username, password]
+          properties:
+            email: { type: string, format: email, example: "rahim@example.com" }
+            username:
+              type: string
+              minLength: 3
+              maxLength: 20
+              pattern: "^[a-zA-Z0-9_.]+$"
+              example: "rahim_uddin"
+            password:
+              {
+                type: string,
+                minLength: 8,
+                maxLength: 30,
+                format: password,
+                example: "StrongPass123!",
+              }
+            role: { $ref: "#/components/schemas/Role" }
+        profile:
+          type: object
+          required: [first_name]
+          properties:
+            first_name: { type: string, maxLength: 100, example: "Rahim" }
+            last_name: { type: string, maxLength: 100, example: "Uddin" }
+            avatar:
+              {
+                type: string,
+                format: uri,
+                example: "https://cdn.example.com/avatars/rahim.png",
+              }
+            cover_img: { type: string, format: uri }
+            nickname: { type: string, maxLength: 100, example: "Ray" }
+            date_of_birth: { type: string, format: date, example: "1995-04-12" }
+            gender: { $ref: "#/components/schemas/Gender" }
+
+    LoginPayload:
+      type: object
+      required: [identifier]
+      properties:
+        identifier:
+          type: string
+          description: Email, username, or (theoretically) user id.
+          example: "rahim@example.com"
+        password:
+          type: string
+          format: password
+          description: Omit to trigger the passwordless OTP-login-code flow instead.
+          example: "StrongPass123!"
+
+    VerifyCodePayload:
+      type: object
+      required: [verify_code]
+      properties:
+        verify_code: { type: string, maxLength: 10, example: "482913" }
+
+    CreateAddressPayload:
+      type: object
+      required: [addr_name, addr_line_1, city, country, country_iso]
+      properties:
+        addr_name: { type: string, maxLength: 100, example: "Home" }
+        addr_line_1:
+          { type: string, maxLength: 255, example: "House 12, Road 5" }
+        addr_line_2: { type: string, maxLength: 255, example: "Mirpur 10" }
+        city: { type: string, maxLength: 100, example: "Dhaka" }
+        state: { type: string, maxLength: 100, example: "Dhaka Division" }
+        post_code: { type: string, maxLength: 20, example: "1216" }
+        country: { type: string, maxLength: 100, example: "Bangladesh" }
+        country_iso: { type: string, minLength: 2, maxLength: 2, example: "BD" }
+        is_default: { type: boolean, example: true }
+
+    UpdateAddressPayload:
+      allOf:
+        - $ref: "#/components/schemas/CreateAddressPayload"
+      description: All fields optional on update (server requires none beyond the path `id`).
+
+    CreateContactPayload:
+      type: object
+      properties:
+        socials:
+          type: array
+          items: { $ref: "#/components/schemas/SocialLink" }
+          default: []
+
+    CreatePhonePayload:
+      type: object
+      required: [phone_code, phone]
+      properties:
+        phone_code:
+          {
+            type: string,
+            pattern: "^\\+?\\d{1,5}$",
+            maxLength: 5,
+            example: "+880",
+          }
+        phone:
+          {
+            type: string,
+            pattern: "^\\d{4,20}$",
+            maxLength: 20,
+            example: "1711223344",
+          }
+        is_primary: { type: boolean, example: true }
+
+    CreateEmailPayload:
+      type: object
+      required: [email]
+      properties:
+        email:
+          {
+            type: string,
+            format: email,
+            example: "rahim.secondary@example.com",
+          }
+        is_primary: { type: boolean, example: false }
+
+    UpdateProfilePayload:
+      type: object
+      properties:
+        first_name: { type: string, maxLength: 100, example: "Rahim" }
+        last_name: { type: string, maxLength: 100, example: "Uddin" }
+        avatar: { type: string, format: uri }
+        cover_img: { type: string, format: uri }
+        nickname: { type: string, maxLength: 100 }
+        date_of_birth: { type: string, format: date, example: "1995-04-12" }
+        gender: { $ref: "#/components/schemas/Gender" }
+
+    IdData:
+      type: object
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            nullable: true,
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          }
+
+  responses:
+    ValidationError:
+      description: Request body/query failed Zod validation.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            title: "Validation Error"
+            message: "The information provided is incorrect or incomplete. Please check your inputs and try again."
+            code: "40001"
+            status: 400
+            success: false
+            errors: []
+
+    Unauthorized:
+      description: Missing/expired/invalid session, or bad credentials.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            title: "Unauthorized"
+            message: "Your session has expired or is invalid. Please log in again."
+            code: "40100"
+            status: 401
+            success: false
+            errors: []
+
+    NotFound:
+      description: Requested resource was not found.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            title: "Resource Not Found"
+            message: "The requested resource could not be found. Please check the identifier and try again."
+            code: "40400"
+            status: 404
+            success: false
+            errors: []
+
+    Conflict:
+      description: Resource already exists / already in the requested state.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            title: "Already Exists"
+            message: "A resource with these details already exists."
+            code: "40900"
+            status: 409
+            success: false
+            errors: []
+
+    ServiceUnavailable:
+      description: An upstream provider (e.g. Google) failed to respond as expected.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            title: "Service Unavailable"
+            message: "We couldn't complete that request with our provider. Please try again shortly."
+            code: "50300"
+            status: 503
+            success: false
+            errors: []
+
+    InternalServerError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            title: "Unexpected Error"
+            message: "Something went wrong on our end. Please try again later or contact support if the issue persists."
+            code: "50000"
+            status: 500
+            success: false
+            errors: []
+
+security:
+  - accessToken: []
+
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Health check endpoint (served at the app root, not under /api/v1)
+      tags: [System]
+      security: []
+      servers:
+        - url: http://localhost:{port}
+          variables: { port: { default: "3000" } }
+      responses:
+        "200":
+          description: Service healthy.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "OK",
+                  success: true,
+                  title: "",
+                  data: null,
+                }
+
+  /auth/signup:
+    post:
+      operationId: signupUser
+      summary: Create an account (email/password) and start the session
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              { $ref: "#/components/schemas/CreateUserWithProfilePayload" }
+      responses:
+        "201":
+          description: >-
+            Account created. Sets accessToken + refreshToken cookies. A signup
+            verification code is also emailed to the user.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: accessToken and refreshToken cookies.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                status: 201
+                message: "Account created successfully. Please verify your account using the code sent to you."
+                success: true
+                title: ""
+                data: { id: "b1e6c2a0-1f2d-4a3b-9c5e-7d8f9a0b1c2d" }
+        "400":
+          description: Already logged in, or the email is already registered.
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      summary: Log in with identifier + password (or trigger a passwordless OTP email)
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginPayload" }
+      responses:
+        "200":
+          description: Login successful. Sets accessToken + refreshToken cookies.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: accessToken and refreshToken cookies.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Login Successful.",
+                  success: true,
+                  title: "",
+                  data: null,
+                }
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          description: Wrong password, or (passwordless flow) unverified account.
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /auth/signin/google:
+    get:
+      operationId: redirectGoogleAuth
+      summary: Redirect to Google's OAuth consent screen
+      tags: [Auth]
+      security: []
+      responses:
+        "302":
+          description: Redirect to Google's consent URL (access_type=offline, prompt=consent).
+          headers:
+            Location: { schema: { type: string, format: uri } }
+
+  /auth/callback/google:
+    get:
+      operationId: loginWithGoogle
+      summary: Google OAuth callback — exchanges the auth code and logs the user in
+      tags: [Auth]
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema: { type: string }
+          example: "4/0AY0e-g7...redacted"
+      responses:
+        "201":
+          description: >-
+            Logged in (creates the account on first login). Sets accessToken +
+            refreshToken cookies. Note: HTTP status is 201 while the response
+            body's `status` field is 200, as currently implemented.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: accessToken and refreshToken cookies.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "OK",
+                  success: true,
+                  title: "",
+                  data: { id: "b1e6c2a0-1f2d-4a3b-9c5e-7d8f9a0b1c2d" },
+                }
+        "401":
+          description: Missing `code` query param.
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          description: Google did not return an id token.
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /auth/messages/signup/code:
+    post:
+      operationId: resendSignupCode
+      summary: Resend the signup verification code to the current user's email
+      tags: [Auth]
+      security: [{ accessToken: [] }]
+      responses:
+        "200":
+          description: Verification code sent.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Verification code sent successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: null },
+                }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/verify/signup/code:
+    post:
+      operationId: verifySignupCode
+      summary: Verify the current user's account with an OTP code
+      tags: [Auth]
+      security: [{ accessToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VerifyCodePayload" }
+      responses:
+        "200":
+          description: Account verified.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Account verified successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "b1e6c2a0-1f2d-4a3b-9c5e-7d8f9a0b1c2d" },
+                }
+        "400":
+          description: Already verified, invalid code, or expired code.
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/me:
+    get:
+      operationId: getAuthUserBasicData
+      summary: Get the current session's basic user + profile data (Redis-cached)
+      tags: [Auth]
+      security: [{ accessToken: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - type: object
+                    properties:
+                      { data: { $ref: "#/components/schemas/AuthMeResponse" } }
+              example:
+                status: 200
+                message: "OK"
+                success: true
+                title: ""
+                data:
+                  email: "rahim@example.com"
+                  username: "rahim_uddin"
+                  is_verified: true
+                  avatar: "https://cdn.example.com/avatars/rahim.png"
+                  first_name: "Rahim"
+                  last_name: "Uddin"
+                  nickname: "Ray"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/profile:
+    get:
+      operationId: getUserProfile
+      summary: Get the current user's full profile
+      tags: [User]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - type: object
+                    properties:
+                      {
+                        data:
+                          { $ref: "#/components/schemas/UserProfileResponse" },
+                      }
+              example:
+                status: 200
+                message: "Ok"
+                success: true
+                title: ""
+                data:
+                  id: "b1e6c2a0-1f2d-4a3b-9c5e-7d8f9a0b1c2d"
+                  email: "rahim@example.com"
+                  username: "rahim_uddin"
+                  role: "USER"
+                  provider: "MANUAL"
+                  is_verified: true
+                  created_at: "2026-07-15T09:24:00Z"
+                  updated_at: "2026-07-15T09:24:00Z"
+                  profile:
+                    first_name: "Rahim"
+                    last_name: "Uddin"
+                    avatar: "https://cdn.example.com/avatars/rahim.png"
+                    cover_img: null
+                    nickname: "Ray"
+                    date_of_birth: "1995-04-12"
+                    gender: "MALE"
+                    created_at: "2026-07-15T09:24:00Z"
+                    updated_at: "2026-07-15T09:24:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateUserProfile
+      summary: Update the current user's profile
+      tags: [User]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateProfilePayload" }
+      responses:
+        "200":
+          description: Profile updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Profile updated successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "p1e6c2a0-1f2d-4a3b-9c5e-7d8f9a0b1c2d" },
+                }
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users:
+    delete:
+      operationId: deleteUser
+      summary: Delete the current user's account
+      tags: [User]
+      responses:
+        "200":
+          description: Account deleted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Account deleted successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "b1e6c2a0-1f2d-4a3b-9c5e-7d8f9a0b1c2d" },
+                }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/addresses:
+    post:
+      operationId: createAddress
+      summary: Add an address for the current user
+      tags: [User]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateAddressPayload" }
+      responses:
+        "201":
+          description: Address added.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 201,
+                  message: "Address added successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+                }
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/addresses/{id}:
+    patch:
+      operationId: updateAddress
+      summary: Update one of the current user's addresses
+      tags: [User]
+      parameters: [{ $ref: "#/components/parameters/AddressId" }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateAddressPayload" }
+      responses:
+        "200":
+          description: Address updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Address updated successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+                }
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteAddress
+      summary: Delete one of the current user's addresses
+      tags: [User]
+      parameters: [{ $ref: "#/components/parameters/AddressId" }]
+      responses:
+        "200":
+          description: Address deleted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Address deleted successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+                }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/contacts:
+    post:
+      operationId: createContact
+      summary: Create the current user's contact record (social links)
+      tags: [User]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateContactPayload" }
+      responses:
+        "201":
+          description: Contact added.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 201,
+                  message: "Contact added successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "3fa85f64-5717-4562-b3fc-2c963f66afa6" },
+                }
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      operationId: updateContact
+      summary: Update the current user's contact record
+      tags: [User]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateContactPayload" }
+      responses:
+        "200":
+          description: Contact updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Contact updated successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "3fa85f64-5717-4562-b3fc-2c963f66afa6" },
+                }
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/contacts/{id}:
+    delete:
+      operationId: deleteContact
+      summary: Delete the current user's contact record
+      tags: [User]
+      parameters: [{ $ref: "#/components/parameters/ContactId" }]
+      responses:
+        "200":
+          description: Contact deleted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Contact deleted successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "3fa85f64-5717-4562-b3fc-2c963f66afa6" },
+                }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/contacts/{id}/phones:
+    post:
+      operationId: createPhone
+      summary: Add a phone number under a contact
+      tags: [User]
+      parameters: [{ $ref: "#/components/parameters/ContactId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreatePhonePayload" }
+      responses:
+        "201":
+          description: Phone number added.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 201,
+                  message: "Phone number added successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "6f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c" },
+                }
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/contacts/{id}/emails:
+    post:
+      operationId: createEmail
+      summary: Add an email address under a contact
+      tags: [User]
+      parameters: [{ $ref: "#/components/parameters/ContactId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateEmailPayload" }
+      responses:
+        "201":
+          description: Email added.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 201,
+                  message: "Email added successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "8c2d3e4f-5a6b-7c8d-9e0f-1a2b3c4d5e6f" },
+                }
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/contacts/phones/{id}:
+    patch:
+      operationId: updatePhone
+      summary: Update a phone number
+      tags: [User]
+      parameters: [{ $ref: "#/components/parameters/PhoneId" }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreatePhonePayload" }
+      responses:
+        "200":
+          description: Phone number updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Phone number updated successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "6f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c" },
+                }
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deletePhone
+      summary: Delete a phone number
+      tags: [User]
+      parameters: [{ $ref: "#/components/parameters/PhoneId" }]
+      responses:
+        "200":
+          description: Phone number deleted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Phone number deleted successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "6f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c" },
+                }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/contacts/emails/{id}:
+    patch:
+      operationId: updateEmail
+      summary: Update an email address
+      tags: [User]
+      parameters: [{ $ref: "#/components/parameters/EmailId" }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateEmailPayload" }
+      responses:
+        "200":
+          description: Email updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Email updated successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "8c2d3e4f-5a6b-7c8d-9e0f-1a2b3c4d5e6f" },
+                }
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteEmail
+      summary: Delete an email address
+      tags: [User]
+      parameters: [{ $ref: "#/components/parameters/EmailId" }]
+      responses:
+        "200":
+          description: Email deleted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Email deleted successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "8c2d3e4f-5a6b-7c8d-9e0f-1a2b3c4d5e6f" },
+                }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/messages/contacts/phones/{id}/code:
+    post:
+      operationId: sendContactPhoneVerification
+      summary: Send an SMS OTP to verify a phone number (via Twilio)
+      tags: [User]
+      parameters: [{ $ref: "#/components/parameters/PhoneId" }]
+      responses:
+        "200":
+          description: Verification code sent.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Verification code sent successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: null },
+                }
+        "400":
+          description: Invalid phone number (Twilio lookup failed).
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/messages/contacts/emails/{id}/code:
+    post:
+      operationId: sendContactEmailVerification
+      summary: Send an email OTP to verify an email address (via Resend)
+      tags: [User]
+      parameters: [{ $ref: "#/components/parameters/EmailId" }]
+      responses:
+        "200":
+          description: Verification code sent.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Verification code sent successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: null },
+                }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/verify/contacts/phones/{id}:
+    post:
+      operationId: verifyContactPhone
+      summary: Verify a phone number with the OTP code
+      tags: [User]
+      parameters: [{ $ref: "#/components/parameters/PhoneId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VerifyCodePayload" }
+      responses:
+        "200":
+          description: Phone number verified.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Phone number verified successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "6f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c" },
+                }
+        "400":
+          description: Invalid code, expired code.
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Phone already verified.
+          $ref: "#/components/responses/Conflict"
+
+  /users/verify/contacts/emails/{id}:
+    post:
+      operationId: verifyContactEmail
+      summary: Verify an email address with the OTP code
+      tags: [User]
+      parameters: [{ $ref: "#/components/parameters/EmailId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VerifyCodePayload" }
+      responses:
+        "200":
+          description: Email verified.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Email verified successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "8c2d3e4f-5a6b-7c8d-9e0f-1a2b3c4d5e6f" },
+                }
+        "400":
+          description: Invalid code, expired code.
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Email already verified.
+          $ref: "#/components/responses/Conflict"
+
+  /resend/webhook:
+    post:
+      operationId: resendWebhook
+      summary: Resend delivery-event webhook (svix-signed) — inferred from ResendService, confirm against resend.route.ts
+      tags: [System]
+      security: []
+      parameters:
+        - name: svix-id
+          in: header
+          required: true
+          schema: { type: string }
+        - name: svix-timestamp
+          in: header
+          required: true
+          schema: { type: string }
+        - name: svix-signature
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                description: "Resend WebhookEventPayload (email.sent, email.bounced, etc.)",
+              }
+      responses:
+        "200":
+          description: Webhook accepted.
+        "400":
+          description: Missing svix headers, or signature verification failed.
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          description: RESEND_WEBHOOK_SECRET not configured server-side.
+          $ref: "#/components/responses/InternalServerError"
