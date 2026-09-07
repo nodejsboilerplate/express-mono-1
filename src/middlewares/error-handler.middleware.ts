@@ -1,6 +1,6 @@
 import { baseConfig } from "@/config";
 import { SystemCustomErrorCode, SystemCustomErrorMsgByCode } from "@/events";
-import { ApiError } from "@/libs";
+import { ApiError, logger } from "@/libs";
 import type { ApiErrorType } from "@/types";
 
 import type { NextFunction, Request, Response } from "express";
@@ -25,6 +25,7 @@ export const errorHandlerMiddleware = (
   res: Response,
   _next: NextFunction
 ) => {
+  logger.error(err);
   let error: ApiError;
   /**
    * Normalization

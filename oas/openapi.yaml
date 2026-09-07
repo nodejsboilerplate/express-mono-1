@@ -1,10 +1,10 @@
 openapi: 3.1.0
 
 info:
-  title: Server - Auth & User Service API
-  summary: Authentication, account, and profile management API for the Server.
+  title: Nebula - Auth & User Service API
+  summary: Authentication, account, and profile management API for the Nebula.
   description: >-
-    Auth/User microservice for Server: signup/login
+    Auth/User microservice for Nebula: signup/login
     with JWT access+refresh cookies, Google OAuth, OTP-based email/phone verification
     (Resend + Twilio), Redis-cached session data, and profile/contact/address CRUD.
 

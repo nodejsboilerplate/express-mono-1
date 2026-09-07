@@ -1,4 +1,5 @@
-import { pinoLogger } from "@/libs";
+import { baseConfig } from "@/config";
+import { logger, pinoLogger } from "@/libs";
 import type { NextFunction, Request, Response } from "express";
 
 /**
@@ -10,7 +11,7 @@ import type { NextFunction, Request, Response } from "express";
  * @returns {Function} Express middleware function.
  */
 export const requestLogger = () => {
-  const logger = pinoLogger.createLogger();
+  const plogger = pinoLogger.createLogger();
 
   return (req: Request, res: Response, next: NextFunction) => {
     const startTime = process.hrtime();
@@ -35,6 +36,7 @@ export const requestLogger = () => {
 
         statusCode: res.statusCode,
         responseTime: `${responseTime}ms`,
+        responseMessage: res.statusMessage as string,
         errorMessage:
           res.statusCode >= 400
             ? {
@@ -47,9 +49,17 @@ export const requestLogger = () => {
       };
 
       if (res.statusCode >= 400) {
-        logger.error(logData, "Request failed");
+        if (baseConfig.NODE_ENV === "development") {
+          plogger.error(logData, "Request failed");
+        }
+        logger.error(logData);
       } else {
-        logger.info(logData, "Request completed");
+        if (baseConfig.NODE_ENV === "development") {
+          plogger.info(logData, "Request completed");
+        }
+        if (req.path !== "/metrics") {
+          logger.info(logData);
+        }
       }
     });
 

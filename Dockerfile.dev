@@ -1,0 +1,34 @@
+FROM node:24-alpine AS base
+
+# ******************************SETUP PNPM*********************************
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+# ******************************INSTALLATION**************************************
+FROM base AS installer
+
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+ENV CI=true
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm --filter emails run build:package
+
+# ******************************RUN THE APP***********************************
+FROM base AS runner
+WORKDIR /app
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 express
+
+COPY --from=installer --chown=express:nodejs /app .
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD [ "pnpm", "dev" ]
