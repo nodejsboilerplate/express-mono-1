@@ -14,9 +14,8 @@ WORKDIR /app
 ENV CI=true
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY . .
-
 RUN pnpm install --frozen-lockfile
+COPY . .
 RUN pnpm --filter emails run build:package
 
 # ******************************RUN THE APP***********************************

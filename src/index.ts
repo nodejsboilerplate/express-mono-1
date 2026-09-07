@@ -4,7 +4,7 @@
 import routers from "./routes/index.route";
 import { rateLimit } from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis";
-import { ApiResponse, connectRedis, redisClient } from "./libs";
+import { ApiResponse, connectRedis, logger, redisClient } from "./libs";
 import { errorHandlerMiddleware, requestLogger } from "./middlewares";
 import { baseConfig } from "./config";
 import { ExpressServer } from "./server";
@@ -20,20 +20,6 @@ const Registry = promClient.Registry;
 const register = new Registry();
 collectDefaultMetrics({ register });
 
-// Custom Metrics
-const reqResTime = new promClient.Histogram({
-  name: "http_request_duration_second",
-  help: "HTTP request duration in second",
-  labelNames: ["method", "route", "status"],
-  buckets: [0.1, 0.5, 1, 2, 5],
-});
-
-const reqCounter = new promClient.Counter({
-  name: "req_counter",
-  help: "Counts total http requests",
-  labelNames: ["method", "route", "code"],
-});
-
 /* -------------------------------------------------------------------------- */
 /*                               Create Server                                */
 /* -------------------------------------------------------------------------- */
@@ -43,25 +29,6 @@ const app = server.GetApp();
 if (process.env.NODE_ENV === "development") {
   app.use(requestLogger());
 }
-
-/* -------------------------------------------------------------------------- */
-/*                            Metrics Middlewares                             */
-/* -------------------------------------------------------------------------- */
-
-app.use((req, res, next) => {
-  if (req.path.startsWith("/metrics")) return next();
-  const end = reqResTime.startTimer();
-  res.on("finish", () => {
-    reqCounter.inc({
-      code: res.statusCode,
-      method: req.method,
-      route: req.path,
-    });
-    end({ method: req.method, route: req.path, status: res.statusCode });
-  });
-
-  next();
-});
 
 /* -------------------------------------------------------------------------- */
 /*                                 Rate Limiter                               */
@@ -89,16 +56,6 @@ app.use("/health", async (_, res) => {
   return res.status(200).json(new ApiResponse(200, "OK"));
 });
 
-app.use("/system/connections", async (_, res) => {
-  const result = await pgDb.execute(sql`select now()`);
-  return res.status(200).json(
-    new ApiResponse(200, "OK", {
-      database: result.rows[0]!.now,
-      redis: await redisClient.ping(),
-    })
-  );
-});
-
 app.get("/metrics", async (_req, res) => {
   try {
     res.set("Content-Type", register.contentType);
@@ -115,5 +72,8 @@ app.use(errorHandlerMiddleware);
 
 // Start Server
 app.listen(baseConfig.PORT, async () => {
+  const result = await pgDb.execute(sql`select now()`);
+  console.log("Database: ", result.rows[0]!.now);
+  console.log("Redis: ", await redisClient.ping());
   console.log(`Server is listening on port: ${baseConfig.PORT}`);
 });

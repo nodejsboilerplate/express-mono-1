@@ -87,6 +87,8 @@
     "tsdown": "^0.22.14",
     "twilio": "^6.1.0",
     "uuid": "^14.0.2",
+    "winston": "^3.19.0",
+    "winston-loki": "^6.1.7",
     "zod": "^4.4.3"
   },
   "packageManager": "pnpm@11.0.0"

@@ -6,6 +6,7 @@ services:
       - "redis"
       - "redis_insight"
       - "postgres"
+      - "grafana_loki"
     build:
       context: .
       dockerfile: ./Dockerfile.dev
@@ -82,8 +83,17 @@ services:
       - "prometheus"
     image: grafana/grafana-oss
     container_name: grafana
+    networks:
+      - nebula
     ports:
       - 3005:3000
+  grafana_loki:
+    image: grafana/loki
+    container_name: nebula-loki
+    networks:
+      - nebula
+    ports:
+      - 3100:3100
 
 networks:
   nebula:
