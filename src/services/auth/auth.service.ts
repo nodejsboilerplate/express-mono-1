@@ -6,6 +6,9 @@ import { UserRepository } from "@/database/repositories";
 import { UserInputValidators } from "@/validators/inputs";
 import { TokenService } from "./token.service";
 import type { IEmailService } from "@/blueprints";
+import type { UserBasicInfoDataType } from "@/types";
+import { getSystemCustomErrorMsgByKey } from "@/events";
+import { ApiError } from "@/libs";
 
 type AuthServiceDepsType = {
   authRedis: AuthRedis;
@@ -19,6 +22,9 @@ type AuthServiceDepsType = {
 export class AuthService {
   public manualAuth: ManualAuthService;
   public googleOAuth: GoogleOAuthService;
+  private userRepository: UserRepository;
+  private authRedis: AuthRedis;
+  private tokenService: TokenService;
 
   constructor({
     authRedis,
@@ -28,6 +34,10 @@ export class AuthService {
     userRepository,
     userService,
   }: AuthServiceDepsType) {
+    this.userRepository = userRepository;
+    this.authRedis = authRedis;
+    this.tokenService = tokenService;
+
     this.manualAuth = new ManualAuthService({
       authRedis,
       emailService,
@@ -42,5 +52,42 @@ export class AuthService {
       tokenService,
       userService,
     });
+  }
+
+  async getAuthUserData(id: string) {
+    let temp_user: UserBasicInfoDataType;
+
+    const get_cached_data = await this.authRedis.getCachedLoginData(id);
+    const parse_data = JSON.parse(
+      String(get_cached_data)
+    ) as UserBasicInfoDataType;
+
+    if (!parse_data) {
+      const existedUser =
+        await this.userRepository.GetUserDataForLoginByEmailOrUsernameOrId(id);
+      if (!existedUser?.id) {
+        throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
+      }
+
+      const { tokenData, profileData } =
+        this.tokenService.finalLoginResponseUserData(
+          existedUser,
+          existedUser.profile!
+        );
+
+      await this.authRedis.cacheUserLoginData(existedUser?.id as string, {
+        ...tokenData,
+        ...profileData,
+      });
+
+      temp_user = {
+        ...tokenData,
+        ...profileData,
+      };
+    } else {
+      temp_user = parse_data;
+    }
+
+    return temp_user;
   }
 }
