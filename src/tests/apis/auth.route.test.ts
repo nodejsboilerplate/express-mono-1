@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
-import authRouter from "@/routes/auth.route";
+import { authRouter } from "@/routes/auth.route";
 
 // ---------------------------------------------------------
 // Hoisted shared mock fns

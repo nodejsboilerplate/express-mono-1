@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import jwt from "jsonwebtoken";
-import { AuthService } from "@/services/auth.service";
+import { AuthService } from "@/services/auth";
 
 // ---------------------------------------------------------
 // Hoisted shared mock fns (so module-level singletons inside
