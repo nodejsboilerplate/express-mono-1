@@ -5,6 +5,7 @@ import { CookieService } from "@/services";
 import type { AuthService } from "@/services/auth/auth.service";
 import type { TokenService } from "@/services/auth/token.service";
 import { VerificationService } from "@/services/verification.service";
+import type { UserProfileDataByLoginType } from "@/types";
 import type {
   CreateUserWithProfileInputType,
   LoginUserInputType,
@@ -173,5 +174,21 @@ export class AuthController {
     return res
       .status(201)
       .json(new ApiResponse(200, "OK", { id: result.user_id }));
+  }
+
+  async authUserBasicDataProvider(req: Request, res: Response) {
+    const { id, role, ...user } = req.auth_user;
+
+    const auth_user = await this.authService.getAuthUserData(id);
+    const profile: UserProfileDataByLoginType = {
+      avatar: auth_user.avatar,
+      first_name: auth_user.first_name,
+      last_name: auth_user.last_name,
+      nickname: auth_user.nickname,
+    };
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "OK", { ...user, ...profile }));
   }
 }

@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { asyncHandler } from "@/utils";
-import { authMiddlware } from "@/middlewares/auth.middleware";
 import type { createContainer } from "@/container";
 
 export const userRouter = (container: ReturnType<typeof createContainer>) => {
   const router: Router = Router();
 
-  const { controllerContainer } = container;
+  const { controllerContainer, middlewareContainer } = container;
   const { userController } = controllerContainer;
+  const { authMiddleware } = middlewareContainer;
 
   // ---------------------------------------------------------
   // Create
@@ -16,28 +16,28 @@ export const userRouter = (container: ReturnType<typeof createContainer>) => {
   router
     .route("/addresses")
     .post(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.createAddressHandler.bind(userController))
     );
 
   router
     .route("/contacts")
     .post(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.createContactHandler.bind(userController))
     );
 
   router
     .route("/contacts/:id/phones")
     .post(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.createPhoneHandler.bind(userController))
     );
 
   router
     .route("/contacts/:id/emails")
     .post(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.createEmailHandler.bind(userController))
     );
 
@@ -47,7 +47,7 @@ export const userRouter = (container: ReturnType<typeof createContainer>) => {
   router
     .route("/profile")
     .get(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.getUserProfileHandler.bind(userController))
     );
 
@@ -58,7 +58,7 @@ export const userRouter = (container: ReturnType<typeof createContainer>) => {
   router
     .route("/messages/contacts/phones/:id/code")
     .post(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(
         userController.sendContactPhoneVerificationHandler.bind(userController)
       )
@@ -67,7 +67,7 @@ export const userRouter = (container: ReturnType<typeof createContainer>) => {
   router
     .route("/messages/contacts/emails/:id/code")
     .post(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(
         userController.sendContactEmailVerificationHandler.bind(userController)
       )
@@ -76,7 +76,7 @@ export const userRouter = (container: ReturnType<typeof createContainer>) => {
   router
     .route("/verify/contacts/phones/:id")
     .post(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(
         userController.verifyContactPhoneHandler.bind(userController)
       )
@@ -85,7 +85,7 @@ export const userRouter = (container: ReturnType<typeof createContainer>) => {
   router
     .route("/verify/contacts/emails/:id")
     .post(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(
         userController.verifyContactEmailHandler.bind(userController)
       )
@@ -97,35 +97,35 @@ export const userRouter = (container: ReturnType<typeof createContainer>) => {
   router
     .route("/profile")
     .patch(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.updateProfileHandler.bind(userController))
     );
 
   router
     .route("/addresses/:id")
     .patch(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.updateAddressHandler.bind(userController))
     );
 
   router
     .route("/contacts")
     .patch(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.updateContactHandler.bind(userController))
     );
 
   router
     .route("/contacts/phones/:id")
     .patch(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.updatePhoneHandler.bind(userController))
     );
 
   router
     .route("/contacts/emails/:id")
     .patch(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.updateEmailHandler.bind(userController))
     );
 
@@ -135,35 +135,35 @@ export const userRouter = (container: ReturnType<typeof createContainer>) => {
   router
     .route("/")
     .delete(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.deleteUserHandler.bind(userController))
     );
 
   router
     .route("/addresses/:id")
     .delete(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.deleteAddressHandler.bind(userController))
     );
 
   router
     .route("/contacts/:id")
     .delete(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.deleteContactHandler.bind(userController))
     );
 
   router
     .route("/contacts/phones/:id")
     .delete(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.deletePhoneHandler.bind(userController))
     );
 
   router
     .route("/contacts/emails/:id")
     .delete(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(userController.deleteEmailHandler.bind(userController))
     );
 

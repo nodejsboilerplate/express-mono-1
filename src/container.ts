@@ -4,6 +4,7 @@ import {
   createRepositories,
   createServices,
   createValidators,
+  createMiddlewares,
 } from "./containers";
 
 export const createContainer = () => {
@@ -17,6 +18,13 @@ export const createContainer = () => {
     validators: validatorContainer,
   });
 
+  const middlewareContainer = createMiddlewares({
+    redisServices: redisServiceContainer,
+    repositories: repositoryContainer,
+    services: serviceContainer,
+    validators: validatorContainer,
+  });
+
   const controllerContainer = createControllers(serviceContainer);
 
   return {
@@ -25,5 +33,6 @@ export const createContainer = () => {
     redisServiceContainer,
     repositoryContainer,
     validatorContainer,
+    middlewareContainer,
   };
 };

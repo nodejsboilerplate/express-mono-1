@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { asyncHandler } from "@/utils";
-import { authMiddlware } from "@/middlewares/auth.middleware";
 import type { createContainer } from "@/container";
 
 export const authRouter = (container: ReturnType<typeof createContainer>) => {
   const router: Router = Router();
 
-  const { controllerContainer } = container;
+  const { controllerContainer, middlewareContainer } = container;
   const { authController } = controllerContainer;
+  const { authMiddleware } = middlewareContainer;
 
   router
     .route("/signup")
@@ -33,21 +33,21 @@ export const authRouter = (container: ReturnType<typeof createContainer>) => {
   router
     .route("/messages/signup/code")
     .post(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(authController.resendSignupCodeHandler.bind(authController))
     );
 
   router
     .route("/verify/signup/code")
     .post(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(authController.verifySignupCodeHandler.bind(authController))
     );
 
   router
     .route("/me")
     .get(
-      authMiddlware,
+      authMiddleware,
       asyncHandler(
         authController.authUserBasicDataProvider.bind(authController)
       )
