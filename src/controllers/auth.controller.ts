@@ -1,12 +1,10 @@
-import { UserRepository } from "@/database/repositories";
+import type { IEmailService } from "@/blueprints";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
-import { AuthRedis } from "@/redis";
-import { AuthService, CookieService, GoogleService } from "@/services";
-import type {
-  UserBasicInfoDataType,
-  UserProfileDataByLoginType,
-} from "@/types";
+import { CookieService } from "@/services";
+import type { AuthService } from "@/services/auth/auth.service";
+import type { TokenService } from "@/services/auth/token.service";
+import { VerificationService } from "@/services/verification.service";
 import type {
   CreateUserWithProfileInputType,
   LoginUserInputType,
@@ -14,17 +12,36 @@ import type {
 } from "@/zod";
 import type { Request, Response } from "express";
 
-const authService = new AuthService();
-const googleService = new GoogleService();
-const userRepository = new UserRepository();
-const authRedis = new AuthRedis();
+type AuthControllerDepsType = {
+  authService: AuthService;
+  tokenService: TokenService;
+  verificationService: VerificationService;
+  emailService: IEmailService;
+};
 
 export class AuthController {
+  private authService: AuthService;
+  private tokenService: TokenService;
+  private verificationService: VerificationService;
+  private emailService: IEmailService;
+
+  constructor({
+    authService,
+    tokenService,
+    verificationService,
+    emailService,
+  }: AuthControllerDepsType) {
+    this.authService = authService;
+    this.tokenService = tokenService;
+    this.verificationService = verificationService;
+    this.emailService = emailService;
+  }
+
   async signupUserHandler(req: Request, res: Response): Promise<Response> {
     const {
       accessToken: existed_access_token,
       refreshToken: existed_refresh_token,
-    } = authService.getCookies(req);
+    } = this.tokenService.getCookies(req);
 
     if (existed_access_token || existed_refresh_token)
       throw new ApiError(
@@ -33,7 +50,7 @@ export class AuthController {
       );
 
     const payload = req.body as CreateUserWithProfileInputType;
-    const result = await authService.signupUser(
+    const result = await this.authService.manualAuth.signupByManual(
       payload,
       req?.headers["user-agent"] ?? "Unknown device"
     );
@@ -64,10 +81,11 @@ export class AuthController {
 
   async loginUserHandler(req: Request, res: Response): Promise<Response> {
     const payload = req.body as LoginUserInputType;
-    const { accessToken, refreshToken } = await authService.loginUser(
-      payload,
-      req?.headers["user-agent"] ?? "Unknown device"
-    );
+    const { accessToken, refreshToken } =
+      await this.authService.manualAuth.loginByManual(
+        payload,
+        req?.headers["user-agent"] ?? "Unknown device"
+      );
 
     res.cookie(
       CookieService.ACCESS_TOKEN.name,
@@ -88,7 +106,7 @@ export class AuthController {
     req: Request,
     res: Response
   ): Promise<Response> {
-    const result = await authService.sendSignupVerificationEmail(
+    const result = await this.emailService.sendSignupCode(
       req.auth_user.email,
       req?.headers["user-agent"] ?? "Unknown device"
     );
@@ -116,7 +134,7 @@ export class AuthController {
       );
     }
 
-    const result = await authService.verifySignupCode({
+    const result = await this.verificationService.verifySignupCode({
       verify_code,
       id: req.auth_user.id,
     });
@@ -129,12 +147,12 @@ export class AuthController {
   }
 
   async redirectGoogleAuthHandler(req: Request, res: Response) {
-    return res.redirect(googleService.generateAuthUrlForLogin());
+    return res.redirect(this.authService.googleOAuth.generateAuthUrlForLogin());
   }
 
   async loginWithGoogleHandler(req: Request, res: Response) {
     const { code } = req.query as { code: string };
-    const result = await googleService.login(
+    const result = await this.authService.googleOAuth.loginOrSignup(
       code,
       req?.headers["user-agent"] ?? "Unknown device"
     );
@@ -155,37 +173,5 @@ export class AuthController {
     return res
       .status(201)
       .json(new ApiResponse(200, "OK", { id: result.user_id }));
-  }
-
-  async authUserBasicDataProvider(req: Request, res: Response) {
-    const { id, role, ...user } = req.auth_user;
-
-    let temp_profile: UserProfileDataByLoginType;
-
-    const get_cached_data = await authRedis.getCachedLoginData(id);
-    const parse_data = JSON.parse(
-      String(get_cached_data)
-    ) as UserBasicInfoDataType;
-
-    if (!parse_data) {
-      const existedUser =
-        await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(id);
-      if (!existedUser?.id) {
-        throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
-      }
-
-      temp_profile = existedUser.profile!;
-    } else {
-      temp_profile = {
-        avatar: parse_data.avatar,
-        first_name: parse_data.first_name,
-        last_name: parse_data.last_name,
-        nickname: parse_data.nickname,
-      };
-    }
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "OK", { ...user, ...temp_profile }));
   }
 }

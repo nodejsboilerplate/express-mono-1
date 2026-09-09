@@ -5,5 +5,4 @@ export * from "./getVerifyExpiry";
 export * from "./isZodError";
 export * from "./validationError";
 export * from "./drizzle-create-prepare";
-export * from "./finalLoginResponseUserData";
 export * from "./generateRandomUsername";

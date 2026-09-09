@@ -1,163 +1,171 @@
 import { Router } from "express";
-import { UserController } from "@/controllers/user.controller";
 import { asyncHandler } from "@/utils";
 import { authMiddlware } from "@/middlewares/auth.middleware";
+import type { createContainer } from "@/container";
 
-const router: Router = Router();
-const userController = new UserController();
+export const userRouter = (container: ReturnType<typeof createContainer>) => {
+  const router: Router = Router();
 
-// ---------------------------------------------------------
-// Create
-// ---------------------------------------------------------
+  const { controllerContainer } = container;
+  const { userController } = controllerContainer;
 
-router
-  .route("/addresses")
-  .post(
-    authMiddlware,
-    asyncHandler(userController.createAddressHandler.bind(userController))
-  );
+  // ---------------------------------------------------------
+  // Create
+  // ---------------------------------------------------------
 
-router
-  .route("/contacts")
-  .post(
-    authMiddlware,
-    asyncHandler(userController.createContactHandler.bind(userController))
-  );
+  router
+    .route("/addresses")
+    .post(
+      authMiddlware,
+      asyncHandler(userController.createAddressHandler.bind(userController))
+    );
 
-router
-  .route("/contacts/:id/phones")
-  .post(
-    authMiddlware,
-    asyncHandler(userController.createPhoneHandler.bind(userController))
-  );
+  router
+    .route("/contacts")
+    .post(
+      authMiddlware,
+      asyncHandler(userController.createContactHandler.bind(userController))
+    );
 
-router
-  .route("/contacts/:id/emails")
-  .post(
-    authMiddlware,
-    asyncHandler(userController.createEmailHandler.bind(userController))
-  );
+  router
+    .route("/contacts/:id/phones")
+    .post(
+      authMiddlware,
+      asyncHandler(userController.createPhoneHandler.bind(userController))
+    );
 
-// ---------------------------------------------------------
-// Read
-// ---------------------------------------------------------
-router
-  .route("/profile")
-  .get(
-    authMiddlware,
-    asyncHandler(userController.getUserProfileHandler.bind(userController))
-  );
+  router
+    .route("/contacts/:id/emails")
+    .post(
+      authMiddlware,
+      asyncHandler(userController.createEmailHandler.bind(userController))
+    );
 
-// ---------------------------------------------------------
-// Verify
-// ---------------------------------------------------------
+  // ---------------------------------------------------------
+  // Read
+  // ---------------------------------------------------------
+  router
+    .route("/profile")
+    .get(
+      authMiddlware,
+      asyncHandler(userController.getUserProfileHandler.bind(userController))
+    );
 
-router
-  .route("/messages/contacts/phones/:id/code")
-  .post(
-    authMiddlware,
-    asyncHandler(
-      userController.sendContactPhoneVerificationHandler.bind(userController)
-    )
-  );
+  // ---------------------------------------------------------
+  // Verify
+  // ---------------------------------------------------------
 
-router
-  .route("/messages/contacts/emails/:id/code")
-  .post(
-    authMiddlware,
-    asyncHandler(
-      userController.sendContactEmailVerificationHandler.bind(userController)
-    )
-  );
+  router
+    .route("/messages/contacts/phones/:id/code")
+    .post(
+      authMiddlware,
+      asyncHandler(
+        userController.sendContactPhoneVerificationHandler.bind(userController)
+      )
+    );
 
-router
-  .route("/verify/contacts/phones/:id")
-  .post(
-    authMiddlware,
-    asyncHandler(userController.verifyContactPhoneHandler.bind(userController))
-  );
+  router
+    .route("/messages/contacts/emails/:id/code")
+    .post(
+      authMiddlware,
+      asyncHandler(
+        userController.sendContactEmailVerificationHandler.bind(userController)
+      )
+    );
 
-router
-  .route("/verify/contacts/emails/:id")
-  .post(
-    authMiddlware,
-    asyncHandler(userController.verifyContactEmailHandler.bind(userController))
-  );
+  router
+    .route("/verify/contacts/phones/:id")
+    .post(
+      authMiddlware,
+      asyncHandler(
+        userController.verifyContactPhoneHandler.bind(userController)
+      )
+    );
 
-// ---------------------------------------------------------
-// Update
-// ---------------------------------------------------------
-router
-  .route("/profile")
-  .patch(
-    authMiddlware,
-    asyncHandler(userController.updateProfileHandler.bind(userController))
-  );
+  router
+    .route("/verify/contacts/emails/:id")
+    .post(
+      authMiddlware,
+      asyncHandler(
+        userController.verifyContactEmailHandler.bind(userController)
+      )
+    );
 
-router
-  .route("/addresses/:id")
-  .patch(
-    authMiddlware,
-    asyncHandler(userController.updateAddressHandler.bind(userController))
-  );
+  // ---------------------------------------------------------
+  // Update
+  // ---------------------------------------------------------
+  router
+    .route("/profile")
+    .patch(
+      authMiddlware,
+      asyncHandler(userController.updateProfileHandler.bind(userController))
+    );
 
-router
-  .route("/contacts")
-  .patch(
-    authMiddlware,
-    asyncHandler(userController.updateContactHandler.bind(userController))
-  );
+  router
+    .route("/addresses/:id")
+    .patch(
+      authMiddlware,
+      asyncHandler(userController.updateAddressHandler.bind(userController))
+    );
 
-router
-  .route("/contacts/phones/:id")
-  .patch(
-    authMiddlware,
-    asyncHandler(userController.updatePhoneHandler.bind(userController))
-  );
+  router
+    .route("/contacts")
+    .patch(
+      authMiddlware,
+      asyncHandler(userController.updateContactHandler.bind(userController))
+    );
 
-router
-  .route("/contacts/emails/:id")
-  .patch(
-    authMiddlware,
-    asyncHandler(userController.updateEmailHandler.bind(userController))
-  );
+  router
+    .route("/contacts/phones/:id")
+    .patch(
+      authMiddlware,
+      asyncHandler(userController.updatePhoneHandler.bind(userController))
+    );
 
-// ---------------------------------------------------------
-// Delete
-// ---------------------------------------------------------
-router
-  .route("/")
-  .delete(
-    authMiddlware,
-    asyncHandler(userController.deleteUserHandler.bind(userController))
-  );
+  router
+    .route("/contacts/emails/:id")
+    .patch(
+      authMiddlware,
+      asyncHandler(userController.updateEmailHandler.bind(userController))
+    );
 
-router
-  .route("/addresses/:id")
-  .delete(
-    authMiddlware,
-    asyncHandler(userController.deleteAddressHandler.bind(userController))
-  );
+  // ---------------------------------------------------------
+  // Delete
+  // ---------------------------------------------------------
+  router
+    .route("/")
+    .delete(
+      authMiddlware,
+      asyncHandler(userController.deleteUserHandler.bind(userController))
+    );
 
-router
-  .route("/contacts/:id")
-  .delete(
-    authMiddlware,
-    asyncHandler(userController.deleteContactHandler.bind(userController))
-  );
+  router
+    .route("/addresses/:id")
+    .delete(
+      authMiddlware,
+      asyncHandler(userController.deleteAddressHandler.bind(userController))
+    );
 
-router
-  .route("/contacts/phones/:id")
-  .delete(
-    authMiddlware,
-    asyncHandler(userController.deletePhoneHandler.bind(userController))
-  );
+  router
+    .route("/contacts/:id")
+    .delete(
+      authMiddlware,
+      asyncHandler(userController.deleteContactHandler.bind(userController))
+    );
 
-router
-  .route("/contacts/emails/:id")
-  .delete(
-    authMiddlware,
-    asyncHandler(userController.deleteEmailHandler.bind(userController))
-  );
+  router
+    .route("/contacts/phones/:id")
+    .delete(
+      authMiddlware,
+      asyncHandler(userController.deletePhoneHandler.bind(userController))
+    );
 
-export default router;
+  router
+    .route("/contacts/emails/:id")
+    .delete(
+      authMiddlware,
+      asyncHandler(userController.deleteEmailHandler.bind(userController))
+    );
+
+  return router;
+};
