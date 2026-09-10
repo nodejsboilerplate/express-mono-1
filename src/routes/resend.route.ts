@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { asyncHandler } from "@/utils";
-import type { createContainer } from "@/container";
+import type { ContainerType } from "@/types";
 
-export const resendRouter = (container: ReturnType<typeof createContainer>) => {
+export const resendRouter = (container: ContainerType) => {
   const router: Router = Router();
 
   const { controllerContainer } = container;

@@ -74,7 +74,21 @@ app.use(errorHandlerMiddleware);
 // Start Server
 app.listen(baseConfig.PORT, async () => {
   const result = await pgDb.execute(sql`select now()`);
-  console.log("Database: ", result.rows[0]!.now);
-  console.log("Redis: ", await redisClient.ping());
-  console.log(`Server is listening on port: ${baseConfig.PORT}`);
+  console.log(`                                     
+               █             ███          
+ ██   █        █               █          
+ ██░  █        █               █          
+ █▒▓  █  ███   █▓██   █   █    █    ░███░ 
+ █ █  █ ▓▓ ▒█  █▓ ▓█  █   █    █    █▒ ▒█ 
+ █ ▓▓ █ █   █  █   █  █   █    █        █ 
+ █  █ █ █████  █   █  █   █    █    ▒████ 
+ █  ▓▒█ █      █   █  █   █    █    █▒  █ 
+ █  ░██ ▓▓  █  █▓ ▓█  █▒ ▓█    █░   █░ ▓█ 
+ █   ██  ███▒  █▓██   ▒██▒█    ▒██  ▒██▒█     
+ Listening...                  Port: ${baseConfig.PORT}`);
+  console.log(" Database: ", result.rows[0]!.now ? "Working ✅" : "ᶻ 𝗓 𐰁");
+  console.log(
+    " Redis: ",
+    (await redisClient.ping()) === "PONG" ? "Working ✅" : "ᶻ 𝗓 𐰁"
+  );
 });

@@ -6,11 +6,7 @@ import type { AuthService } from "@/services/auth/auth.service";
 import type { TokenService } from "@/services/auth/token.service";
 import { VerificationService } from "@/services/verification.service";
 import type { UserProfileDataByLoginType } from "@/types";
-import type {
-  CreateUserWithProfileInputType,
-  LoginUserInputType,
-  VerifyCodeInputType,
-} from "@/zod";
+import type { CreateUserWithProfileInputType, LoginUserInputType } from "@/zod";
 import type { Request, Response } from "express";
 
 type AuthControllerDepsType = {
@@ -101,50 +97,6 @@ export class AuthController {
     );
 
     return res.status(200).json(new ApiResponse(200, "Login Successful."));
-  }
-
-  async resendSignupCodeHandler(
-    req: Request,
-    res: Response
-  ): Promise<Response> {
-    const result = await this.emailService.sendSignupCode(
-      req.auth_user.email,
-      req?.headers["user-agent"] ?? "Unknown device"
-    );
-
-    return res.status(200).json(
-      new ApiResponse(200, "Verification code sent successfully.", {
-        id: result,
-      })
-    );
-  }
-
-  async verifySignupCodeHandler(
-    req: Request,
-    res: Response
-  ): Promise<Response> {
-    const { verify_code } = req.body as Pick<
-      VerifyCodeInputType,
-      "verify_code"
-    >;
-
-    if (req.auth_user.is_verified) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("USER_ALREADY_VERIFIED")
-      );
-    }
-
-    const result = await this.verificationService.verifySignupCode({
-      verify_code,
-      id: req.auth_user.id,
-    });
-
-    return res.status(200).json(
-      new ApiResponse(200, "Account verified successfully.", {
-        id: result,
-      })
-    );
   }
 
   async redirectGoogleAuthHandler(req: Request, res: Response) {

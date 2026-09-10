@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { asyncHandler } from "@/utils";
-import type { createContainer } from "@/container";
+import type { ContainerType } from "@/types";
 
-export const authRouter = (container: ReturnType<typeof createContainer>) => {
+export const authRouter = (container: ContainerType) => {
   const router: Router = Router();
 
   const { controllerContainer, middlewareContainer } = container;
@@ -28,20 +28,6 @@ export const authRouter = (container: ReturnType<typeof createContainer>) => {
     .route("/callback/google")
     .get(
       asyncHandler(authController.loginWithGoogleHandler.bind(authController))
-    );
-
-  router
-    .route("/messages/signup/code")
-    .post(
-      authMiddleware,
-      asyncHandler(authController.resendSignupCodeHandler.bind(authController))
-    );
-
-  router
-    .route("/verify/signup/code")
-    .post(
-      authMiddleware,
-      asyncHandler(authController.verifySignupCodeHandler.bind(authController))
     );
 
   router

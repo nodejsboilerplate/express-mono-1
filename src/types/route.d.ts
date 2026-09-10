@@ -1,3 +1,5 @@
+import type { createContainer } from "@/container";
+
 export interface ApiResponseType {
   status: number;
   message: string;
@@ -12,3 +14,5 @@ export interface ApiErrorType {
   stack?: string;
   errors?: any[];
 }
+
+export type ContainerType = ReturnType<typeof createContainer>;

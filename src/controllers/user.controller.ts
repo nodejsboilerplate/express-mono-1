@@ -10,35 +10,20 @@ import type {
   UpdatePhoneInputType,
   UpdateProfileInputType,
   UserIdWithContextIdInputType,
-  VerifyCodeWithUserIdInput,
 } from "@/zod";
 
 import { ApiResponse } from "@/libs";
-import { UserService, VerificationService } from "@/services";
-import type { IEmailService, IPhoneMessageService } from "@/blueprints";
+import { UserService } from "@/services";
 
 type UserControllerDepsType = {
   userService: UserService;
-  emailService: IEmailService;
-  phoneService: IPhoneMessageService;
-  verificationService: VerificationService;
 };
 
 export class UserController {
   private userService: UserService;
-  private emailService: IEmailService;
-  private phoneService: IPhoneMessageService;
-  private verificationService: VerificationService;
-  constructor({
-    userService,
-    emailService,
-    phoneService,
-    verificationService,
-  }: UserControllerDepsType) {
+
+  constructor({ userService }: UserControllerDepsType) {
     this.userService = userService;
-    this.emailService = emailService;
-    this.phoneService = phoneService;
-    this.verificationService = verificationService;
   }
   // ---------------------------------------------------------
   // Create
@@ -121,92 +106,6 @@ export class UserController {
     const result = await this.userService.getUserProfile(user.id);
 
     return res.status(200).json(new ApiResponse(200, "Ok", result));
-  }
-
-  async sendContactPhoneVerificationHandler(
-    req: Request,
-    res: Response
-  ): Promise<Response> {
-    const { id } = req.params as Pick<UserIdWithContextIdInputType, "id">;
-    const result = await this.phoneService.sendContactPhoneVerificationCode({
-      id,
-      user_id: req.auth_user.id,
-    });
-
-    return res.status(200).json(
-      new ApiResponse(200, "Verification code sent successfully.", {
-        id: result,
-      })
-    );
-  }
-
-  async sendContactEmailVerificationHandler(
-    req: Request,
-    res: Response
-  ): Promise<Response> {
-    const { id } = req.params as Pick<UserIdWithContextIdInputType, "id">;
-    const result = await this.emailService.sendContactEmailVerificationCode(
-      {
-        id,
-        user_id: req.auth_user.id,
-      },
-      req?.headers["user-agent"] ?? "Unknown device"
-    );
-
-    return res.status(200).json(
-      new ApiResponse(200, "Verification code sent successfully.", {
-        id: result,
-      })
-    );
-  }
-
-  // ---------------------------------------------------------
-  // Verify
-  // ---------------------------------------------------------
-
-  async verifyContactPhoneHandler(
-    req: Request,
-    res: Response
-  ): Promise<Response> {
-    const { id } = req.params as Pick<VerifyCodeWithUserIdInput, "id">;
-    const { verify_code } = req.body as Pick<
-      VerifyCodeWithUserIdInput,
-      "verify_code"
-    >;
-
-    const result = await this.verificationService.verifyContactPhone({
-      id,
-      user_id: req.auth_user.id,
-      verify_code,
-    });
-
-    return res.status(200).json(
-      new ApiResponse(200, "Phone number verified successfully.", {
-        id: result,
-      })
-    );
-  }
-
-  async verifyContactEmailHandler(
-    req: Request,
-    res: Response
-  ): Promise<Response> {
-    const { id } = req.params as Pick<VerifyCodeWithUserIdInput, "id">;
-    const { verify_code } = req.body as Pick<
-      VerifyCodeWithUserIdInput,
-      "verify_code"
-    >;
-
-    const result = await this.verificationService.verifyContactEmail({
-      id,
-      user_id: req.auth_user.id,
-      verify_code,
-    });
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, "Email verified successfully.", { id: result })
-      );
   }
 
   // ---------------------------------------------------------

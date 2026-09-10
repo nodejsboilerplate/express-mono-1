@@ -3,7 +3,6 @@ import type { UserIdWithContextIdInputType } from "@/zod";
 
 export interface IEmailService {
   sendSignupCode(email: string, deviceInfo: string): Promise<void>;
-  sendLoginCode(email: string, deviceInfo: string): Promise<void>;
   sendContactEmailVerificationCode(
     payload: UserIdWithContextIdInputType,
     deviceInfo: string

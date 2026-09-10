@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AuthController } from "@/controllers/auth.controller";
 
-const mocks = vi.hoisted(() => ({ cookieSet: vi.fn() }));
-
-// AuthController imports CookieService from the "@/services" barrel.
 vi.mock("@/services", () => ({
   CookieService: {
-    ACCESS_TOKEN: { name: "accessToken", cookie: { maxAge: 300_000 } },
-    REFRESH_TOKEN: { name: "refreshToken", cookie: { maxAge: 2_592_000_000 } },
+    ACCESS_TOKEN: {
+      name: "accessToken",
+      cookie: { httpOnly: false, sameSite: "lax" },
+    },
+    REFRESH_TOKEN: {
+      name: "refreshToken",
+      cookie: { httpOnly: false, sameSite: "lax" },
+    },
   },
 }));
 
@@ -23,16 +26,14 @@ vi.mock("@/libs", () => ({
       this.status = status;
     }
   },
-  ApiResponse: class {
+  ApiResponse: class ApiResponse {
     status: number;
     message: string;
     data: unknown;
-    success = true;
-    title = "";
     constructor(status: number, message: string, data?: unknown) {
       this.status = status;
       this.message = message;
-      this.data = data ?? null;
+      this.data = data;
     }
   },
 }));
@@ -46,213 +47,264 @@ const buildRes = () => {
   return res;
 };
 
+const buildDeps = () => ({
+  authService: {
+    manualAuth: {
+      signupByManual: vi.fn(),
+      loginByManual: vi.fn(),
+    },
+    googleOAuth: {
+      generateAuthUrlForLogin: vi.fn(),
+      loginOrSignup: vi.fn(),
+    },
+    getAuthUserData: vi.fn(),
+  },
+  tokenService: {
+    getCookies: vi.fn(),
+  },
+  verificationService: {
+    verifySignupCode: vi.fn(),
+  },
+  emailService: {
+    sendSignupCode: vi.fn(),
+  },
+});
+
 describe("AuthController", () => {
-  let authService: any;
-  let tokenService: any;
-  let verificationService: any;
-  let emailService: any;
+  let deps: ReturnType<typeof buildDeps>;
   let authController: AuthController;
+  let res: ReturnType<typeof buildRes>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    authService = {
-      manualAuth: { signupByManual: vi.fn(), loginByManual: vi.fn() },
-      googleOAuth: { generateAuthUrlForLogin: vi.fn(), loginOrSignup: vi.fn() },
-      getAuthUserData: vi.fn(),
-    };
-    tokenService = { getCookies: vi.fn() };
-    verificationService = { verifySignupCode: vi.fn() };
-    emailService = { sendSignupCode: vi.fn() };
-
-    authController = new AuthController({
-      authService,
-      tokenService,
-      verificationService,
-      emailService,
-    });
+    deps = buildDeps();
+    authController = new AuthController(deps as any);
+    res = buildRes();
   });
 
+  // -------------------------------------------------------
   describe("signupUserHandler", () => {
-    it("throws 400 when the request already carries session cookies", async () => {
-      tokenService.getCookies.mockReturnValueOnce({
-        accessToken: "acc",
-        refreshToken: "ref",
+    it("throws 400 if the request already carries an access or refresh token cookie", async () => {
+      deps.tokenService.getCookies.mockReturnValueOnce({
+        accessToken: "existing.jwt",
+        refreshToken: undefined,
       });
-      const req = { body: {}, headers: {} } as any;
-      await expect(
-        authController.signupUserHandler(req, buildRes())
-      ).rejects.toThrow("USER_ALREADY_EXISTS");
-      expect(authService.manualAuth.signupByManual).not.toHaveBeenCalled();
+      const req: any = { body: {}, headers: {} };
+
+      await expect(authController.signupUserHandler(req, res)).rejects.toThrow(
+        "USER_ALREADY_EXISTS"
+      );
+      expect(deps.authService.manualAuth.signupByManual).not.toHaveBeenCalled();
     });
 
     it("signs up, sets both cookies, and returns 201 with the new user id", async () => {
-      tokenService.getCookies.mockReturnValueOnce({
+      deps.tokenService.getCookies.mockReturnValueOnce({
         accessToken: undefined,
         refreshToken: undefined,
       });
-      authService.manualAuth.signupByManual.mockResolvedValueOnce({
-        tokens: { accessToken: "acc", refreshToken: "ref" },
+      deps.authService.manualAuth.signupByManual.mockResolvedValueOnce({
+        tokens: { accessToken: "access.jwt", refreshToken: "refresh.jwt" },
         user_id: "u1",
       });
-      const req = {
-        body: { user: {}, profile: {} },
-        headers: { "user-agent": "jest" },
-      } as any;
-      const res = buildRes();
 
-      await authController.signupUserHandler(req, res);
+      const payload = {
+        user: { email: "a@b.com" },
+        profile: { first_name: "A" },
+      };
+      const req: any = { body: payload, headers: { "user-agent": "Chrome" } };
 
+      const result = await authController.signupUserHandler(req, res);
+
+      expect(deps.authService.manualAuth.signupByManual).toHaveBeenCalledWith(
+        payload,
+        "Chrome"
+      );
       expect(res.cookie).toHaveBeenCalledWith(
         "accessToken",
-        "acc",
-        expect.anything()
+        "access.jwt",
+        expect.objectContaining({ httpOnly: false })
       );
       expect(res.cookie).toHaveBeenCalledWith(
         "refreshToken",
-        "ref",
-        expect.anything()
+        "refresh.jwt",
+        expect.objectContaining({ httpOnly: false })
       );
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { id: "u1" } })
+        expect.objectContaining({
+          status: 201,
+          message:
+            "Account created successfully. Please verify your account using the code sent to you.",
+          data: { id: "u1" },
+        })
       );
-    });
-  });
-
-  describe("loginUserHandler", () => {
-    it("logs in and sets both cookies", async () => {
-      authService.manualAuth.loginByManual.mockResolvedValueOnce({
-        accessToken: "acc",
-        refreshToken: "ref",
-      });
-      const req = { body: { identifier: "a@b.com" }, headers: {} } as any;
-      const res = buildRes();
-
-      await authController.loginUserHandler(req, res);
-
-      expect(res.cookie).toHaveBeenCalledTimes(2);
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ message: "Login Successful." })
-      );
-    });
-  });
-
-  describe("resendSignupCodeHandler", () => {
-    it("sends the signup code to the authenticated user's email", async () => {
-      emailService.sendSignupCode.mockResolvedValueOnce(undefined);
-      const req = { auth_user: { email: "a@b.com" }, headers: {} } as any;
-      const res = buildRes();
-
-      await authController.resendSignupCodeHandler(req, res);
-
-      expect(emailService.sendSignupCode).toHaveBeenCalledWith(
-        "a@b.com",
-        expect.any(String)
-      );
-      expect(res.status).toHaveBeenCalledWith(200);
-    });
-  });
-
-  describe("verifySignupCodeHandler", () => {
-    it("throws 400 when the user is already verified", async () => {
-      const req = {
-        auth_user: { id: "u1", is_verified: true },
-        body: {},
-      } as any;
-      await expect(
-        authController.verifySignupCodeHandler(req, buildRes())
-      ).rejects.toThrow("USER_ALREADY_VERIFIED");
-      expect(verificationService.verifySignupCode).not.toHaveBeenCalled();
+      expect(result).toBe(res);
     });
 
-    it("verifies the code and returns the verified user id", async () => {
-      verificationService.verifySignupCode.mockResolvedValueOnce("u1");
-      const req = {
-        auth_user: { id: "u1", is_verified: false },
-        body: { verify_code: "123456" },
-      } as any;
-      const res = buildRes();
-
-      await authController.verifySignupCodeHandler(req, res);
-
-      expect(verificationService.verifySignupCode).toHaveBeenCalledWith({
-        verify_code: "123456",
-        id: "u1",
-      });
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { id: "u1" } })
-      );
-    });
-  });
-
-  describe("redirectGoogleAuthHandler", () => {
-    it("redirects to the Google consent URL", async () => {
-      authService.googleOAuth.generateAuthUrlForLogin.mockReturnValueOnce(
-        "https://google.com/consent"
-      );
-      const res = buildRes();
-      await authController.redirectGoogleAuthHandler({} as any, res);
-      expect(res.redirect).toHaveBeenCalledWith("https://google.com/consent");
-    });
-  });
-
-  describe("loginWithGoogleHandler", () => {
-    it("logs in via Google, sets both cookies, and returns the user id", async () => {
-      authService.googleOAuth.loginOrSignup.mockResolvedValueOnce({
-        tokens: { accessToken: "acc", refreshToken: "ref" },
+    it("falls back to 'Unknown device' when no user-agent header is present", async () => {
+      deps.tokenService.getCookies.mockReturnValueOnce({});
+      deps.authService.manualAuth.signupByManual.mockResolvedValueOnce({
+        tokens: { accessToken: "a", refreshToken: "r" },
         user_id: "u1",
       });
-      const req = { query: { code: "google-code" }, headers: {} } as any;
-      const res = buildRes();
+      const req: any = { body: {}, headers: {} };
 
-      await authController.loginWithGoogleHandler(req, res);
+      await authController.signupUserHandler(req, res);
 
-      expect(authService.googleOAuth.loginOrSignup).toHaveBeenCalledWith(
-        "google-code",
-        expect.any(String)
-      );
-      expect(res.cookie).toHaveBeenCalledTimes(2);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { id: "u1" } })
+      expect(deps.authService.manualAuth.signupByManual).toHaveBeenCalledWith(
+        {},
+        "Unknown device"
       );
     });
   });
 
-  describe("authUserBasicDataProvider", () => {
-    it("strips id/role off req.auth_user and merges in the fetched profile fields", async () => {
-      authService.getAuthUserData.mockResolvedValueOnce({
-        avatar: "a.png",
-        first_name: "A",
-        last_name: "B",
-        nickname: "Al",
+  // -------------------------------------------------------
+  describe("loginUserHandler", () => {
+    it("logs in, sets both cookies, and returns 200", async () => {
+      deps.authService.manualAuth.loginByManual.mockResolvedValueOnce({
+        accessToken: "access.jwt",
+        refreshToken: "refresh.jwt",
       });
-      const req = {
+      const payload = { identifier: "a@b.com", password: "secret123" };
+      const req: any = { body: payload, headers: { "user-agent": "Safari" } };
+
+      const result = await authController.loginUserHandler(req, res);
+
+      expect(deps.authService.manualAuth.loginByManual).toHaveBeenCalledWith(
+        payload,
+        "Safari"
+      );
+      expect(res.cookie).toHaveBeenCalledWith(
+        "accessToken",
+        "access.jwt",
+        expect.any(Object)
+      );
+      expect(res.cookie).toHaveBeenCalledWith(
+        "refreshToken",
+        "refresh.jwt",
+        expect.any(Object)
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 200, message: "Login Successful." })
+      );
+      expect(result).toBe(res);
+    });
+
+    it("propagates errors from manualAuth.loginByManual (e.g. bad credentials)", async () => {
+      deps.authService.manualAuth.loginByManual.mockRejectedValueOnce(
+        new Error("UNAUTHORIZED")
+      );
+      const req: any = { body: {}, headers: {} };
+
+      await expect(authController.loginUserHandler(req, res)).rejects.toThrow(
+        "UNAUTHORIZED"
+      );
+    });
+  });
+
+  // -------------------------------------------------------
+  describe("redirectGoogleAuthHandler", () => {
+    it("redirects to the Google consent URL", async () => {
+      deps.authService.googleOAuth.generateAuthUrlForLogin.mockReturnValueOnce(
+        "https://accounts.google.com/consent"
+      );
+      const req: any = {};
+
+      const result = await authController.redirectGoogleAuthHandler(req, res);
+
+      expect(res.redirect).toHaveBeenCalledWith(
+        "https://accounts.google.com/consent"
+      );
+      expect(result).toBe(res);
+    });
+  });
+
+  // -------------------------------------------------------
+  describe("loginWithGoogleHandler", () => {
+    it("logs in via Google, sets both cookies, and returns 201 with body status 200", async () => {
+      deps.authService.googleOAuth.loginOrSignup.mockResolvedValueOnce({
+        tokens: { accessToken: "g.access.jwt", refreshToken: "g.refresh.jwt" },
+        user_id: "u1",
+      });
+      const req: any = {
+        query: { code: "google-code" },
+        headers: { "user-agent": "Chrome" },
+      };
+
+      const result = await authController.loginWithGoogleHandler(req, res);
+
+      expect(deps.authService.googleOAuth.loginOrSignup).toHaveBeenCalledWith(
+        "google-code",
+        "Chrome"
+      );
+      expect(res.cookie).toHaveBeenCalledWith(
+        "accessToken",
+        "g.access.jwt",
+        expect.any(Object)
+      );
+      expect(res.cookie).toHaveBeenCalledWith(
+        "refreshToken",
+        "g.refresh.jwt",
+        expect.any(Object)
+      );
+      // NOTE: as implemented, the HTTP status is 201 while the ApiResponse body's
+      // own `status` field is 200 — asserting the current (slightly inconsistent)
+      // behavior faithfully rather than "fixing" it in the test.
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 200,
+          message: "OK",
+          data: { id: "u1" },
+        })
+      );
+      expect(result).toBe(res);
+    });
+  });
+
+  // -------------------------------------------------------
+  describe("authUserBasicDataProvider", () => {
+    it("merges the session user (minus id/role) with the fetched profile data", async () => {
+      deps.authService.getAuthUserData.mockResolvedValueOnce({
+        avatar: "https://cdn.example.com/a.png",
+        first_name: "Rahim",
+        last_name: "Uddin",
+        nickname: "Ray",
+      });
+      const req: any = {
         auth_user: {
           id: "u1",
           role: "USER",
           email: "a@b.com",
-          username: "alice",
+          username: "rahim_uddin",
           is_verified: true,
         },
-      } as any;
-      const res = buildRes();
+      };
 
-      await authController.authUserBasicDataProvider(req, res);
+      const result = await authController.authUserBasicDataProvider(req, res);
 
-      expect(authService.getAuthUserData).toHaveBeenCalledWith("u1");
-      const [payload] = res.json.mock.calls[0];
-      expect(payload.data).toEqual({
-        email: "a@b.com",
-        username: "alice",
-        is_verified: true,
-        avatar: "a.png",
-        first_name: "A",
-        last_name: "B",
-        nickname: "Al",
-      });
-      expect(payload.data).not.toHaveProperty("id");
-      expect(payload.data).not.toHaveProperty("role");
+      expect(deps.authService.getAuthUserData).toHaveBeenCalledWith("u1");
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 200,
+          message: "OK",
+          data: {
+            email: "a@b.com",
+            username: "rahim_uddin",
+            is_verified: true,
+            avatar: "https://cdn.example.com/a.png",
+            first_name: "Rahim",
+            last_name: "Uddin",
+            nickname: "Ray",
+          },
+        })
+      );
+      // id/role are destructured off and NOT forwarded, as currently implemented.
+      expect(res.json.mock.calls[0][0].data).not.toHaveProperty("id");
+      expect(res.json.mock.calls[0][0].data).not.toHaveProperty("role");
+      expect(result).toBe(res);
     });
   });
 });

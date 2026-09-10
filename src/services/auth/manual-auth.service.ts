@@ -60,16 +60,13 @@ export class ManualAuthService {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
     }
 
-    if (parse_payload.password && result.password) {
-      const isPassMatched = await bcrypt.compare(
-        parse_payload.password,
-        result.password as string
-      );
-      if (!isPassMatched) {
-        throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
-      }
-    } else {
-      await this.emailService.sendLoginCode(result.email, deviceInfo);
+    const isPassMatched = await bcrypt.compare(
+      parse_payload.password,
+      result.password as string
+    );
+
+    if (!isPassMatched) {
+      throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
     }
 
     const { password, profile, ...rest } = result;
@@ -86,7 +83,7 @@ export class ManualAuthService {
     });
 
     if (!result.is_verified)
-      await this.emailService.sendLoginCode(result.email, deviceInfo);
+      await this.emailService.sendSignupCode(result.email, deviceInfo);
 
     return {
       accessToken,

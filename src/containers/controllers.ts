@@ -2,6 +2,7 @@ import { AuthController } from "@/controllers/auth.controller";
 import type { createServices } from "./services";
 import { UserController } from "@/controllers/user.controller";
 import { ResendController } from "@/controllers/resend.controller";
+import { MessageController } from "@/controllers/message.contoller";
 
 export const createControllers = (
   services: ReturnType<typeof createServices>
@@ -12,6 +13,7 @@ export const createControllers = (
     tokenService,
     phoneService,
     userService,
+    resendService,
     verificationService,
   } = services;
 
@@ -23,17 +25,23 @@ export const createControllers = (
   });
 
   const userController = new UserController({
-    emailService,
-    phoneService,
     userService,
-    verificationService,
   });
 
-  const resendController = new ResendController();
+  const resendController = new ResendController({
+    resendService,
+  });
+
+  const messegeController = new MessageController({
+    emailService,
+    phoneService,
+    verificationService,
+  });
 
   return {
     authController,
     userController,
     resendController,
+    messegeController,
   };
 };

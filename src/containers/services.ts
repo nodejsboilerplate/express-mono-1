@@ -1,6 +1,7 @@
 import {
   EmailService,
   PhoneMessagingService,
+  ResendService,
   UserService,
   VerificationService,
 } from "@/services";
@@ -50,6 +51,8 @@ export const createServices = ({
     userService,
   });
 
+  const resendService = new ResendService();
+
   return {
     userService,
     emailService,
@@ -57,5 +60,6 @@ export const createServices = ({
     tokenService,
     verificationService,
     authService,
+    resendService,
   };
 };
