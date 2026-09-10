@@ -45,3 +45,9 @@ docs
 .esbuild
 
 .react-email
+
+.terraform/
+
+# Remove if you need and remember to use remote execution
+*.tfstate.*
+*.tfstate
