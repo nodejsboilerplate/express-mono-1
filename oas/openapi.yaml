@@ -576,60 +576,6 @@ paths:
           description: Google did not return an id token.
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /auth/messages/signup/code:
-    post:
-      operationId: resendSignupCode
-      summary: Resend the signup verification code to the current user's email
-      tags: [Auth]
-      security: [{ accessToken: [] }]
-      responses:
-        "200":
-          description: Verification code sent.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
-              example:
-                {
-                  status: 200,
-                  message: "Verification code sent successfully.",
-                  success: true,
-                  title: "",
-                  data: { id: null },
-                }
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-
-  /auth/verify/signup/code:
-    post:
-      operationId: verifySignupCode
-      summary: Verify the current user's account with an OTP code
-      tags: [Auth]
-      security: [{ accessToken: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/VerifyCodePayload" }
-      responses:
-        "200":
-          description: Account verified.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
-              example:
-                {
-                  status: 200,
-                  message: "Account verified successfully.",
-                  success: true,
-                  title: "",
-                  data: { id: "b1e6c2a0-1f2d-4a3b-9c5e-7d8f9a0b1c2d" },
-                }
-        "400":
-          description: Already verified, invalid code, or expired code.
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-
   /auth/me:
     get:
       operationId: getAuthUserBasicData
@@ -1096,7 +1042,61 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /users/messages/contacts/phones/{id}/code:
+  /message/signup/code:
+    post:
+      operationId: resendSignupCode
+      summary: Resend the signup verification code to the current user's email
+      tags: [Auth]
+      security: [{ accessToken: [] }]
+      responses:
+        "200":
+          description: Verification code sent.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Verification code sent successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: null },
+                }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /message/verify/signup/code:
+    post:
+      operationId: verifySignupCode
+      summary: Verify the current user's account with an OTP code
+      tags: [Auth]
+      security: [{ accessToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VerifyCodePayload" }
+      responses:
+        "200":
+          description: Account verified.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+              example:
+                {
+                  status: 200,
+                  message: "Account verified successfully.",
+                  success: true,
+                  title: "",
+                  data: { id: "b1e6c2a0-1f2d-4a3b-9c5e-7d8f9a0b1c2d" },
+                }
+        "400":
+          description: Already verified, invalid code, or expired code.
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /message/contacts/phones/{id}/code:
     post:
       operationId: sendContactPhoneVerification
       summary: Send an SMS OTP to verify a phone number (via Twilio)
@@ -1124,7 +1124,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /users/messages/contacts/emails/{id}/code:
+  /message/contacts/emails/{id}/code:
     post:
       operationId: sendContactEmailVerification
       summary: Send an email OTP to verify an email address (via Resend)
@@ -1149,7 +1149,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /users/verify/contacts/phones/{id}:
+  /message/verify/contacts/phones/{id}:
     post:
       operationId: verifyContactPhone
       summary: Verify a phone number with the OTP code
@@ -1185,7 +1185,7 @@ paths:
           description: Phone already verified.
           $ref: "#/components/responses/Conflict"
 
-  /users/verify/contacts/emails/{id}:
+  /message/verify/contacts/emails/{id}:
     post:
       operationId: verifyContactEmail
       summary: Verify an email address with the OTP code

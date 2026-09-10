@@ -2,7 +2,7 @@ import type { ContainerType } from "@/types";
 import { asyncHandler } from "@/utils";
 import { Router } from "express";
 
-export const userRouter = (container: ContainerType) => {
+export const messageRouter = (container: ContainerType) => {
   const router: Router = Router();
 
   const { controllerContainer, middlewareContainer } = container;
@@ -10,7 +10,7 @@ export const userRouter = (container: ContainerType) => {
   const { authMiddleware } = middlewareContainer;
 
   router
-    .route("/messages/signup/code")
+    .route("/signup/code")
     .post(
       authMiddleware,
       asyncHandler(
@@ -19,7 +19,7 @@ export const userRouter = (container: ContainerType) => {
     );
 
   router
-    .route("/messages/verify/signup/code")
+    .route("/verify/signup/code")
     .post(
       authMiddleware,
       asyncHandler(
@@ -28,7 +28,7 @@ export const userRouter = (container: ContainerType) => {
     );
 
   router
-    .route("/messages/contacts/phones/:id/code")
+    .route("/contacts/phones/:id/code")
     .post(
       authMiddleware,
       asyncHandler(
@@ -39,7 +39,7 @@ export const userRouter = (container: ContainerType) => {
     );
 
   router
-    .route("/messages/contacts/emails/:id/code")
+    .route("/contacts/emails/:id/code")
     .post(
       authMiddleware,
       asyncHandler(
@@ -50,7 +50,7 @@ export const userRouter = (container: ContainerType) => {
     );
 
   router
-    .route("/messages/verify/contacts/phones/:id")
+    .route("/verify/contacts/phones/:id")
     .post(
       authMiddleware,
       asyncHandler(
@@ -59,11 +59,13 @@ export const userRouter = (container: ContainerType) => {
     );
 
   router
-    .route("/messages/verify/contacts/emails/:id")
+    .route("/verify/contacts/emails/:id")
     .post(
       authMiddleware,
       asyncHandler(
         messegeController.verifyContactEmailHandler.bind(messegeController)
       )
     );
+
+  return router;
 };

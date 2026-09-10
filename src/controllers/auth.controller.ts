@@ -12,26 +12,15 @@ import type { Request, Response } from "express";
 type AuthControllerDepsType = {
   authService: AuthService;
   tokenService: TokenService;
-  verificationService: VerificationService;
-  emailService: IEmailService;
 };
 
 export class AuthController {
   private authService: AuthService;
   private tokenService: TokenService;
-  private verificationService: VerificationService;
-  private emailService: IEmailService;
 
-  constructor({
-    authService,
-    tokenService,
-    verificationService,
-    emailService,
-  }: AuthControllerDepsType) {
+  constructor({ authService, tokenService }: AuthControllerDepsType) {
     this.authService = authService;
     this.tokenService = tokenService;
-    this.verificationService = verificationService;
-    this.emailService = emailService;
   }
 
   async signupUserHandler(req: Request, res: Response): Promise<Response> {

@@ -19,9 +19,7 @@ export const createControllers = (
 
   const authController = new AuthController({
     authService,
-    emailService,
     tokenService,
-    verificationService,
   });
 
   const userController = new UserController({
