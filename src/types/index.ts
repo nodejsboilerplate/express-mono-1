@@ -1,4 +1,4 @@
-export type * from "./http";
+export type * from "./route";
 export type * from "./redis";
 export type * from "./user";
 export type * from "./global";

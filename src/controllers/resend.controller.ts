@@ -5,12 +5,19 @@ import type { Request, Response } from "express";
 const sanitize = (value: unknown): string =>
   String(value ?? "").replace(/[\r\n]/g, "");
 
-const resendService = new ResendService();
+type ResendControllerDepsType = {
+  resendService: ResendService;
+};
 
 export class ResendController {
+  private resendService: ResendService;
+  constructor({ resendService }: ResendControllerDepsType) {
+    this.resendService = resendService;
+  }
+
   async webhook(req: Request, res: Response) {
-    const headers = resendService.getWebhookHeaders(req);
-    const event = await resendService.verifyWebhookPayload(req, headers);
+    const headers = this.resendService.getWebhookHeaders(req);
+    const event = await this.resendService.verifyWebhookPayload(req, headers);
 
     // Handle each event according to your business logic.
     switch (event.type) {

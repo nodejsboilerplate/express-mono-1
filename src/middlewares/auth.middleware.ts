@@ -1,16 +1,10 @@
-import { UserRepository } from "@/database/repositories";
+import type { createContainer } from "@/container";
+import type { createMiddlewares } from "@/containers";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
-import { AuthRedis } from "@/redis";
-import { AuthService } from "@/services";
 import { CookieService } from "@/services/cookie.service";
 import type { AccessTokenPayload, UserBasicInfoDataType } from "@/types";
-import { finalLoginResponseUserData } from "@/utils";
 import type { NextFunction, Response, Request } from "express";
-
-const authService = new AuthService();
-const authRedis = new AuthRedis();
-const userRepository = new UserRepository();
 
 /**
  * Middleware to enforce authentication and manage token rotation.
@@ -24,114 +18,124 @@ const userRepository = new UserRepository();
  *
  * @throws {ApiError} 401 Unauthorized if both tokens are invalid or user lacks Admin permissions.
  */
-export const authMiddlware = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
+export const createAuthMiddleware = (
+  container: Parameters<typeof createMiddlewares>[0]
 ) => {
-  try {
-    const { accessToken, refreshToken } = authService.getCookies(req);
+  const { redisServices, repositories, services } = container;
 
-    /**
-     * Fast-Path (Access Token)
-     * If a valid Access Token exists, we trust the signed payload to avoid DB/Redis latency.
-     */
-    if (accessToken && refreshToken) {
-      try {
-        const decode_data = authService.getDataFromAccessToken(accessToken);
-        authService.getDataFromRefreshToken(refreshToken);
+  const { tokenService } = services;
+  const { authRedis } = redisServices;
+  const { userRepository } = repositories;
 
-        if (decode_data?.id) {
-          req.auth_user = decode_data;
-          return next();
-        }
-      } catch {
-        // Access token expired or tampered; fall through to Refresh Token logic
-      }
-    }
-
-    /**
-     * Silent Refresh (Refresh Token)
-     * If we reach here, the Access Token is missing or invalid.
-     */
-    if (!refreshToken) {
-      throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
-    }
-
-    let decoded;
+  const authMiddlware = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
-      decoded = authService.getDataFromRefreshToken(refreshToken);
-    } catch (err) {
-      throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
-    }
+      const { accessToken, refreshToken } = tokenService.getCookies(req);
 
-    let temp_user: AccessTokenPayload;
+      /**
+       * Fast-Path (Access Token)
+       * If a valid Access Token exists, we trust the signed payload to avoid DB/Redis latency.
+       */
+      if (accessToken && refreshToken) {
+        try {
+          const decode_data = tokenService.getDataFromAccessToken(accessToken);
+          tokenService.getDataFromRefreshToken(refreshToken);
 
-    // Redis Lookup
-    const get_cached_data = await authRedis.getCachedLoginData(decoded.id);
-    const parse_data = JSON.parse(
-      String(get_cached_data)
-    ) as UserBasicInfoDataType;
-
-    if (!parse_data) {
-      const user =
-        await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
-          decoded.id
-        );
-
-      if (!user?.id) {
-        throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
+          if (decode_data?.id) {
+            req.auth_user = decode_data;
+            return next();
+          }
+        } catch {
+          // Access token expired or tampered; fall through to Refresh Token logic
+        }
       }
 
-      const profile = user?.profile;
+      /**
+       * Silent Refresh (Refresh Token)
+       * If we reach here, the Access Token is missing or invalid.
+       */
+      if (!refreshToken) {
+        throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
+      }
 
-      const { tokenData, profileData } = finalLoginResponseUserData(
-        user,
-        profile!
+      let decoded;
+      try {
+        decoded = tokenService.getDataFromRefreshToken(refreshToken);
+      } catch (err) {
+        throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
+      }
+
+      let temp_user: AccessTokenPayload;
+
+      // Redis Lookup
+      const get_cached_data = await authRedis.getCachedLoginData(decoded.id);
+      const parse_data = JSON.parse(
+        String(get_cached_data)
+      ) as UserBasicInfoDataType;
+
+      if (!parse_data) {
+        const user =
+          await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
+            decoded.id
+          );
+
+        if (!user?.id) {
+          throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
+        }
+
+        const profile = user?.profile;
+
+        const { tokenData, profileData } =
+          tokenService.finalLoginResponseUserData(user, profile!);
+
+        await authRedis.cacheUserLoginData(user?.id as string, {
+          ...tokenData,
+          ...profileData,
+        });
+
+        temp_user = tokenData;
+      } else {
+        temp_user = {
+          id: parse_data.id,
+          username: parse_data.username,
+          email: parse_data.email,
+          role: parse_data.role,
+          is_verified: parse_data.is_verified,
+        };
+      }
+
+      if (!temp_user.id) {
+        throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
+      }
+
+      /**
+       * Token Rotation
+       * Generate a new short-lived Access Token and update the client's cookie.
+       */
+      const renewed_access_token = tokenService.renewAccessToken(temp_user);
+
+      res.cookie(
+        CookieService.ACCESS_TOKEN.name,
+        renewed_access_token,
+        CookieService.ACCESS_TOKEN.cookie
       );
 
-      await authRedis.cacheUserLoginData(user?.id as string, {
-        ...tokenData,
-        ...profileData,
-      });
-
-      temp_user = tokenData;
-    } else {
-      temp_user = {
-        id: parse_data.id,
-        username: parse_data.username,
-        email: parse_data.email,
-        role: parse_data.role,
-        is_verified: parse_data.is_verified,
+      req.auth_user = {
+        id: temp_user.id,
+        email: temp_user.email,
+        role: temp_user.role,
+        is_verified: temp_user.is_verified,
+        username: temp_user.username,
       };
-    }
 
-    if (!temp_user.id) {
+      return next();
+    } catch (error) {
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
     }
+  };
 
-    /**
-     * Token Rotation
-     * Generate a new short-lived Access Token and update the client's cookie.
-     */
-    const renewed_access_token = authService.renewAccessToken(temp_user);
-
-    res.cookie(
-      CookieService.ACCESS_TOKEN.name,
-      renewed_access_token,
-      CookieService.ACCESS_TOKEN.cookie
-    );
-
-    req.auth_user = {
-      id: temp_user.id,
-      email: temp_user.email,
-      role: temp_user.role,
-      is_verified: temp_user.is_verified,
-      username: temp_user.username,
-    };
-
-    return next();
-  } catch (error) {
-    throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED")!);
-  }
+  return authMiddlware;
 };

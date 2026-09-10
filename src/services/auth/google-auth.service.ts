@@ -4,18 +4,29 @@ import type { TokenPayload } from "google-auth-library";
 import { ApiError } from "@/libs";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import type { CreateUserWithProfileByProviderInputType } from "@/zod";
-import { AuthService } from "./auth.service";
-import { UserService } from "./user.service";
+
 import { AuthRedis } from "@/redis";
-import { finalLoginResponseUserData, generateRandomUsername } from "@/utils";
+import { generateRandomUsername } from "@/utils";
+import type { IEmailService, OAuthService } from "@/blueprints";
+import type { TokenService } from "./token.service";
+import type { UserService } from "../user.service";
 
-const userService = new UserService();
-const authRedis = new AuthRedis();
+type GoogleOAuthServiceDepsType = {
+  authRedis: AuthRedis;
+  emailService: IEmailService;
+  userService: UserService;
+  tokenService: TokenService;
+};
 
-export class GoogleService extends AuthService {
+export class GoogleOAuthService implements OAuthService {
   private static CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
   private static CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
   private static REDIRECT_URI = process.env.GOOGLE_AUTH_REDIRECT_URI;
+
+  private authRedis: AuthRedis;
+  private emailService: IEmailService;
+  private userService: UserService;
+  private tokenService: TokenService;
 
   private static LoginScopes = [
     "https://www.googleapis.com/auth/userinfo.profile",
@@ -24,22 +35,31 @@ export class GoogleService extends AuthService {
 
   private oauthClient;
 
-  constructor() {
-    super();
+  constructor({
+    authRedis,
+    emailService,
+    userService,
+    tokenService,
+  }: GoogleOAuthServiceDepsType) {
+    this.authRedis = authRedis;
+    this.emailService = emailService;
+    this.userService = userService;
+    this.tokenService = tokenService;
+
     this.oauthClient = new google.auth.OAuth2({
-      client_id: GoogleService.CLIENT_ID!,
-      client_secret: GoogleService.CLIENT_SECRET!,
-      redirectUri: GoogleService.REDIRECT_URI!,
+      client_id: GoogleOAuthService.CLIENT_ID!,
+      client_secret: GoogleOAuthService.CLIENT_SECRET!,
+      redirectUri: GoogleOAuthService.REDIRECT_URI!,
     });
   }
 
   generateAuthUrlForLogin() {
     return this.oauthClient.generateAuthUrl({
       access_type: "offline",
-      scope: GoogleService.LoginScopes!,
+      scope: GoogleOAuthService.LoginScopes!,
       include_granted_scopes: true,
       prompt: "consent",
-      redirect_uri: GoogleService.REDIRECT_URI!,
+      redirect_uri: GoogleOAuthService.REDIRECT_URI!,
     });
   }
 
@@ -60,7 +80,7 @@ export class GoogleService extends AuthService {
     return data.getPayload();
   }
 
-  async login(code: string, deviceInfo: string) {
+  async loginOrSignup(code: string, deviceInfo: string) {
     if (!code)
       throw new ApiError(401, getSystemCustomErrorMsgByKey("UNAUTHORIZED"));
 
@@ -89,21 +109,19 @@ export class GoogleService extends AuthService {
     };
 
     const { profile, ...user } =
-      await userService.createUserWithProfileByProvider(payload);
+      await this.userService.createUserWithProfileByProvider(payload);
 
-    const { tokenData, profileData } = finalLoginResponseUserData(
-      user,
-      profile!
-    );
+    const { tokenData, profileData } =
+      this.tokenService.finalLoginResponseUserData(user, profile!);
 
-    const tokens = this.createTokens(tokenData);
-    await authRedis.cacheUserLoginData(user?.id as string, {
+    const tokens = this.tokenService.createTokens(tokenData);
+    await this.authRedis.cacheUserLoginData(user?.id as string, {
       ...tokenData,
       ...profileData,
     });
 
     if (!payload.user.is_verified) {
-      await this.sendSignupVerificationEmail(user.email, deviceInfo);
+      await this.emailService.sendSignupCode(user.email, deviceInfo);
     }
 
     return {

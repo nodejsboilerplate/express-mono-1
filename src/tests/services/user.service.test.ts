@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { UserService } from "@/services/user.service";
+import { UserInputValidators } from "@/validators/inputs";
+import { UserRepository } from "@/database/repositories";
 
 // ---------------------------------------------------------
 // Hoisted shared mock fns
@@ -160,7 +162,12 @@ describe("UserService", () => {
     vi.clearAllMocks();
     mocks.isZodError.mockReturnValue(false);
     mocks.generateVerificationCode.mockReturnValue("123456");
-    userService = new UserService();
+    const userInputValidators = new UserInputValidators();
+    const userRepository = new UserRepository();
+    userService = new UserService({
+      userInputValidators,
+      userRepository,
+    });
   });
 
   // -------------------------------------------------------
@@ -251,153 +258,6 @@ describe("UserService", () => {
     it("createUserEmail returns the new email id", async () => {
       mocks.createNewEmail.mockResolvedValueOnce({ id: "em1" });
       const result = await userService.createUserEmail({} as any);
-      expect(result).toBe("em1");
-    });
-  });
-
-  // -------------------------------------------------------
-  describe("sendContactPhoneVerificationEmail", () => {
-    const payload = { id: "ph1", user_id: "u1" };
-
-    it("throws 404 when phone not found", async () => {
-      mocks.setPhoneVerifyCode.mockResolvedValueOnce(undefined);
-      await expect(
-        userService.sendContactPhoneVerificationEmail(payload as any)
-      ).rejects.toThrow("PHONE_NOT_FOUND");
-    });
-
-    it("sends the SMS verification code on success", async () => {
-      mocks.setPhoneVerifyCode.mockResolvedValueOnce({
-        phone: "5551234",
-        phone_code: "+1",
-      });
-
-      await userService.sendContactPhoneVerificationEmail(payload as any);
-
-      expect(mocks.sendContactPhoneVerification).toHaveBeenCalledWith(
-        "+15551234",
-        expect.any(String)
-      );
-    });
-  });
-
-  describe("sendContactEmailVerificationEmail", () => {
-    const payload = { id: "em1", user_id: "u1" };
-
-    it("throws 404 when email not found", async () => {
-      mocks.setEmailVerifyCode.mockResolvedValueOnce(undefined);
-      await expect(
-        userService.sendContactEmailVerificationEmail(payload as any, "device")
-      ).rejects.toThrow("EMAIL_NOT_FOUND");
-    });
-
-    it("sends the email verification code on success", async () => {
-      mocks.setEmailVerifyCode.mockResolvedValueOnce({
-        email: "a@b.com",
-        id: "em1",
-      });
-      await userService.sendContactEmailVerificationEmail(
-        payload as any,
-        "device-x"
-      );
-      expect(mocks.sendContactEmailVerificationCode).toHaveBeenCalledWith(
-        "a@b.com",
-        expect.any(String),
-        "device-x"
-      );
-    });
-  });
-
-  // -------------------------------------------------------
-  describe("verifyContactPhone", () => {
-    const payload = { id: "ph1", user_id: "u1", verify_code: "123456" };
-
-    it("throws 404 when phone not found", async () => {
-      mocks.getContactPhoneVerifyDetails.mockResolvedValueOnce(undefined);
-      await expect(
-        userService.verifyContactPhone(payload as any)
-      ).rejects.toThrow("PHONE_NOT_FOUND");
-    });
-
-    it("throws 409 when already verified", async () => {
-      mocks.getContactPhoneVerifyDetails.mockResolvedValueOnce({
-        is_verified: true,
-      });
-      await expect(
-        userService.verifyContactPhone(payload as any)
-      ).rejects.toThrow("PHONE_ALREADY_VERIFIED");
-    });
-
-    it("throws 400 on invalid code", async () => {
-      mocks.getContactPhoneVerifyDetails.mockResolvedValueOnce({
-        is_verified: false,
-        verify_code: "000000",
-        verify_expiry: new Date(Date.now() + 60_000),
-      });
-      await expect(
-        userService.verifyContactPhone(payload as any)
-      ).rejects.toThrow("INVALID_VERIFICATION_CODE");
-    });
-
-    it("throws 400 on expired code", async () => {
-      mocks.getContactPhoneVerifyDetails.mockResolvedValueOnce({
-        is_verified: false,
-        verify_code: "123456",
-        verify_expiry: new Date(Date.now() - 60_000),
-      });
-      await expect(
-        userService.verifyContactPhone(payload as any)
-      ).rejects.toThrow("VERIFICATION_CODE_EXPIRED");
-    });
-
-    it("verifies successfully and returns the updated phone id", async () => {
-      mocks.getContactPhoneVerifyDetails.mockResolvedValueOnce({
-        is_verified: false,
-        verify_code: "123456",
-        verify_expiry: new Date(Date.now() + 60_000),
-      });
-      mocks.updateContactPhone.mockResolvedValueOnce({ id: "ph1" });
-
-      const result = await userService.verifyContactPhone(payload as any);
-      expect(result).toBe("ph1");
-      expect(mocks.updateContactPhone).toHaveBeenCalledWith(
-        expect.objectContaining({
-          is_verified: true,
-          verify_code: null,
-          verify_expiry: null,
-        })
-      );
-    });
-  });
-
-  describe("verifyContactEmail", () => {
-    const payload = { id: "em1", user_id: "u1", verify_code: "123456" };
-
-    it("throws 404 when email not found", async () => {
-      mocks.getContactEmailVerifyDetails.mockResolvedValueOnce(undefined);
-      await expect(
-        userService.verifyContactEmail(payload as any)
-      ).rejects.toThrow("EMAIL_NOT_FOUND");
-    });
-
-    it("throws 409 when already verified", async () => {
-      mocks.getContactEmailVerifyDetails.mockResolvedValueOnce({
-        is_verified: true,
-      });
-      await expect(
-        userService.verifyContactEmail(payload as any)
-      ).rejects.toThrow("EMAIL_ALREADY_VERIFIED");
-    });
-
-    it("verifies successfully and returns the updated email id", async () => {
-      mocks.getContactEmailVerifyDetails.mockResolvedValueOnce({
-        is_verified: false,
-        verify_code: "123456",
-        verify_expiry: new Date(Date.now() + 60_000),
-      });
-      mocks.updateContactEmail.mockResolvedValueOnce({ id: "em1" });
-
-      const result = await userService.verifyContactEmail(payload as any);
       expect(result).toBe("em1");
     });
   });

@@ -1,14 +1,18 @@
 import { Router } from "express";
-import { ResendController } from "@/controllers/resend.controller";
 import { asyncHandler } from "@/utils";
+import type { ContainerType } from "@/types";
 
-const router: Router = Router();
-const resendController = new ResendController();
+export const resendRouter = (container: ContainerType) => {
+  const router: Router = Router();
 
-// Configure the webhook in your Resend dashboard:
-// https://resend.com/webhooks
-router
-  .route("/webhook")
-  .post(asyncHandler(resendController.webhook.bind(resendController)));
+  const { controllerContainer } = container;
+  const { resendController } = controllerContainer;
 
-export default router;
+  // Configure the webhook in your Resend dashboard:
+  // https://resend.com/webhooks
+  router
+    .route("/webhook")
+    .post(asyncHandler(resendController.webhook.bind(resendController)));
+
+  return router;
+};

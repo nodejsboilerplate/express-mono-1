@@ -1,20 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GoogleService } from "@/services/google.service";
+import { GoogleOAuthService } from "@/services/auth/google-auth.service";
 
 // ---------------------------------------------------------
-// Hoisted shared mock fns
+// Hoisted shared mock fns for the googleapis OAuth2 client, since
+// GoogleOAuthService constructs its own `new google.auth.OAuth2(...)`
+// internally (not injected).
 // ---------------------------------------------------------
 const mocks = vi.hoisted(() => ({
   generateAuthUrl: vi.fn(),
   getToken: vi.fn(),
   verifyIdToken: vi.fn(),
-  createUserWithProfileByProvider: vi.fn(),
-  cacheUserLoginData: vi.fn(),
-  finalLoginResponseUserData: vi.fn(),
   generateRandomUsername: vi.fn(),
-  createTokens: vi.fn(),
-  sendSignupVerificationEmail: vi.fn(),
-  getCookies: vi.fn(),
 }));
 
 vi.mock("googleapis", () => ({
@@ -45,44 +41,38 @@ vi.mock("@/libs", () => ({
 }));
 
 vi.mock("@/utils", () => ({
-  finalLoginResponseUserData: mocks.finalLoginResponseUserData,
   generateRandomUsername: mocks.generateRandomUsername,
 }));
 
-vi.mock("@/redis", () => ({
-  AuthRedis: class {
-    cacheUserLoginData = mocks.cacheUserLoginData;
+// ---------------------------------------------------------
+// GoogleOAuthService takes { authRedis, emailService, userService,
+// tokenService } via constructor injection — all plain mock objects,
+// no vi.mock() needed for any of them.
+// ---------------------------------------------------------
+const buildDeps = () => ({
+  authRedis: {
+    cacheUserLoginData: vi.fn(),
   },
-}));
-
-vi.mock("@/services/user.service", () => ({
-  UserService: class {
-    createUserWithProfileByProvider = mocks.createUserWithProfileByProvider;
+  emailService: {
+    sendSignupCode: vi.fn(),
   },
-}));
-
-// GoogleService extends AuthService — mock the base class so login() only
-// exercises GoogleService's own logic, not AuthService internals.
-vi.mock("@/services/auth.service", () => ({
-  AuthService: class {
-    getCookies = mocks.getCookies;
-    createTokens = mocks.createTokens;
-    sendSignupVerificationEmail = mocks.sendSignupVerificationEmail;
+  userService: {
+    createUserWithProfileByProvider: vi.fn(),
   },
-}));
+  tokenService: {
+    finalLoginResponseUserData: vi.fn(),
+    createTokens: vi.fn(),
+  },
+});
 
-const ApiErrorLike = (status: number, message: string) => {
-  const e: any = new Error(message);
-  e.status = status;
-  return e;
-};
-
-describe("GoogleService", () => {
-  let googleService: GoogleService;
+describe("GoogleOAuthService", () => {
+  let deps: ReturnType<typeof buildDeps>;
+  let googleOAuthService: GoogleOAuthService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    googleService = new GoogleService();
+    deps = buildDeps();
+    googleOAuthService = new GoogleOAuthService(deps as any);
   });
 
   // -------------------------------------------------------
@@ -92,7 +82,7 @@ describe("GoogleService", () => {
         "https://accounts.google.com/consent"
       );
 
-      const url = googleService.generateAuthUrlForLogin();
+      const url = googleOAuthService.generateAuthUrlForLogin();
 
       expect(mocks.generateAuthUrl).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -113,7 +103,8 @@ describe("GoogleService", () => {
     it("exchanges an auth code for an id token", async () => {
       mocks.getToken.mockResolvedValueOnce({ tokens: { id_token: "id.jwt" } });
 
-      const result = await googleService.getIdTokensByAuthCode("auth-code");
+      const result =
+        await googleOAuthService.getIdTokensByAuthCode("auth-code");
 
       expect(mocks.getToken).toHaveBeenCalledWith("auth-code");
       expect(result).toEqual({ idToken: "id.jwt" });
@@ -126,7 +117,7 @@ describe("GoogleService", () => {
       const payload = { email: "a@b.com", name: "A B", picture: "pic.png" };
       mocks.verifyIdToken.mockResolvedValueOnce({ getPayload: () => payload });
 
-      const result = await googleService.getUserProfileByIdToken("id.jwt");
+      const result = await googleOAuthService.getUserProfileByIdToken("id.jwt");
 
       expect(mocks.verifyIdToken).toHaveBeenCalledWith({ idToken: "id.jwt" });
       expect(result).toEqual(payload);
@@ -134,18 +125,18 @@ describe("GoogleService", () => {
   });
 
   // -------------------------------------------------------
-  describe("login", () => {
+  describe("loginOrSignup", () => {
     it("throws 401 when no code is provided", async () => {
-      await expect(googleService.login("", "device")).rejects.toThrow(
-        "UNAUTHORIZED"
-      );
+      await expect(
+        googleOAuthService.loginOrSignup("", "device")
+      ).rejects.toThrow("UNAUTHORIZED");
     });
 
     it("throws 503 when no id token is returned from Google", async () => {
       mocks.getToken.mockResolvedValueOnce({ tokens: {} });
-      await expect(googleService.login("code", "device")).rejects.toThrow(
-        "SERVICE_UNAVAILABLE"
-      );
+      await expect(
+        googleOAuthService.loginOrSignup("code", "device")
+      ).rejects.toThrow("SERVICE_UNAVAILABLE");
     });
 
     it("creates/links the user, caches login data, and returns tokens for a verified Google account", async () => {
@@ -159,23 +150,25 @@ describe("GoogleService", () => {
         }),
       });
       mocks.generateRandomUsername.mockReturnValueOnce("random_user_1");
-      mocks.createUserWithProfileByProvider.mockResolvedValueOnce({
+      deps.userService.createUserWithProfileByProvider.mockResolvedValueOnce({
         id: "u1",
         email: "a@b.com",
         profile: { id: "p1", first_name: "A B" },
       });
-      mocks.finalLoginResponseUserData.mockReturnValueOnce({
+      deps.tokenService.finalLoginResponseUserData.mockReturnValueOnce({
         tokenData: { id: "u1" },
         profileData: { first_name: "A B" },
       });
-      mocks.createTokens.mockReturnValueOnce({
+      deps.tokenService.createTokens.mockReturnValueOnce({
         accessToken: "access.jwt",
         refreshToken: "refresh.jwt",
       });
 
-      const result = await googleService.login("code", "device-x");
+      const result = await googleOAuthService.loginOrSignup("code", "device-x");
 
-      expect(mocks.createUserWithProfileByProvider).toHaveBeenCalledWith(
+      expect(
+        deps.userService.createUserWithProfileByProvider
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           user: expect.objectContaining({
             email: "a@b.com",
@@ -189,11 +182,15 @@ describe("GoogleService", () => {
           }),
         })
       );
-      expect(mocks.cacheUserLoginData).toHaveBeenCalledWith(
+      expect(deps.tokenService.finalLoginResponseUserData).toHaveBeenCalledWith(
+        { id: "u1", email: "a@b.com" },
+        { id: "p1", first_name: "A B" }
+      );
+      expect(deps.authRedis.cacheUserLoginData).toHaveBeenCalledWith(
         "u1",
         expect.objectContaining({ id: "u1", first_name: "A B" })
       );
-      expect(mocks.sendSignupVerificationEmail).not.toHaveBeenCalled();
+      expect(deps.emailService.sendSignupCode).not.toHaveBeenCalled();
       expect(result).toEqual({
         tokens: { accessToken: "access.jwt", refreshToken: "refresh.jwt" },
         user_id: "u1",
@@ -211,26 +208,59 @@ describe("GoogleService", () => {
         }),
       });
       mocks.generateRandomUsername.mockReturnValueOnce("random_user_2");
-      mocks.createUserWithProfileByProvider.mockResolvedValueOnce({
+      deps.userService.createUserWithProfileByProvider.mockResolvedValueOnce({
         id: "u2",
         email: "unverified@b.com",
         profile: { id: "p2" },
       });
-      mocks.finalLoginResponseUserData.mockReturnValueOnce({
+      deps.tokenService.finalLoginResponseUserData.mockReturnValueOnce({
         tokenData: { id: "u2" },
         profileData: {},
       });
-      mocks.createTokens.mockReturnValueOnce({
+      deps.tokenService.createTokens.mockReturnValueOnce({
         accessToken: "access2.jwt",
         refreshToken: "refresh2.jwt",
       });
 
-      await googleService.login("code", "device-x");
+      await googleOAuthService.loginOrSignup("code", "device-x");
 
-      expect(mocks.sendSignupVerificationEmail).toHaveBeenCalledWith(
+      expect(deps.emailService.sendSignupCode).toHaveBeenCalledWith(
         "unverified@b.com",
         "device-x"
       );
+    });
+
+    it("returns the existing account's tokens without re-sending a signup email when the user already exists", async () => {
+      mocks.getToken.mockResolvedValueOnce({ tokens: { id_token: "id.jwt" } });
+      mocks.verifyIdToken.mockResolvedValueOnce({
+        getPayload: () => ({
+          email: "existing@b.com",
+          email_verified: true,
+          name: "Existing User",
+          picture: "pic.png",
+        }),
+      });
+      // userService.createUserWithProfileByProvider returns the pre-existing
+      // (already verified) user instead of creating a new one.
+      deps.userService.createUserWithProfileByProvider.mockResolvedValueOnce({
+        id: "u3",
+        email: "existing@b.com",
+        is_verified: true,
+        profile: { id: "p3", first_name: "Existing User" },
+      });
+      deps.tokenService.finalLoginResponseUserData.mockReturnValueOnce({
+        tokenData: { id: "u3" },
+        profileData: { first_name: "Existing User" },
+      });
+      deps.tokenService.createTokens.mockReturnValueOnce({
+        accessToken: "access3.jwt",
+        refreshToken: "refresh3.jwt",
+      });
+
+      const result = await googleOAuthService.loginOrSignup("code", "device-x");
+
+      expect(deps.emailService.sendSignupCode).not.toHaveBeenCalled();
+      expect(result.user_id).toBe("u3");
     });
   });
 });

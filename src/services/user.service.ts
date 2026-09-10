@@ -1,12 +1,7 @@
 import { UserRepository } from "@/database/repositories";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError } from "@/libs";
-import {
-  generateVerificationCode,
-  getVerifyExpiry,
-  isZodError,
-  validationError,
-} from "@/utils";
+import { isZodError, validationError } from "@/utils";
 import { UserInputValidators } from "@/validators/inputs";
 import type {
   CreateUserAddressInputType,
@@ -24,25 +19,30 @@ import type {
   UserIdWithContextIdInputType,
   VerifyCodeWithUserIdInput,
 } from "@/zod";
-import { PhoneMessagingService } from "./phone.message.service";
-import { EmailService } from "./email.service";
 
-const userRepository = new UserRepository();
-const userInputValidators = new UserInputValidators();
-const phoneService = new PhoneMessagingService();
-const emailService = new EmailService();
+type UserServiceDepsType = {
+  userInputValidators: UserInputValidators;
+  userRepository: UserRepository;
+};
 
 export class UserService {
+  private userInputValidators: UserInputValidators;
+  private userRepository: UserRepository;
+
+  constructor({ userInputValidators, userRepository }: UserServiceDepsType) {
+    this.userInputValidators = userInputValidators;
+    this.userRepository = userRepository;
+  }
   // ---------------------------------------------------------
   // Create
   // ---------------------------------------------------------
   async createUserWithProfile(payload: CreateUserWithProfileInputType) {
     const parse_payload =
-      userInputValidators.createUserWithProfileInput(payload);
+      this.userInputValidators.createUserWithProfileInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
-    const existedUser = await userRepository.GetUserIdByEmail(
+    const existedUser = await this.userRepository.GetUserIdByEmail(
       parse_payload.user.email
     );
     if (existedUser?.id) {
@@ -52,7 +52,8 @@ export class UserService {
       );
     }
 
-    const result = await userRepository.CreateNewUserAndProfile(parse_payload);
+    const result =
+      await this.userRepository.CreateNewUserAndProfile(parse_payload);
     return result;
   }
 
@@ -60,12 +61,12 @@ export class UserService {
     payload: CreateUserWithProfileByProviderInputType
   ) {
     const parse_payload =
-      userInputValidators.createUserWithProfileByProviderInput(payload);
+      this.userInputValidators.createUserWithProfileByProviderInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
     const existedUser =
-      await userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
+      await this.userRepository.GetUserDataForLoginByEmailOrUsernameOrId(
         parse_payload.user.email
       );
 
@@ -74,19 +75,22 @@ export class UserService {
     }
 
     const result =
-      await userRepository.CreateNewUserAndProfileByProvider(parse_payload);
+      await this.userRepository.CreateNewUserAndProfileByProvider(
+        parse_payload
+      );
     return result;
   }
 
   async createUserAddress(
     payload: CreateUserAddressInputType
   ): Promise<string> {
-    const parse_payload = userInputValidators.createUserAddressInput(payload);
+    const parse_payload =
+      this.userInputValidators.createUserAddressInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
     const createdUserAddress =
-      await userRepository.CreateNewAddress(parse_payload);
+      await this.userRepository.CreateNewAddress(parse_payload);
 
     if (!createdUserAddress?.id) {
       throw new ApiError(
@@ -101,12 +105,13 @@ export class UserService {
   async createUserContact(
     payload: CreateUserContactInputType
   ): Promise<string> {
-    const parse_payload = userInputValidators.createUserContactInput(payload);
+    const parse_payload =
+      this.userInputValidators.createUserContactInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
     const createdUserContact =
-      await userRepository.CreateNewContact(parse_payload);
+      await this.userRepository.CreateNewContact(parse_payload);
 
     if (!createdUserContact?.id) {
       throw new ApiError(
@@ -119,11 +124,13 @@ export class UserService {
   }
 
   async createUserPhone(payload: CreateUserPhoneInputType): Promise<string> {
-    const parse_payload = userInputValidators.createUserPhoneInput(payload);
+    const parse_payload =
+      this.userInputValidators.createUserPhoneInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
-    const createdUserPhone = await userRepository.CreateNewPhone(parse_payload);
+    const createdUserPhone =
+      await this.userRepository.CreateNewPhone(parse_payload);
 
     if (!createdUserPhone?.id) {
       throw new ApiError(
@@ -136,11 +143,13 @@ export class UserService {
   }
 
   async createUserEmail(payload: CreateUserEmailInputType): Promise<string> {
-    const parse_payload = userInputValidators.createUserEmailInput(payload);
+    const parse_payload =
+      this.userInputValidators.createUserEmailInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
-    const createdUserEmail = await userRepository.CreateNewEmail(parse_payload);
+    const createdUserEmail =
+      await this.userRepository.CreateNewEmail(parse_payload);
     if (!createdUserEmail?.id) {
       throw new ApiError(
         500,
@@ -150,188 +159,15 @@ export class UserService {
 
     return createdUserEmail.id;
   }
-
   // ---------------------------------------------------------
-  // Verifications
+  // Read
   // ---------------------------------------------------------
-
-  async sendContactPhoneVerificationEmail(
-    payload: UserIdWithContextIdInputType
-  ) {
-    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const verify_code = generateVerificationCode();
-    const verify_expiry = getVerifyExpiry();
-
-    // Here you throw error based on `.is_verified` instead of returning not found error
-    // As `SetPhoneVerifyCode` is working with only if `.is_verified` is false
-    // So if `.is_verified` is true it will throw not found error
-    // You can throw phone already verified error by using `GetContactPhoneVerifyDetails` repository
-
-    const result = await userRepository.SetPhoneVerifyCode(
-      verify_code,
-      verify_expiry,
-      parse_payload.id,
-      parse_payload.user_id
-    );
-
-    if (!result?.phone) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
-    }
-
-    const phone = result.phone_code + result.phone;
-
-    await phoneService.sendContactPhoneVerification(phone, verify_code);
-  }
-
-  async sendContactEmailVerificationEmail(
-    payload: UserIdWithContextIdInputType,
-    deviceInfo: string
-  ) {
-    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const verify_code = generateVerificationCode();
-    const verify_expiry = getVerifyExpiry();
-
-    const result = await userRepository.SetEmailVerifyCode(
-      verify_code,
-      verify_expiry,
-      parse_payload.id,
-      parse_payload.user_id
-    );
-
-    if (!result?.email) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
-    }
-
-    await emailService.sendContactEmailVerificationCode(
-      result.email,
-      verify_code,
-      deviceInfo
-    );
-  }
-
-  async verifyContactPhone(
-    payload: VerifyCodeWithUserIdInput
-  ): Promise<string> {
-    const parse_payload = userInputValidators.verifyCodeWithUserId(payload);
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const user_phone = await userRepository.GetContactPhoneVerifyDetails(
-      parse_payload.id
-    );
-
-    if (!user_phone) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
-    }
-
-    if (user_phone.is_verified) {
-      throw new ApiError(
-        409,
-        getSystemCustomErrorMsgByKey("PHONE_ALREADY_VERIFIED")
-      );
-    }
-
-    if (
-      !user_phone.verify_code ||
-      user_phone.verify_code !== parse_payload.verify_code
-    ) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("INVALID_VERIFICATION_CODE")
-      );
-    }
-
-    if (
-      !user_phone.verify_expiry ||
-      user_phone.verify_expiry.getTime() < Date.now()
-    ) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("VERIFICATION_CODE_EXPIRED")
-      );
-    }
-
-    const result = await this.updateUserPhone({
-      ...parse_payload,
-      is_verified: true,
-      verify_code: null,
-      verify_expiry: null,
-    });
-
-    if (!result) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
-    }
-
-    return result;
-  }
-
-  async verifyContactEmail(
-    payload: VerifyCodeWithUserIdInput
-  ): Promise<string> {
-    const parse_payload = userInputValidators.verifyCodeWithUserId(payload);
-
-    if (isZodError(parse_payload)) throw validationError(parse_payload);
-
-    const user_email = await userRepository.GetContactEmailVerifyDetails(
-      parse_payload.id
-    );
-
-    if (!user_email) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
-    }
-
-    if (user_email.is_verified) {
-      throw new ApiError(
-        409,
-        getSystemCustomErrorMsgByKey("EMAIL_ALREADY_VERIFIED")
-      );
-    }
-
-    if (
-      !user_email.verify_code ||
-      user_email.verify_code !== parse_payload.verify_code
-    ) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("INVALID_VERIFICATION_CODE")
-      );
-    }
-
-    if (
-      !user_email.verify_expiry ||
-      user_email.verify_expiry.getTime() < Date.now()
-    ) {
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("VERIFICATION_CODE_EXPIRED")
-      );
-    }
-
-    const result = await this.updateUserEmail({
-      ...parse_payload,
-      is_verified: true,
-      verify_code: null,
-      verify_expiry: null,
-    });
-
-    if (!result) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
-    }
-
-    return result;
-  }
-
   async getUserProfile(id: string) {
-    const parse_id = userInputValidators.idInput(id);
+    const parse_id = this.userInputValidators.idInput(id);
 
     if (isZodError(parse_id)) throw validationError(parse_id);
 
-    const result = await userRepository.GetAuthUserProfileById(parse_id);
+    const result = await this.userRepository.GetAuthUserProfileById(parse_id);
 
     if (!result) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
@@ -344,12 +180,13 @@ export class UserService {
   // ---------------------------------------------------------
 
   async updateUserProfile(payload: UpdateProfileInputType): Promise<string> {
-    const parse_payload = userInputValidators.updateUserProfileInput(payload);
+    const parse_payload =
+      this.userInputValidators.updateUserProfileInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
     const updatedProfile =
-      await userRepository.UpdateUserProfile(parse_payload);
+      await this.userRepository.UpdateUserProfile(parse_payload);
 
     if (!updatedProfile?.id) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
@@ -359,10 +196,12 @@ export class UserService {
   }
 
   async updateUserContact(payload: UpdateContactInputType): Promise<string> {
-    const parse_payload = userInputValidators.updateUserContactInput(payload);
+    const parse_payload =
+      this.userInputValidators.updateUserContactInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
-    const updatedContact = await userRepository.UpdateContact(parse_payload);
+    const updatedContact =
+      await this.userRepository.UpdateContact(parse_payload);
 
     if (!updatedContact?.id) {
       throw new ApiError(
@@ -375,10 +214,12 @@ export class UserService {
   }
 
   async updateUserPhone(payload: UpdatePhoneInputType): Promise<string> {
-    const parse_payload = userInputValidators.updateUserPhoneInput(payload);
+    const parse_payload =
+      this.userInputValidators.updateUserPhoneInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
-    const updatedPhone = await userRepository.UpdateContactPhone(parse_payload);
+    const updatedPhone =
+      await this.userRepository.UpdateContactPhone(parse_payload);
 
     if (!updatedPhone?.id) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
@@ -388,10 +229,12 @@ export class UserService {
   }
 
   async updateUserEmail(payload: UpdateEmailInputType): Promise<string> {
-    const parse_payload = userInputValidators.updateUserEmailInput(payload);
+    const parse_payload =
+      this.userInputValidators.updateUserEmailInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
-    const updatedEmail = await userRepository.UpdateContactEmail(parse_payload);
+    const updatedEmail =
+      await this.userRepository.UpdateContactEmail(parse_payload);
 
     if (!updatedEmail?.id) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("EMAIL_NOT_FOUND"));
@@ -401,10 +244,12 @@ export class UserService {
   }
 
   async updateUserAddress(payload: UpdateAddressInputType): Promise<string> {
-    const parse_payload = userInputValidators.updateUserAddressInput(payload);
+    const parse_payload =
+      this.userInputValidators.updateUserAddressInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
-    const updatedAddress = await userRepository.UpdateAddress(parse_payload);
+    const updatedAddress =
+      await this.userRepository.UpdateAddress(parse_payload);
 
     if (!updatedAddress?.id) {
       throw new ApiError(
@@ -421,11 +266,11 @@ export class UserService {
   // ---------------------------------------------------------
 
   async deleteUser(payload: IdZType): Promise<string> {
-    const parse_id = userInputValidators.idInput(payload);
+    const parse_id = this.userInputValidators.idInput(payload);
 
     if (isZodError(parse_id)) throw validationError(parse_id);
 
-    const deletedUser = await userRepository.DeleteUserById(parse_id);
+    const deletedUser = await this.userRepository.DeleteUserById(parse_id);
 
     if (!deletedUser?.id) {
       throw new ApiError(404, getSystemCustomErrorMsgByKey("USER_NOT_FOUND"));
@@ -437,12 +282,13 @@ export class UserService {
   async deleteUserContact(
     payload: UserIdWithContextIdInputType
   ): Promise<string> {
-    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
+    const parse_payload =
+      this.userInputValidators.userIdWithContextIdInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
     const { id, user_id } = parse_payload;
 
-    const deletedContact = await userRepository.DeleteSingleContact(
+    const deletedContact = await this.userRepository.DeleteSingleContact(
       id,
       user_id
     );
@@ -460,12 +306,13 @@ export class UserService {
   async deleteUserPhone(
     payload: UserIdWithContextIdInputType
   ): Promise<string> {
-    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
+    const parse_payload =
+      this.userInputValidators.userIdWithContextIdInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
     const { id, user_id } = parse_payload;
 
-    const deletedPhone = await userRepository.DeleteSingleContactPhone(
+    const deletedPhone = await this.userRepository.DeleteSingleContactPhone(
       id,
       user_id
     );
@@ -480,11 +327,12 @@ export class UserService {
   async deleteUserEmail(
     payload: UserIdWithContextIdInputType
   ): Promise<string> {
-    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
+    const parse_payload =
+      this.userInputValidators.userIdWithContextIdInput(payload);
     if (isZodError(parse_payload)) throw validationError(parse_payload);
 
     const { id, user_id } = parse_payload;
-    const deletedEmail = await userRepository.DeleteSingleContactEmail(
+    const deletedEmail = await this.userRepository.DeleteSingleContactEmail(
       id,
       user_id
     );
@@ -499,12 +347,13 @@ export class UserService {
   async deleteUserAddress(
     payload: UserIdWithContextIdInputType
   ): Promise<string> {
-    const parse_payload = userInputValidators.userIdWithContextIdInput(payload);
+    const parse_payload =
+      this.userInputValidators.userIdWithContextIdInput(payload);
 
     if (isZodError(parse_payload)) throw validationError(parse_payload);
     const { id, user_id } = parse_payload;
 
-    const deletedAddress = await userRepository.DeleteSingleAddress(
+    const deletedAddress = await this.userRepository.DeleteSingleAddress(
       id,
       user_id
     );

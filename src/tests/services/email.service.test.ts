@@ -7,8 +7,15 @@ import { EmailService } from "@/services/email.service";
 const mocks = vi.hoisted(() => ({
   send: vi.fn(),
   otpVerificationEmail2: vi.fn((props: unknown) => ({ __reactMarkup: props })),
+  isZodError: vi.fn(),
+  validationError: vi.fn(),
+  generateVerificationCode: vi.fn(),
+  getVerifyExpiry: vi.fn(),
 }));
 
+// EmailService extends ResendService and constructs it internally (super()),
+// so ResendService is mocked via its real alias (not a relative path — this
+// test file doesn't live next to email.service.ts).
 vi.mock("@/services/resend.service", () => ({
   ResendService: class {
     static resend = { emails: { send: mocks.send } };
@@ -28,19 +35,133 @@ vi.mock("@repo/emails", () => ({
   OtpVerificationEmail2: mocks.otpVerificationEmail2,
 }));
 
+vi.mock("@/utils", () => ({
+  isZodError: mocks.isZodError,
+  validationError: mocks.validationError,
+  generateVerificationCode: mocks.generateVerificationCode,
+  getVerifyExpiry: mocks.getVerifyExpiry,
+}));
+
+vi.mock("@/events", () => ({
+  getSystemCustomErrorMsgByKey: (key: string) => key,
+}));
+
+vi.mock("@/libs", () => ({
+  ApiError: class ApiError extends Error {
+    status: number;
+    constructor(status: number, message: string) {
+      super(message);
+      this.status = status;
+    }
+  },
+}));
+
+const ApiErrorLike = (status: number, message: string) => {
+  const e: any = new Error(message);
+  e.status = status;
+  return e;
+};
+
+// ---------------------------------------------------------
+// EmailService takes { userInputValidators, userRepository } via
+// constructor injection — plain mock objects, no vi.mock() needed for
+// either.
+// ---------------------------------------------------------
+const buildDeps = () => ({
+  userInputValidators: {
+    emailInput: vi.fn((p: unknown) => p),
+    userIdWithContextIdInput: vi.fn((p: unknown) => p),
+  },
+  userRepository: {
+    GetUserDataForLoginByEmailOrUsernameOrId: vi.fn(),
+    SetVerifyCodeForCoreUser: vi.fn(),
+    SetEmailVerifyCode: vi.fn(),
+  },
+});
+
 describe("EmailService", () => {
+  let deps: ReturnType<typeof buildDeps>;
   let emailService: EmailService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    emailService = new EmailService();
+    mocks.isZodError.mockReturnValue(false);
+    mocks.generateVerificationCode.mockReturnValue("123456");
+    mocks.getVerifyExpiry.mockReturnValue(new Date(Date.now() + 5 * 60_000));
+    deps = buildDeps();
+    emailService = new EmailService(deps as any);
   });
 
   // -------------------------------------------------------
   describe("sendSignupCode", () => {
-    it("sends a signup verification email from the auth address", async () => {
-      await emailService.sendSignupCode("a@b.com", "123456", "Chrome on macOS");
+    it("throws validation error for an invalid email", async () => {
+      mocks.isZodError.mockReturnValueOnce(true);
+      mocks.validationError.mockReturnValueOnce(
+        ApiErrorLike(400, "INVALID_EMAIL")
+      );
+      await expect(
+        emailService.sendSignupCode("bad-email", "device")
+      ).rejects.toThrow("INVALID_EMAIL");
+      expect(mocks.send).not.toHaveBeenCalled();
+    });
 
+    it("throws 404 when no matching user exists", async () => {
+      deps.userRepository.GetUserDataForLoginByEmailOrUsernameOrId.mockResolvedValueOnce(
+        undefined
+      );
+      await expect(
+        emailService.sendSignupCode("a@b.com", "device")
+      ).rejects.toThrow("USER_NOT_FOUND");
+    });
+
+    it("throws 400 when the user is already verified", async () => {
+      deps.userRepository.GetUserDataForLoginByEmailOrUsernameOrId.mockResolvedValueOnce(
+        {
+          id: "u1",
+          email: "a@b.com",
+          is_verified: true,
+        }
+      );
+      await expect(
+        emailService.sendSignupCode("a@b.com", "device")
+      ).rejects.toThrow("USER_ALREADY_VERIFIED");
+    });
+
+    it("throws 404 when setting the verify code fails", async () => {
+      deps.userRepository.GetUserDataForLoginByEmailOrUsernameOrId.mockResolvedValueOnce(
+        {
+          id: "u1",
+          email: "a@b.com",
+          is_verified: false,
+        }
+      );
+      deps.userRepository.SetVerifyCodeForCoreUser.mockResolvedValueOnce(
+        undefined
+      );
+      await expect(
+        emailService.sendSignupCode("a@b.com", "device")
+      ).rejects.toThrow("USER_NOT_FOUND");
+    });
+
+    it("sends a signup verification email from the auth address on success", async () => {
+      deps.userRepository.GetUserDataForLoginByEmailOrUsernameOrId.mockResolvedValueOnce(
+        {
+          id: "u1",
+          email: "a@b.com",
+          is_verified: false,
+        }
+      );
+      deps.userRepository.SetVerifyCodeForCoreUser.mockResolvedValueOnce({
+        id: "u1",
+      });
+
+      await emailService.sendSignupCode("a@b.com", "Chrome on macOS");
+
+      expect(deps.userRepository.SetVerifyCodeForCoreUser).toHaveBeenCalledWith(
+        "123456",
+        expect.any(Date),
+        "a@b.com"
+      );
       expect(mocks.send).toHaveBeenCalledWith(
         expect.objectContaining({
           from: "Signup <auth@fluctux.com>",
@@ -61,35 +182,34 @@ describe("EmailService", () => {
   });
 
   // -------------------------------------------------------
-  describe("sendLoginCode", () => {
-    it("sends a login verification email from the auth address", async () => {
-      await emailService.sendLoginCode("a@b.com", "654321", "Safari on iOS");
-
-      expect(mocks.send).toHaveBeenCalledWith(
-        expect.objectContaining({
-          from: "Signup <auth@fluctux.com>",
-          to: "a@b.com",
-          subject: "Your Login Verification Code",
-        })
-      );
-      expect(mocks.otpVerificationEmail2).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deviceInfo: "Safari on iOS",
-          otp: "654321",
-        })
-      );
-    });
-  });
-
-  // -------------------------------------------------------
   describe("sendContactEmailVerificationCode", () => {
-    it("sends a contact-email verification message from the verification address", async () => {
+    const payload = { id: "em1", user_id: "u1" };
+
+    it("throws 404 when the email row can't be found/updated", async () => {
+      deps.userRepository.SetEmailVerifyCode.mockResolvedValueOnce(undefined);
+      await expect(
+        emailService.sendContactEmailVerificationCode(payload as any, "device")
+      ).rejects.toThrow("EMAIL_NOT_FOUND");
+      expect(mocks.send).not.toHaveBeenCalled();
+    });
+
+    it("sends a verification message from the verification address on success", async () => {
+      deps.userRepository.SetEmailVerifyCode.mockResolvedValueOnce({
+        id: "em1",
+        email: "new@b.com",
+      });
+
       await emailService.sendContactEmailVerificationCode(
-        "new@b.com",
-        "999999",
+        payload as any,
         "Firefox on Linux"
       );
 
+      expect(deps.userRepository.SetEmailVerifyCode).toHaveBeenCalledWith(
+        "123456",
+        expect.any(Date),
+        "em1",
+        "u1"
+      );
       expect(mocks.send).toHaveBeenCalledWith(
         expect.objectContaining({
           from: "Email Verification <verify@fluctux.com>",
@@ -100,21 +220,9 @@ describe("EmailService", () => {
       expect(mocks.otpVerificationEmail2).toHaveBeenCalledWith(
         expect.objectContaining({
           deviceInfo: "Firefox on Linux",
-          otp: "999999",
+          otp: "123456",
         })
       );
     });
-  });
-
-  // -------------------------------------------------------
-  it("does not throw when EmailService.resend is null (optional chaining guard)", async () => {
-    // Simulate resend client not being configured
-    (EmailService as any).resend = null;
-
-    await expect(
-      emailService.sendSignupCode("a@b.com", "111111", "device")
-    ).resolves.not.toThrow();
-
-    expect(mocks.send).not.toHaveBeenCalled();
   });
 });

@@ -1,16 +1,17 @@
 // ┌─────────────────────────┐
 // │ Base Imports            │
 // └─────────────────────────┘
-import routers from "./routes/index.route";
 import { rateLimit } from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis";
-import { ApiResponse, connectRedis, logger, redisClient } from "./libs";
+import { ApiResponse, connectRedis, redisClient } from "./libs";
 import { errorHandlerMiddleware, requestLogger } from "./middlewares";
 import { baseConfig } from "./config";
 import { ExpressServer } from "./server";
 import { pgDb } from "./libs/db.connect";
 import { sql } from "drizzle-orm";
 import promClient from "@prometheus-io/client";
+import { apiRouters } from "./routes";
+import { createContainer } from "./container";
 
 /* -------------------------------------------------------------------------- */
 /*                                 Metrics                                    */
@@ -49,7 +50,9 @@ app.use(limiter);
 /* -------------------------------------------------------------------------- */
 /*                                   Routes                                   */
 /* -------------------------------------------------------------------------- */
-app.use("/api", routers);
+
+const container = createContainer();
+app.use("/api", apiRouters(container));
 app.get("/health", async (_, res) => {
   return res.status(200).json(new ApiResponse(200, "OK"));
 });
@@ -71,7 +74,21 @@ app.use(errorHandlerMiddleware);
 // Start Server
 app.listen(baseConfig.PORT, async () => {
   const result = await pgDb.execute(sql`select now()`);
-  console.log("Database: ", result.rows[0]!.now);
-  console.log("Redis: ", await redisClient.ping());
-  console.log(`Server is listening on port: ${baseConfig.PORT}`);
+  console.log(`                                     
+               █             ███          
+ ██   █        █               █          
+ ██░  █        █               █          
+ █▒▓  █  ███   █▓██   █   █    █    ░███░ 
+ █ █  █ ▓▓ ▒█  █▓ ▓█  █   █    █    █▒ ▒█ 
+ █ ▓▓ █ █   █  █   █  █   █    █        █ 
+ █  █ █ █████  █   █  █   █    █    ▒████ 
+ █  ▓▒█ █      █   █  █   █    █    █▒  █ 
+ █  ░██ ▓▓  █  █▓ ▓█  █▒ ▓█    █░   █░ ▓█ 
+ █   ██  ███▒  █▓██   ▒██▒█    ▒██  ▒██▒█     
+ Listening...                  Port: ${baseConfig.PORT}`);
+  console.log(" Database: ", result.rows[0]!.now ? "Working ✅" : "ᶻ 𝗓 𐰁");
+  console.log(
+    " Redis: ",
+    (await redisClient.ping()) === "PONG" ? "Working ✅" : "ᶻ 𝗓 𐰁"
+  );
 });
