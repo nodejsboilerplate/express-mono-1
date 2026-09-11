@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { EmailService } from "@/services/email.service";
+import { EmailService } from "@/services";
 
-// ---------------------------------------------------------
-// Hoisted shared mock fns
-// ---------------------------------------------------------
 const mocks = vi.hoisted(() => ({
   send: vi.fn(),
   otpVerificationEmail2: vi.fn((props: unknown) => ({ __reactMarkup: props })),
@@ -13,9 +10,6 @@ const mocks = vi.hoisted(() => ({
   getVerifyExpiry: vi.fn(),
 }));
 
-// EmailService extends ResendService and constructs it internally (super()),
-// so ResendService is mocked via its real alias (not a relative path — this
-// test file doesn't live next to email.service.ts).
 vi.mock("@/services/resend.service", () => ({
   ResendService: class {
     static resend = { emails: { send: mocks.send } };
@@ -62,11 +56,6 @@ const ApiErrorLike = (status: number, message: string) => {
   return e;
 };
 
-// ---------------------------------------------------------
-// EmailService takes { userInputValidators, userRepository } via
-// constructor injection — plain mock objects, no vi.mock() needed for
-// either.
-// ---------------------------------------------------------
 const buildDeps = () => ({
   userInputValidators: {
     emailInput: vi.fn((p: unknown) => p),

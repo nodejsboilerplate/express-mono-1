@@ -1,8 +1,10 @@
-import { AuthController } from "@/controllers/auth.controller";
+import {
+  AuthController,
+  MessageController,
+  ResendController,
+  UserController,
+} from "@/controllers";
 import type { createServices } from "./services";
-import { UserController } from "@/controllers/user.controller";
-import { ResendController } from "@/controllers/resend.controller";
-import { MessageController } from "@/controllers/message.contoller";
 
 export const createControllers = (
   services: ReturnType<typeof createServices>

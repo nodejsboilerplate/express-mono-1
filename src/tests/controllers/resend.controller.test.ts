@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { ResendController } from "@/controllers/resend.controller";
+import { ResendController } from "@/controllers";
 
 vi.mock("@/services", () => ({ ResendService: class {} }));
 

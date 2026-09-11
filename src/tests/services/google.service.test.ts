@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GoogleOAuthService } from "@/services/auth/google-auth.service";
+import { GoogleOAuthService } from "@/services/auth";
 
-// ---------------------------------------------------------
-// Hoisted shared mock fns for the googleapis OAuth2 client, since
-// GoogleOAuthService constructs its own `new google.auth.OAuth2(...)`
-// internally (not injected).
-// ---------------------------------------------------------
 const mocks = vi.hoisted(() => ({
   generateAuthUrl: vi.fn(),
   getToken: vi.fn(),
@@ -44,11 +39,6 @@ vi.mock("@/utils", () => ({
   generateRandomUsername: mocks.generateRandomUsername,
 }));
 
-// ---------------------------------------------------------
-// GoogleOAuthService takes { authRedis, emailService, userService,
-// tokenService } via constructor injection — all plain mock objects,
-// no vi.mock() needed for any of them.
-// ---------------------------------------------------------
 const buildDeps = () => ({
   authRedis: {
     cacheUserLoginData: vi.fn(),
@@ -240,8 +230,7 @@ describe("GoogleOAuthService", () => {
           picture: "pic.png",
         }),
       });
-      // userService.createUserWithProfileByProvider returns the pre-existing
-      // (already verified) user instead of creating a new one.
+
       deps.userService.createUserWithProfileByProvider.mockResolvedValueOnce({
         id: "u3",
         email: "existing@b.com",

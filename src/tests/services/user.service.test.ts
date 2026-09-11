@@ -1,11 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { UserService } from "@/services/user.service";
+import { UserService } from "@/services";
 import { UserInputValidators } from "@/validators/inputs";
 import { UserRepository } from "@/database/repositories";
 
-// ---------------------------------------------------------
-// Hoisted shared mock fns
-// ---------------------------------------------------------
 const mocks = vi.hoisted(() => ({
   // repository
   getUserIdByEmail: vi.fn(),

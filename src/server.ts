@@ -1,5 +1,5 @@
 import express from "express";
-import type { ErrorRequestHandler, Express, RequestHandler } from "express";
+import type { Express } from "express";
 import requestIp from "request-ip";
 import cookieParser from "cookie-parser";
 import cors, { type CorsOptions } from "cors";

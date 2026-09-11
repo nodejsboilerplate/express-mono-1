@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { AuthController } from "@/controllers/auth.controller";
+import { AuthController } from "@/controllers";
 
 vi.mock("@/services", () => ({
   CookieService: {
@@ -248,10 +248,8 @@ describe("AuthController", () => {
         "g.refresh.jwt",
         expect.any(Object)
       );
-      // NOTE: as implemented, the HTTP status is 201 while the ApiResponse body's
-      // own `status` field is 200 — asserting the current (slightly inconsistent)
-      // behavior faithfully rather than "fixing" it in the test.
-      expect(res.status).toHaveBeenCalledWith(201);
+
+      expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 200,
@@ -301,7 +299,7 @@ describe("AuthController", () => {
           },
         })
       );
-      // id/role are destructured off and NOT forwarded, as currently implemented.
+
       expect(res.json.mock.calls[0][0].data).not.toHaveProperty("id");
       expect(res.json.mock.calls[0][0].data).not.toHaveProperty("role");
       expect(result).toBe(res);

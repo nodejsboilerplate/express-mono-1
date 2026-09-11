@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TwilioService } from "@/services";
 
-// ---------------------------------------------------------
-// Hoisted shared mock fns
-// ---------------------------------------------------------
 const mocks = vi.hoisted(() => ({
   twilioFactory: vi.fn(),
   fetch: vi.fn(),
@@ -14,7 +11,6 @@ vi.mock("twilio", () => ({
   default: mocks.twilioFactory,
 }));
 
-// TwilioService is abstract — expose its protected members via a subclass.
 class TestTwilioService extends TwilioService {
   exposeGetTwilioClient() {
     return this.GetTwilioClient();

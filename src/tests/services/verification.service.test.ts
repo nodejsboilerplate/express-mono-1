@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { VerificationService } from "@/services/verification.service";
+import { VerificationService } from "@/services";
 
 const mocks = vi.hoisted(() => ({
   isZodError: vi.fn(),

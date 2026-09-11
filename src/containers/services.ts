@@ -5,8 +5,7 @@ import {
   UserService,
   VerificationService,
 } from "@/services";
-import { AuthService } from "@/services/auth/auth.service";
-import { TokenService } from "@/services/auth/token.service";
+import { AuthService, TokenService } from "@/services/auth";
 import type { createRepositories } from "./repositories";
 import type { createValidators } from "./validators";
 import type { createRedisServices } from "./redis-services";

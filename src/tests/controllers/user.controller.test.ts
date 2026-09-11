@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { UserController } from "@/controllers/user.controller";
+import { UserController } from "@/controllers";
 import { AUTH_USER } from "../helper";
 
 vi.mock("@/libs", () => ({

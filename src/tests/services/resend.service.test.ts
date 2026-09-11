@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ResendService } from "@/services/resend.service";
+import { ResendService } from "@/services";
 
-// ---------------------------------------------------------
-// Hoisted shared mock fns / mutable config
-// ---------------------------------------------------------
 const mocks = vi.hoisted(() => ({
   resendFactory: vi.fn(),
   verify: vi.fn(),

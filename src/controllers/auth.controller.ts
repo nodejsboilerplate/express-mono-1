@@ -1,10 +1,7 @@
-import type { IEmailService } from "@/blueprints";
 import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
 import { CookieService } from "@/services";
-import type { AuthService } from "@/services/auth/auth.service";
-import type { TokenService } from "@/services/auth/token.service";
-import { VerificationService } from "@/services/verification.service";
+import type { AuthService, TokenService } from "@/services/auth";
 import type { UserProfileDataByLoginType } from "@/types";
 import type { CreateUserWithProfileInputType, LoginUserInputType } from "@/zod";
 import type { Request, Response } from "express";
@@ -113,7 +110,7 @@ export class AuthController {
     );
 
     return res
-      .status(201)
+      .status(200)
       .json(new ApiResponse(200, "OK", { id: result.user_id }));
   }
 

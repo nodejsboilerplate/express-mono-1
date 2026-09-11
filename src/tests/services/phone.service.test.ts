@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { PhoneMessagingService } from "@/services/phone.message.service";
+import { PhoneMessagingService } from "@/services";
 
-// ---------------------------------------------------------
-// Hoisted shared mock fns
-// ---------------------------------------------------------
 const mocks = vi.hoisted(() => ({
   lookupWithCallerNameAndLineTypeIntelligence: vi.fn(),
   createMessage: vi.fn(),
@@ -13,9 +10,6 @@ const mocks = vi.hoisted(() => ({
   getVerifyExpiry: vi.fn(),
 }));
 
-// PhoneMessagingService extends TwilioService and constructs it internally
-// (super()), so TwilioService is mocked via its real alias (not a relative
-// path — this test file doesn't live next to phone.message.service.ts).
 vi.mock("@/services/twilio.service", () => ({
   TwilioService: class {
     lookupWithCallerNameAndLineTypeIntelligence =
@@ -51,11 +45,6 @@ const ApiErrorLike = (status: number, message: string) => {
   return e;
 };
 
-// ---------------------------------------------------------
-// PhoneMessagingService takes { userInputValidators, userRepository }
-// via constructor injection — plain mock objects, no vi.mock() needed
-// for either.
-// ---------------------------------------------------------
 const buildDeps = () => ({
   userInputValidators: {
     userIdWithContextIdInput: vi.fn((p: unknown) => p),

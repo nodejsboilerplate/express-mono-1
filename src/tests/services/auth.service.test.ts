@@ -1,15 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { AuthService } from "@/services/auth/auth.service";
+import { AuthService } from "@/services/auth";
 
-// ---------------------------------------------------------
-// AuthService constructs its own ManualAuthService and GoogleOAuthService
-// internally (they are NOT injected), so those two are mocked via their
-// real module aliases (not relative paths — this test file doesn't live
-// next to auth.service.ts, so a relative specifier would silently miss).
-// Everything AuthService itself takes via constructor injection
-// (authRedis, tokenService, userRepository, etc.) is passed as plain
-// mock objects with no vi.mock() needed.
-// ---------------------------------------------------------
 const mocks = vi.hoisted(() => ({
   manualAuthCtor: vi.fn(),
   googleOAuthCtor: vi.fn(),
@@ -130,7 +121,6 @@ describe("AuthService", () => {
     });
 
     it("falls back to the repository + caches the result on a cache miss", async () => {
-      // Redis returns null for a missing key -> String(null) === "null" -> JSON.parse("null") === null (falsy)
       deps.authRedis.getCachedLoginData.mockResolvedValueOnce(null);
       deps.userRepository.GetUserDataForLoginByEmailOrUsernameOrId.mockResolvedValueOnce(
         {
