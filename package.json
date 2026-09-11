@@ -2,7 +2,16 @@
   "name": "Nebula",
   "version": "26.4.1",
   "description": "",
-  "main": "./dist/index.js",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsx --watch ./src/index.ts",
     "build": "tsdown",
