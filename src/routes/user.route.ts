@@ -93,7 +93,7 @@ export const userRouter = (container: ContainerType) => {
   // Delete
   // ---------------------------------------------------------
   router
-    .route("/single")
+    .route("/")
     .delete(
       authMiddleware,
       asyncHandler(userController.deleteUserHandler.bind(userController))

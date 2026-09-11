@@ -686,7 +686,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /users/single:
+  /users:
     delete:
       operationId: deleteUser
       summary: Delete the current user's account
