@@ -11,7 +11,7 @@ export const apiRouters = (container: ReturnType<typeof createContainer>) => {
   router.use("/v1/users", userRouter(container));
   router.use("/v1/auth", authRouter(container));
   router.use("/v1/resend", resendRouter(container));
-  router.use("/v1/message", messageRouter(container));
+  router.use("/v1/messages", messageRouter(container));
 
   return router;
 };

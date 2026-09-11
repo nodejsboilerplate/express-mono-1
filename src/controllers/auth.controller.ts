@@ -1,37 +1,22 @@
-import { getSystemCustomErrorMsgByKey } from "@/events";
 import { ApiError, ApiResponse } from "@/libs";
 import { CookieService } from "@/services";
-import type { AuthService, TokenService } from "@/services/auth";
+import type { AuthService } from "@/services/auth";
 import type { UserProfileDataByLoginType } from "@/types";
 import type { CreateUserWithProfileInputType, LoginUserInputType } from "@/zod";
 import type { Request, Response } from "express";
 
 type AuthControllerDepsType = {
   authService: AuthService;
-  tokenService: TokenService;
 };
 
 export class AuthController {
   private authService: AuthService;
-  private tokenService: TokenService;
 
-  constructor({ authService, tokenService }: AuthControllerDepsType) {
+  constructor({ authService }: AuthControllerDepsType) {
     this.authService = authService;
-    this.tokenService = tokenService;
   }
 
   async signupUserHandler(req: Request, res: Response): Promise<Response> {
-    const {
-      accessToken: existed_access_token,
-      refreshToken: existed_refresh_token,
-    } = this.tokenService.getCookies(req);
-
-    if (existed_access_token || existed_refresh_token)
-      throw new ApiError(
-        400,
-        getSystemCustomErrorMsgByKey("USER_ALREADY_EXISTS")
-      );
-
     const payload = req.body as CreateUserWithProfileInputType;
     const result = await this.authService.manualAuth.signupByManual(
       payload,

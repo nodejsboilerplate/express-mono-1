@@ -12,7 +12,6 @@ export const createControllers = (
   const {
     authService,
     emailService,
-    tokenService,
     phoneService,
     userService,
     resendService,
@@ -21,7 +20,6 @@ export const createControllers = (
 
   const authController = new AuthController({
     authService,
-    tokenService,
   });
 
   const userController = new UserController({

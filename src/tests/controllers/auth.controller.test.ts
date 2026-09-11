@@ -84,19 +84,6 @@ describe("AuthController", () => {
 
   // -------------------------------------------------------
   describe("signupUserHandler", () => {
-    it("throws 400 if the request already carries an access or refresh token cookie", async () => {
-      deps.tokenService.getCookies.mockReturnValueOnce({
-        accessToken: "existing.jwt",
-        refreshToken: undefined,
-      });
-      const req: any = { body: {}, headers: {} };
-
-      await expect(authController.signupUserHandler(req, res)).rejects.toThrow(
-        "USER_ALREADY_EXISTS"
-      );
-      expect(deps.authService.manualAuth.signupByManual).not.toHaveBeenCalled();
-    });
-
     it("signs up, sets both cookies, and returns 201 with the new user id", async () => {
       deps.tokenService.getCookies.mockReturnValueOnce({
         accessToken: undefined,

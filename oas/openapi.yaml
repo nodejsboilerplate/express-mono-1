@@ -686,7 +686,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /users:
+  /users/single:
     delete:
       operationId: deleteUser
       summary: Delete the current user's account
@@ -1042,7 +1042,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /message/signup/code:
+  /messages/signup/code:
     post:
       operationId: resendSignupCode
       summary: Resend the signup verification code to the current user's email
@@ -1065,7 +1065,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
-  /message/verify/signup/code:
+  /messages/verify/signup/code:
     post:
       operationId: verifySignupCode
       summary: Verify the current user's account with an OTP code
@@ -1096,7 +1096,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
-  /message/contacts/phones/{id}/code:
+  /messages/contacts/phones/{id}/code:
     post:
       operationId: sendContactPhoneVerification
       summary: Send an SMS OTP to verify a phone number (via Twilio)
@@ -1124,7 +1124,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /message/contacts/emails/{id}/code:
+  /messages/contacts/emails/{id}/code:
     post:
       operationId: sendContactEmailVerification
       summary: Send an email OTP to verify an email address (via Resend)
@@ -1149,7 +1149,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /message/verify/contacts/phones/{id}:
+  /messages/verify/contacts/phones/{id}:
     post:
       operationId: verifyContactPhone
       summary: Verify a phone number with the OTP code
@@ -1185,7 +1185,7 @@ paths:
           description: Phone already verified.
           $ref: "#/components/responses/Conflict"
 
-  /message/verify/contacts/emails/{id}:
+  /messages/verify/contacts/emails/{id}:
     post:
       operationId: verifyContactEmail
       summary: Verify an email address with the OTP code

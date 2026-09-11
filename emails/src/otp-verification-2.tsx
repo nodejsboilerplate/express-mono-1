@@ -30,6 +30,7 @@ interface SignupVerificationEmailProps {
   deviceInfo?: string;
   requestDate?: string;
   teamName?: string;
+  email_title?: string
 }
 
  const OtpVerificationEmail2 = ({
@@ -38,6 +39,7 @@ interface SignupVerificationEmailProps {
   deviceInfo = "Chrome on macOS",
   requestDate = "12/02/2024",
   teamName = "The Curatane Team",
+  email_title = "Your signup verification code is"
 }: SignupVerificationEmailProps) => {
   const otpDigits = otp.split("");
 
@@ -52,7 +54,7 @@ interface SignupVerificationEmailProps {
           }
         `}</style>
       </Head>
-      <Preview>Your signup verification code is {otp}.</Preview>
+      <Preview>{email_title} {otp}.</Preview>
       <Body style={main}>
         <Container style={container}>
           {/* App logo */}
@@ -82,7 +84,7 @@ interface SignupVerificationEmailProps {
           </Row>
 
           <Heading as="h3" style={headingTop}>
-            Your Signup verification
+            {email_title}
           </Heading>
           <Heading as="h3" style={headingBottom}>
             Code

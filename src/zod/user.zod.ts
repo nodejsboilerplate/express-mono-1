@@ -262,9 +262,9 @@ export abstract class UserZSchema extends ZodBase {
     .omit({
       created_at: true,
       updated_at: true,
+      id: true,
     })
     .required({
-      id: true,
       user_id: true,
     });
 

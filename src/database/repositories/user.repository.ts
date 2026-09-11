@@ -324,7 +324,7 @@ export class UserRepository {
   // ---------------------------------------------------------
 
   async UpdateUserProfile(data: UpdateProfileInputType) {
-    const { date_of_birth, user_id, id, ...updateData } = data;
+    const { date_of_birth, user_id, ...updateData } = data;
 
     const [updatedProfile] = await pgDb
       .update(userProfilesTable)
@@ -334,12 +334,7 @@ export class UserRepository {
           ? date_of_birth.toISOString().split("T")[0]
           : undefined,
       })
-      .where(
-        and(
-          eq(userProfilesTable.user_id, user_id),
-          eq(userProfilesTable.id, id)
-        )
-      )
+      .where(and(eq(userProfilesTable.user_id, user_id)))
       .returning({ id: userProfilesTable.id });
 
     return updatedProfile;
