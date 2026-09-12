@@ -463,6 +463,21 @@ export class UserRepository {
     return updatedEmail;
   }
 
+  async SetVerifyCodeForCoreUser(code: string, expiry: Date, email: string) {
+    const [user] = await pgDb
+      .update(usersTable)
+      .set({
+        verify_code: code,
+        verify_expiry: expiry,
+      })
+      .where(eq(usersTable.email, email))
+      .returning({
+        id: usersTable.id,
+      });
+
+    return user;
+  }
+
   // ---------------------------------------------------------
   // Delete
   // ---------------------------------------------------------
@@ -530,20 +545,5 @@ export class UserRepository {
       .returning({ id: userAddressesTable.id });
 
     return deletedAddress;
-  }
-
-  async SetVerifyCodeForCoreUser(code: string, expiry: Date, email: string) {
-    const [user] = await pgDb
-      .update(usersTable)
-      .set({
-        verify_code: code,
-        verify_expiry: expiry,
-      })
-      .where(eq(usersTable.email, email))
-      .returning({
-        id: usersTable.id,
-      });
-
-    return user;
   }
 }

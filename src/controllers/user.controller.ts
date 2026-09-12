@@ -51,6 +51,10 @@ export class UserController {
       user_id: req.auth_user.id,
     });
 
+    // Collect the user's phone number and email here.
+    // Create the phone and email data based on your business logic.
+    // Implement the logic according to your business requirements.
+
     return res
       .status(201)
       .json(
