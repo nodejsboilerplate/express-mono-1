@@ -17,7 +17,6 @@ import type {
   UpdatePhoneInputType,
   UpdateProfileInputType,
   UserIdWithContextIdInputType,
-  VerifyCodeWithUserIdInput,
 } from "@/zod";
 
 type UserServiceDepsType = {
@@ -189,7 +188,10 @@ export class UserService {
       await this.userRepository.UpdateUserProfile(parse_payload);
 
     if (!updatedProfile?.id) {
-      throw new ApiError(404, getSystemCustomErrorMsgByKey("PHONE_NOT_FOUND"));
+      throw new ApiError(
+        404,
+        getSystemCustomErrorMsgByKey("PROFILE_NOT_FOUND")
+      );
     }
 
     return updatedProfile.id;
