@@ -10,13 +10,14 @@ import {
   userAddressesTable,
 } from "@/database";
 import { pgDb } from "@/libs/db.connect";
-
-type UserInsert = typeof usersTable.$inferInsert;
-type UserProfileInsert = typeof userProfilesTable.$inferInsert;
-type UserContactInsert = typeof userContactsTable.$inferInsert;
-type UserPhoneInsert = typeof userPhonesTable.$inferInsert;
-type UserEmailInsert = typeof userEmailsTable.$inferInsert;
-type UserAddressInsert = typeof userAddressesTable.$inferInsert;
+import type {
+  UserAddressInsertType,
+  UserContactInsertType,
+  UserEmailsInsertType,
+  UserInsertType,
+  UserPhonesInsertType,
+  UserProfileInsertType,
+} from "../type";
 
 interface SeedUsersOptions {
   count?: number;
@@ -27,7 +28,7 @@ export async function seedUsers(options: SeedUsersOptions = {}) {
   const { count = 20, addressesPerUser = 1 } = options;
 
   // -- Build users
-  const usersData: UserInsert[] = Array.from({ length: count }).map(() => ({
+  const usersData: UserInsertType[] = Array.from({ length: count }).map(() => ({
     id: uuidv4(),
     email: faker.internet.email().toLowerCase(),
     username: faker.internet.username().toLowerCase(),
@@ -42,7 +43,7 @@ export async function seedUsers(options: SeedUsersOptions = {}) {
   });
 
   // -- Build profiles (1:1)
-  const profilesData: UserProfileInsert[] = users.map((user) => ({
+  const profilesData: UserProfileInsertType[] = users.map((user) => ({
     id: uuidv4(),
     user_id: user.id,
     first_name: faker.person.firstName(),
@@ -64,7 +65,7 @@ export async function seedUsers(options: SeedUsersOptions = {}) {
     });
 
   // -- Build contacts (1:1)
-  const contactsData: UserContactInsert[] = profiles.map((profile) => ({
+  const contactsData: UserContactInsertType[] = profiles.map((profile) => ({
     id: uuidv4(),
     user_id: profile.user_id,
     socials: [
@@ -84,7 +85,7 @@ export async function seedUsers(options: SeedUsersOptions = {}) {
   const profileByUserId = new Map(profiles.map((p) => [p.user_id, p]));
 
   // -- Build phones (1:1 with user, tied to contact)
-  const phonesData: UserPhoneInsert[] = contacts.map((contact) => ({
+  const phonesData: UserPhonesInsertType[] = contacts.map((contact) => ({
     id: uuidv4(),
     contact_id: contact.id,
     user_id: contact.user_id,
@@ -97,7 +98,7 @@ export async function seedUsers(options: SeedUsersOptions = {}) {
   await pgDb.insert(userPhonesTable).values(phonesData);
 
   // -- Build emails (1:1 with user, tied to contact)
-  const emailsData: UserEmailInsert[] = contacts.map((contact) => {
+  const emailsData: UserEmailsInsertType[] = contacts.map((contact) => {
     const profile = profileByUserId.get(contact.user_id);
     return {
       id: uuidv4(),
@@ -115,7 +116,7 @@ export async function seedUsers(options: SeedUsersOptions = {}) {
   await pgDb.insert(userEmailsTable).values(emailsData);
 
   // -- Build addresses (many per user)
-  const addressesData: UserAddressInsert[] = users.flatMap((user) =>
+  const addressesData: UserAddressInsertType[] = users.flatMap((user) =>
     Array.from({ length: addressesPerUser }).map((_, i) => ({
       id: uuidv4(),
       user_id: user.id,
