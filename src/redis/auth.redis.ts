@@ -1,7 +1,7 @@
 import { RedisResponse } from "@/constants";
 import { redisClient } from "@/libs";
 import { ACCESS_TOKEN_EXPIRY_SEC } from "@/services";
-import type { AccessTokenPayload, UserBasicInfoDataType } from "@/types";
+import type { UserBasicInfoDataType } from "@/types";
 
 export class AuthRedis {
   async cacheUserLoginData(
